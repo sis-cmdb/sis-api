@@ -1,0 +1,15 @@
+{
+    "version" : "1.0.1",
+    "private" : true,
+    "name" : "SIS",
+    "description" : "Service Information System",
+    "dependencies" : {
+        "express" : ">= 3.4.x",
+        "jade" : ">= 0.35.x",
+        "mongoose" : ">= 3.6.20"
+    },
+    "devDependencies" : {
+        "mocha" : ">= 1.13.0"
+    },
+    "engine" : "node 0.10.20"
+}
