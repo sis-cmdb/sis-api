@@ -14,33 +14,46 @@
  
  ***********************************************************/
 
-// The model class for a schema object in SIS
+// A class used to manage the SIS Schemas defined by the /schemas api
+// and also help out the /entities apis
+
 // Not all controllers need this and can use mongoose directly
 // but we have it here since the schemas and entities controller can benefit
 (function() {
 
+    // Take in a mongoose that's already been initialized.
     var SchemaManager = function(mongoose) {
         
-        var SchemaType = null;
+        // A mongoose.model object for SIS Schemas
+        var SisSchemaModel = null;
+        // this..
         var self = this;
 
+        // initializer funct
         var init = function() {
+            // Set up the mongoose.Schema for a SIS Schema
             var definition = {
                 "name" : "String",
                 "definition" : { }
             }
             var name = "SisSchema";
-            SchemaType = self.getEntityModel({name : name, definition : definition});
+            // Get the model from the definition and name
+            SisSchemaModel = self.getEntityModel({name : name, definition : definition});
         }
 
+        // Get all the SIS Schemas in the system
         this.getAll = function(callback) {
-            SchemaType.find({}, callback);
+            SisSchemaModel.find({}, callback);
         }
 
+        // Get a SIS Schema by name
         this.getByName = function(name, callback) {
-            SchemaType.findOne({"name" : name}, callback);
+            SisSchemaModel.findOne({"name" : name}, callback);
         }
 
+        // Add a SIS Schema.  The modelObj must have the following properties:
+        // - "name" : "Schema Name" - cannot be empty
+        // - "definition" : <json_object> that is a mongoose schema
         this.addSchema = function(modelObj, callback) {
             if (!modelObj.name) {
                 callback("Schema has no name.", null);
@@ -62,7 +75,8 @@
                 callback("Schema is invalid: " + ex, null);
                 return;
             }
-            var entity = new SchemaType(modelObj);
+            // Valid schema, so now we can create a SIS Schema object to persist
+            var entity = new SisSchemaModel(modelObj);
             // TODO: need to cleanup the entity returned to callback
             entity.save(callback);
         }

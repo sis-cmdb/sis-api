@@ -51,7 +51,7 @@
             }
             getModelForType(type, function(err, result) {
                 if (err || !result) {
-                    Common.sendError(res, 400, "Unknown type specified: ", type);
+                    Common.sendError(res, 404, "Unknown type specified: ", type);
                 } else {
                     // result is a mongoose model
                     result.find({}, function(err, entities) {

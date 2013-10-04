@@ -16,7 +16,6 @@
 
 var express = require('express');
 var mongoose = require('mongoose');
-var config = require('./config')
 
 var app = express();
 app.use(express.bodyParser());
@@ -27,22 +26,42 @@ var routes = [
     'entities'
 ];
 
-app.configure(function() {
-    mongoose.connect(config.db.url);
-    var db = mongoose.connection;
-    db.on('error', function(err) {
-        console.log("Error connecting to mongo.");
-    })
-    db.once('open', function() {
-        var cfg = {
-            'mongoose' : mongoose
-        }        
-        // setup the routes
-        routes.map(function(routeName) {
-            var route = require("./routes/" + routeName);
-            route.setup(app, cfg);
+var server = null;
+
+var startServer = function(config, callback) {
+    app.configure(function() {
+        mongoose.connect(config.db.url);
+        var db = mongoose.connection;
+        db.on('error', function(err) {
+            console.log("Error connecting to mongo: " + err);
+            throw err;
+        })
+        db.once('open', function() {
+            var cfg = {
+                'mongoose' : mongoose
+            }        
+            // setup the routes
+            routes.map(function(routeName) {
+                var route = require("./routes/" + routeName);
+                route.setup(app, cfg);
+            });
+            // listen
+            server = app.listen(config.server.port);
+            console.log("Listening on port " + config.server.port);
         });
-        // listen
-        app.listen(config.server.port);
-    });
-});
+    });    
+}
+
+// Run if we're the root module
+if (!module.parent) {
+    var config = require('./config')
+    startServer(config);
+}
+
+module.exports.mongoose = mongoose; 
+module.exports.startServer = startServer;
+module.exports.stopServer = function() {
+    if (server) {
+        server.close();
+    }
+}

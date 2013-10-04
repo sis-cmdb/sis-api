@@ -1,3 +1,19 @@
+/***********************************************************
+ 
+ The information in this document is proprietary
+ to VeriSign and the VeriSign Product Development.
+ It may not be used, reproduced or disclosed without
+ the written approval of the General Manager of
+ VeriSign Product Development.
+ 
+ PRIVILEGED AND CONFIDENTIAL
+ VERISIGN PROPRIETARY INFORMATION
+ REGISTRY SENSITIVE INFORMATION
+ 
+ Copyright (c) 2013 VeriSign, Inc.  All rights reserved.
+ 
+ ***********************************************************/
+
 var config = require('./test-config');
 var mongoose = require('mongoose');
 var schemaManager;
@@ -15,6 +31,7 @@ describe('SchemaManager', function() {
 
   after(function(done) {
     mongoose.connection.db.dropDatabase();
+    mongoose.connection.close();
     done();
   });
 
