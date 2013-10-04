@@ -42,11 +42,16 @@ describe('Entity API', function() {
     describe("GET Failure cases", function() {
         // no schemas..
         it("Should fail if type is not specified ", function(done) {
-            console.log("Sending request");
             request(app).get("/v1/api/entities").expect(404, done);
         });
         it("Should fail if type does not exist ", function(done) {
             request(app).get("/v1/api/entities/dne").expect(404, done);
+        });
+    });
+
+    describe("GET entities", function() {
+        before(function() {
+            // create the schema
         });
     });
 

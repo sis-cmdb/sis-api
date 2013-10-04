@@ -96,4 +96,50 @@ describe('SchemaManager', function() {
       });
     });
   });
+
+  describe('delete-schema', function() {
+    var schemaName = "schema1"
+    before(function(done) {
+      // add a schema
+      var schema = {
+        f1 : "String",
+        f2 : "String"
+      };
+      schemaManager.addSchema({"name" : schemaName, "definition" : schema}, function(err, entity) {
+        if (err) {
+          done(err);
+          return;
+        }
+        // add some documents - get the model and save a document
+        var EntityType = schemaManager.getEntityModel(entity);
+        if (!EntityType) {
+          done("Entity type is null");
+          return;
+        }
+        var doc = new EntityType({f1 : "f1", f2 : "f2"});
+        doc.save(function(err, e) {
+          done() 
+        });
+      });
+    });
+
+    it("Should return false if schema dne ", function(done) {
+      schemaManager.deleteSchema("DNE", function(err, result) {
+        should.exist(err);
+        result.should.not.be.ok;
+        done();
+      });
+    });
+    it("Should return true if schema exists ", function(done) {
+        schemaManager.deleteSchema(schemaName, function(err, result) {
+          should.not.exist(err);
+          result.should.be.ok;
+          // ensure it is null
+          schemaManager.getByName(schemaName, function(err, result) {
+            should.not.exist(result);
+            done();
+          });
+        });
+    });
+  });
 });

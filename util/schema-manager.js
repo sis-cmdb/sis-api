@@ -85,6 +85,7 @@
         // passed in.  sisSchema would be an object returned by
         // calls like getByName 
         // the mongoose cached version is returned if available
+        // Do not hang on to any of these objects
         this.getEntityModel = function(sisSchema) {
             if (!sisSchema || !sisSchema.name || !sisSchema.definition) {
                 return null;
@@ -100,6 +101,44 @@
             } catch (ex) {
                 return null;
             }
+        }
+
+        this.deleteSchema = function(name, callback) {
+            this.getByName(name, function(err, schema) {
+                if (err || !schema) {
+                    err = err || "Schema does not exist";
+                    callback(err, false);
+                    return;
+                }
+                // need to delete the schema document from mongo
+                SisSchemaModel.remove({ "name" : name }, function(err) {
+                    if (err) {
+                        callback(err, false);
+                        return;
+                    }
+                    // schema document is removed.. now delete the 
+                    // mongoose caches
+                    // and documents for that schema
+                    var model = mongoose.models[name];
+                    if (!model) {
+                        model = mongoose.model(name, schema);
+                    }
+                    model.collection.drop(function(err, reply) {
+                        if (err) {
+                            // at this point we're in a bad state.. we deleted the instance
+                            // but still have documents
+                            // TODO: handle this
+                            callback(err, false);
+                        } else {
+                            delete mongoose.modelSchemas[name];
+                            delete mongoose.models[name];
+                            callback(null, true);
+                        }
+                    });
+                    
+                });
+
+            });
         }
 
         init();
