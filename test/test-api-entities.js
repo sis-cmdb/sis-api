@@ -36,23 +36,23 @@ describe('Entity API', function() {
         done();
     });
 
-    describe("Get failures", function() {
-        // no schemas..
-        it("Should fail if type is not specified ", function(done) {
-            var req = TestUtil.createRequest(config, "/api/v1/entities", "GET");
-            req.sendRequest(function(res, body) {
-                res.statusCode.should.eql(404);
-                done();
-            });
-        });
-        it("Should fail if type does not exist ", function(done) {
-           var req = TestUtil.createRequest(config, "/api/v1/entities/dne", "GET");
-            req.sendRequest(function(res, body) {
-                res.statusCode.should.eql(404);
-                done();
-            }); 
-        });
-    });
+    // describe("Get failures", function() {
+    //     // no schemas..
+    //     it("Should fail if type is not specified ", function(done) {
+    //         var req = TestUtil.createRequest(config, "/api/v1/entities", "GET");
+    //         req.sendRequest(function(res, body) {
+    //             res.statusCode.should.eql(404);
+    //             done();
+    //         });
+    //     });
+    //     it("Should fail if type does not exist ", function(done) {
+    //        var req = TestUtil.createRequest(config, "/api/v1/entities/dne", "GET");
+    //         req.sendRequest(function(res, body) {
+    //             res.statusCode.should.eql(404);
+    //             done();
+    //         }); 
+    //     });
+    // });
 
 
 });
