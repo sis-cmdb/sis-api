@@ -18,7 +18,7 @@ describe('SchemaManager', function() {
     done();
   });
 
-  describe('add-invalid-schema', function() {   
+  describe('add-invalid-schema', function() {
     it("should error adding an empty string ", function(done) {
       var name = "name";
       var schema = "";
@@ -36,7 +36,7 @@ describe('SchemaManager', function() {
         done();
       });
     });
-    
+
 
     it("should error adding a schema with an unkown type ", function(done) {
       var name = "name";
