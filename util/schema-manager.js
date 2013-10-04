@@ -42,9 +42,22 @@
         }
 
         this.addSchema = function(modelObj, callback) {
+            if (!modelObj.name) {
+                callback("Schema has no name.", null);
+                return;
+            }
             // see if the object itself is a valid schema
             try {
+                // object.keys will fail if the var is not an object..
+                if (Object.keys(modelObj.definition).length == 0) {
+                    callback("Cannot add an empty schema.", null);
+                    return;
+                }
                 var testSchema = mongoose.Schema(modelObj.definition);
+                if (!testSchema) {
+                    callback("Schema is invalid: " + ex, null);    
+                    return;
+                }
             } catch (ex) {
                 callback("Schema is invalid: " + ex, null);
                 return;
