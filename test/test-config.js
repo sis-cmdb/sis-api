@@ -20,6 +20,7 @@ module.exports = {
         url : "mongodb://localhost/sis-test"
     },
     server : {
-        port : 3333
+        port : 3001,
+        address : "127.0.0.1"
     }
 }

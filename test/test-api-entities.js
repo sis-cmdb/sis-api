@@ -17,16 +17,19 @@
 var config = require('./test-config');
 var server = require("../server")
 var should = require('should');
-var TestUtil = require('./test-util');
+var request = require('supertest');
 var mongoose = null;
 var schemaManager = null;
+var app = null;
 
 describe('Entity API', function() {
     before(function(done) {
-        server.startServer(config);
-        mongoose = server.mongoose;
-        schemaManager = require('../util/schema-manager')(mongoose);
-        done();
+        server.startServer(config, function(expressApp) {
+            mongoose = server.mongoose;
+            schemaManager = require('../util/schema-manager')(mongoose);
+            app = expressApp;
+            done();
+        });
     });
 
     after(function(done) {
@@ -36,23 +39,16 @@ describe('Entity API', function() {
         done();
     });
 
-    // describe("Get failures", function() {
-    //     // no schemas..
-    //     it("Should fail if type is not specified ", function(done) {
-    //         var req = TestUtil.createRequest(config, "/api/v1/entities", "GET");
-    //         req.sendRequest(function(res, body) {
-    //             res.statusCode.should.eql(404);
-    //             done();
-    //         });
-    //     });
-    //     it("Should fail if type does not exist ", function(done) {
-    //        var req = TestUtil.createRequest(config, "/api/v1/entities/dne", "GET");
-    //         req.sendRequest(function(res, body) {
-    //             res.statusCode.should.eql(404);
-    //             done();
-    //         }); 
-    //     });
-    // });
+    describe("GET Failure cases", function() {
+        // no schemas..
+        it("Should fail if type is not specified ", function(done) {
+            console.log("Sending request");
+            request(app).get("/v1/api/entities").expect(404, done);
+        });
+        it("Should fail if type does not exist ", function(done) {
+            request(app).get("/v1/api/entities/dne").expect(404, done);
+        });
+    });
 
 
 });

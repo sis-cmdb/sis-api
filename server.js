@@ -46,8 +46,11 @@ var startServer = function(config, callback) {
                 route.setup(app, cfg);
             });
             // listen
-            server = app.listen(config.server.port);
-            console.log("Listening on port " + config.server.port);
+            server = app.listen(config.server.port, function() {
+                if (callback) {
+                    callback(app);
+                }
+            });
         });
     });    
 }
