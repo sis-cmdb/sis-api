@@ -98,14 +98,14 @@ describe('SchemaManager', function() {
   });
 
   describe('delete-schema', function() {
-    var schemaName = "schema1"
+    var schemaName = "schema1";
+    // add a schema
+    var schemaDef = {
+      f1 : "String",
+      f2 : "String"
+    };
     before(function(done) {
-      // add a schema
-      var schema = {
-        f1 : "String",
-        f2 : "String"
-      };
-      schemaManager.addSchema({"name" : schemaName, "definition" : schema}, function(err, entity) {
+      schemaManager.addSchema({"name" : schemaName, "definition" : schemaDef}, function(err, entity) {
         if (err) {
           done(err);
           return;
@@ -118,7 +118,11 @@ describe('SchemaManager', function() {
         }
         var doc = new EntityType({f1 : "f1", f2 : "f2"});
         doc.save(function(err, e) {
-          done() 
+          // assert there is an item
+          EntityType.count({}, function(err, result) {
+            result.should.eql(1);
+            done(err); 
+          });
         });
       });
     });
@@ -130,16 +134,35 @@ describe('SchemaManager', function() {
         done();
       });
     });
+
     it("Should return true if schema exists ", function(done) {
-        schemaManager.deleteSchema(schemaName, function(err, result) {
-          should.not.exist(err);
-          result.should.be.ok;
-          // ensure it is null
-          schemaManager.getByName(schemaName, function(err, result) {
-            should.not.exist(result);
-            done();
-          });
+      schemaManager.deleteSchema(schemaName, function(err, result) {
+        should.not.exist(err);
+        result.should.be.ok;
+        done(err);
+      });
+    });
+
+    it("Should no longer exist ", function(done) {
+      // ensure it is null
+      schemaManager.getByName(schemaName, function(err, result) {
+        should.not.exist(result);
+        done(err);
+      });
+    });
+
+    it("Should no have no documents ", function(done) {
+      schemaManager.addSchema({"name" : schemaName, "definition" : schemaDef}, function(err, entity) {
+        if (err) {
+          done(err);
+          return;
+        }
+        var EntityType = schemaManager.getEntityModel(entity);
+        EntityType.count({}, function(err, result) {
+          result.should.eql(0);
+          done(err); 
         });
+      });
     });
   });
 });
