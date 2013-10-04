@@ -51,21 +51,21 @@ describe('Schema API', function() {
 
     describe("POST schema", function() {
         it("Should create new schemas", function(done) {
-            var jsData = JSON.parse("{        \
-                \"name\":\"network_element\", \
-                \"definition\": {             \
-                    \"ne_type\": \"String\",  \
-                    \"cid\":     \"String\",  \
-                    \"ip\":      \"String\",  \
-                    \"ip6\":     \"String\",  \
-                    \"bgpip\":   \"String\",  \
-                    \"bgpip6\":  \"String\",  \
-                }.                            \
-            }");
-            request(app).post("/v1/api/schemas")
+            var jsData = {
+                "name":"network_element",
+                "definition": {
+                    "ne_type": "String",
+                    "cid":     "String",
+                    "ip":      "String",
+                    "ip6":     "String",
+                    "bgpip":   "String",
+                    "bgpip6":  "String" 
+                }
+            };
+            request(app).post("/api/v1/schemas")
                 .set('Content-Encoding', 'application/json')
-                .write(jsData)
-                .expect(200);
+                .send(jsData)
+                .expect(201, done);
         });
     });
 });
