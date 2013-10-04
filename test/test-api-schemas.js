@@ -22,7 +22,7 @@ var mongoose = null;
 var schemaManager = null;
 var app = null;
 
-describe('Entity API', function() {
+describe('Schema API', function() {
     before(function(done) {
         server.startServer(config, function(expressApp) {
             mongoose = server.mongoose;
@@ -39,21 +39,33 @@ describe('Entity API', function() {
         done();
     });
 
-    describe("GET Failure cases", function() {
+    describe("GET failure cases", function() {
         // no schemas..
         it("Should fail if type is not specified ", function(done) {
-            request(app).get("/v1/api/entities").expect(404, done);
+            request(app).get("/v1/api/schemas").expect(404, done);
         });
         it("Should fail if type does not exist ", function(done) {
-            request(app).get("/v1/api/entities/dne").expect(404, done);
+            request(app).get("/v1/api/schemas/dne").expect(404, done);
         });
     });
 
-    describe("GET entities", function() {
-        before(function() {
-            // create the schema
+    describe("POST schema", function() {
+        it("Should create new schemas", function(done) {
+            var jsData = JSON.parse("{        \
+                \"name\":\"network_element\", \
+                \"definition\": {             \
+                    \"ne_type\": \"String\",  \
+                    \"cid\":     \"String\",  \
+                    \"ip\":      \"String\",  \
+                    \"ip6\":     \"String\",  \
+                    \"bgpip\":   \"String\",  \
+                    \"bgpip6\":  \"String\",  \
+                }.                            \
+            }");
+            request(app).post("/v1/api/schemas")
+                .set('Content-Encoding', 'application/json')
+                .write(jsData)
+                .expect(200);
         });
     });
-
-
 });
