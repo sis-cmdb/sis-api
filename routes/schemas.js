@@ -46,6 +46,10 @@
                 Common.sendError(res, 400, "JSON object must contain a 'name', and a 'definition' object");
                 return;
             }
+            if ("_id" in schema) {
+                Common.sendError(res, 400, "_id is reserved and cannot be used in schemas.");
+                return;
+            }
             // TODO: check if one exists
 
             schemaManager.addSchema({"name" : name, "definition" : schema}, function(err, entity) {

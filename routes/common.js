@@ -27,5 +27,6 @@
     module.exports.sendError = function(res, code, err) {
         res.send(code, err);
     }
+
 })();
 

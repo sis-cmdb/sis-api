@@ -49,9 +49,67 @@ describe('Entity API', function() {
         });
     });
 
-    describe("GET entities", function() {
-        before(function() {
-            // create the schema
+    describe("CRUD Entity", function() {
+        var schema = {
+            "name":"testEntity",
+            "definition": {
+                "str":   "String",
+                "num":   "Number",
+                "date":  "Date",
+                "bool":  "Boolean",
+                "arr": [],
+            }
+        };
+        before(function(done) {
+            schemaManager.addSchema(schema, done);
+        });
+        after(function(done) {
+            schemaManager.deleteSchema(schema.name, done);
+        });
+        var entityId = null;
+        var expectedEntity = {
+            "str" : "testing",
+            "num" : 123,
+            "date" : new Date(2013, 10, 1),
+            "bool" : true,
+            "arr" : ["sis"]
+        };
+        var validateWithExpected = function(entity) {
+            for (var k in expectedEntity) {
+                should.exist(entity[k]);
+                JSON.stringify(expectedEntity[k]).should.eql(JSON.stringify(entity[k]));
+            }
+        }
+
+        var createEndCallback = function(done) {
+            return function(err, res) {
+                if (err) { done(err); }
+                should.exist(res.body);
+                should.exist(res.body['_id']);
+                if (!entityId) {
+                    entityId = res.body['_id'];
+                } else {
+                    entityId.should.eql(res.body['_id']);
+                }
+                validateWithExpected(res.body);
+                done();
+            }
+        }
+
+        it("Should add the entity ", function(done) {
+            request(app).post("/api/v1/entities/" + schema.name)
+                .set('Content-Encoding', 'application/json')
+                .send(expectedEntity)
+                .expect(201)
+                .end(createEndCallback(done));
+        });
+        it("Should update the str to foobar ", function(done) {
+            expectedEntity["str"] = "foobar";
+            request(app).put("/api/v1/entities/" + schema.name + "/" + entityId)
+                .set('Content-Encoding', 'application/json')
+                .send(expectedEntity)
+                .expect(200)
+                .end(createEndCallback(done));
         });
     });
 
