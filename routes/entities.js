@@ -66,7 +66,7 @@
                     Common.sendError(res, 404, "Unknown type specified: ", type);
                 } else {
                     EntityModel.find({}, function(err, entities) {
-                        res.send(200, entities);
+                        Common.sendObject(res, 200, entities);
                     });
                 }
             });
@@ -81,7 +81,7 @@
                 if (err || !result) {
                     Common.sendError(res, 404, "Unable to find entity of type " + type + " with id " + id);
                 } else {
-                    res.send(200, result);
+                    Common.sendObject(res, 200, result);
                 }
             });
         }
@@ -100,7 +100,7 @@
                         if (err) {
                             Common.sendError(res, 500, "Could not delete entity " + id + ": " + err);
                         } else {
-                            res.send(200, true);
+                            Common.sendObject(res, 200, true);
                         }
                     })
                 }
@@ -128,7 +128,7 @@
                         if (err) {
                             Common.sendError(res, 500, "Unable to add entity: " + err);
                         } else {
-                            res.send(201, result);
+                            Common.sendObject(res, 201, result);
                         }
                     });
                 }
@@ -160,7 +160,7 @@
                         if (err) {
                             Common.sendError(res, 500, "Unable to save entity of type " + type + " with id " + id + ": " + err);
                         } else {
-                            res.send(200, updated);
+                            Common.sendObject(res, 200, updated);
                         }
                     });
                 }

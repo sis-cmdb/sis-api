@@ -27,7 +27,7 @@
 
         this.getAll = function(req, res) {
             schemaManager.getAll(function(err, results) {
-                res.send(200, results);
+                Common.sendObject(res, 200, results);
             });
         }
 
@@ -37,7 +37,7 @@
                 if (err || !result) {
                     Common.sendError(res, 404, "Schema with name " + name + " not found.");
                 } else {
-                    res.send(200, result);
+                    Common.sendObject(res, 200, result);
                 }
             });
         }
@@ -48,7 +48,7 @@
                 if (err) {
                     Common.sendError(res, 404, "Unable to delete schema with name " + name + " : " + err);
                 } else {
-                    res.send(200, true);
+                    Common.sendObject(res, 200, true);
                 }
             })
         }
@@ -70,7 +70,7 @@
                 if (err) {
                     Common.sendError(res, 400, "Unable to save schema " + err);
                 } else {
-                    res.send(201, entity);
+                    Common.sendObject(res, 201, entity);
                 }
             });
         }

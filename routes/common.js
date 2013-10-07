@@ -25,7 +25,11 @@
 
     // wrapped in case we want to do more things here..
     module.exports.sendError = function(res, code, err) {
-        res.send(code, err);
+        res.jsonp(code, {"error" : err });
+    }
+
+    module.exports.sendObject = function(res, code, obj) {
+        res.jsonp(code, obj);
     }
 
 })();

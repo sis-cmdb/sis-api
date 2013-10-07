@@ -111,6 +111,20 @@ describe('Entity API', function() {
                 .expect(200)
                 .end(createEndCallback(done));
         });
+        it("Should not add an invalid entity ", function(done) {
+            var invalid = {
+                "str" : "testing",
+                "num" : 123,
+                "date" : new Date(2013, 10, 1),
+                "bool" : "bogus",
+                "arr" : "not an array"
+            };
+            request(app).post("/api/v1/entities/" + schema.name)
+                .set('Content-Encoding', 'application/json')
+                .send(invalid)
+                .expect(400);
+                done();
+        });
     });
 
 
