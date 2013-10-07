@@ -64,11 +64,11 @@
 
         this.get = function(req, res) {
             var hieraName = req.params.id;
-            HieraSchemaModel.find({"name" : hieraName}, function(err, result) {
+            HieraSchemaModel.findOne({"name" : hieraName}, function(err, result) {
                 if (err || !result) {
                     Common.sendError(res, 404, "HieraData for " + name + " not found.");
-                } else {
-                    Common.sendObject(res, 200, result.hieradata);
+                } else {                    
+                    Common.sendObject(res, 200, result['hieradata']);
                 }
             });
         }
@@ -146,6 +146,8 @@
                 }
             });
         }
+
+        init();
     } 
 
     // all route controllers expose a setup method
