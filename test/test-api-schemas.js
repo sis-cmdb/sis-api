@@ -55,6 +55,7 @@ describe('Schema API', function() {
         it("Should create new schemas", function(done) {
             var jsData = {
                 "name":"network_element",
+                "owner" : "ResOps",
                 "definition": {
                     "ne_type": "String",
                     "cid":     "String",
@@ -77,9 +78,9 @@ describe('Schema API', function() {
     describe("Schema search", function() {
         before(function(done) {
             // insert three schemas
-            var schemas = [{ "name":"s1", "definition": { "field" : "String" } },
-                           { "name":"s2", "definition": { "field" : "String" } },
-                           { "name":"t1", "definition": { "field" : "String" } }];
+            var schemas = [{ "name":"s1", "definition": { "field" : "String" }, "owner" : "ResOps" },
+                           { "name":"s2", "definition": { "field" : "String" }, "owner" : "ResOps" },
+                           { "name":"t1", "definition": { "field" : "String" }, "owner" : "ProvOps" }];
             // async magic - https://github.com/caolan/async
             async.map(schemas, schemaManager.addSchema.bind(schemaManager), done);
         });

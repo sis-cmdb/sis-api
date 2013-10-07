@@ -23,7 +23,8 @@ app.use(express.bodyParser());
 // routes we want to include 
 var routes = [
     'schemas',
-    'entities'
+    'entities',
+    'hiera'
 ];
 
 var server = null;

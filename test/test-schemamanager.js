@@ -79,19 +79,23 @@ describe('SchemaManager', function() {
     it("should add a valid json schema object", function(done) {
       var name = "network_element";
       var schema = {
-        ne_type: "String",
-        cid: "String",
-        ip: "String",
-        ip6: "String",
-        bgpip: "String",
-        bgpip6: "String",
-      }
-      schemaManager.addSchema({"name" : name, "definition" : schema}, function(err, entity) {
+        "name" : "network_element",
+        "owner" : "test",
+        "definition" : {
+          ne_type: "String",
+          cid: "String",
+          ip: "String",
+          ip6: "String",
+          bgpip: "String",
+          bgpip6: "String"
+        }
+      };
+      schemaManager.addSchema(schema, function(err, entity) {
         should.not.exist(err);
 
         entity.should.have.property('name', 'network_element');
         entity.should.have.property('definition');
-        entity['definition'].should.eql(schema);
+        entity['definition'].should.eql(schema['definition']);
         done();
       });
     });
@@ -104,8 +108,14 @@ describe('SchemaManager', function() {
       f1 : "String",
       f2 : "String"
     };
+
+    var fullSchema = {
+      "name" : schemaName,
+      "owner" : "test",
+      "definition" : schemaDef
+    };
     before(function(done) {
-      schemaManager.addSchema({"name" : schemaName, "definition" : schemaDef}, function(err, entity) {
+      schemaManager.addSchema(fullSchema, function(err, entity) {
         if (err) {
           done(err);
           return;
@@ -152,7 +162,7 @@ describe('SchemaManager', function() {
     });
 
     it("Should have no documents ", function(done) {
-      schemaManager.addSchema({"name" : schemaName, "definition" : schemaDef}, function(err, entity) {
+      schemaManager.addSchema(fullSchema, function(err, entity) {
         if (err) {
           done(err);
           return;
@@ -169,6 +179,7 @@ describe('SchemaManager', function() {
   describe("update-schema", function() {
     var schema = {
       "name":"testEntity",
+      "owner" : "test",
       "definition": {
         "str":   "String",
         "num":   "Number",
