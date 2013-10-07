@@ -18,7 +18,7 @@
 // the schemas API
 (function() {
 
-    var Common = require("./common.js");
+    var Common = require("./common");
 
     var EntityController = function(config) {
 

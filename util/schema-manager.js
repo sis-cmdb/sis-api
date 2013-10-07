@@ -34,14 +34,23 @@
             "__v" : true
         };
 
+        // reserved schemas
+        this.HIERA_SCHEMA_NAME = "HieraDataSchema";
+        this.SIS_SCHEMA_NAME = "SisSchema";
+
+        this.reservedSchemas = {
+            "HieraDataSchema" : true,
+            "SisSchema" : true
+        };
+
         // initializer funct
         var init = function() {
             // Set up the mongoose.Schema for a SIS Schema
             var definition = {
-                "name" : "String",
-                "definition" : { }
+                "name" : {"type" : "String", "required" : true },
+                "definition" : { "type" : {}, "required" : true }
             }
-            var name = "SisSchema";
+            var name = self.SIS_SCHEMA_NAME;
             // Get the model from the definition and name
             SisSchemaModel = self.getEntityModel({name : name, definition : definition});
         }
@@ -57,8 +66,12 @@
         }
 
         var validateSchemaObject = function(modelObj) {
-            if (!modelObj || !modelObj.name) {
-                return "Schema has no name.";
+            if (!modelObj || !modelObj.name || typeof modelObj.name != 'string') {
+                return "Schema has an invalid name.";
+            }
+
+            if (modelObj.name in self.reservedSchemas) {
+                return "Schema name is reserved.";
             }
             try {
                 // object.keys will fail if the var is not an object..

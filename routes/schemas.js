@@ -17,7 +17,7 @@
 // API for schemas
 (function() {
 
-    var Common = require("./common.js");
+    var Common = require("./common");
 
     var SchemaController = function(config) {
 
@@ -69,12 +69,6 @@
                 Common.sendError(res, 400, "JSON object must contain a 'name', and a 'definition' object");
                 return;
             }
-            if ("_id" in schema) {
-                Common.sendError(res, 400, "_id is reserved and cannot be used in schemas.");
-                return;
-            }
-            // TODO: check if one exists
-
             schemaManager.addSchema({"name" : name, "definition" : schema}, function(err, entity) {
                 if (err) {
                     Common.sendError(res, 400, "Unable to save schema " + err);
@@ -85,7 +79,19 @@
         }
 
         this.update = function(req, res) {
-
+            var schemaName = req.params.id;
+            var sisSchema = req.body;
+            if (!sisSchema || sisSchema.name != schemaName) {
+                Common.sendError(res, 400, "Schema name cannot be changed.");
+                return;
+            }
+            schemaManager.updateSchema(sisSchema, function(err, entity) {
+                if (err) {
+                    Common.sendError(res, 400, "Unable to update schema " + err);
+                } else {
+                    Common.sendObject(res, 200, entity);
+                }
+            });
         }
     } 
 
