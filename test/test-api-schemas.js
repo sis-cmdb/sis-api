@@ -18,6 +18,8 @@ var config = require('./test-config');
 var server = require("../server")
 var should = require('should');
 var request = require('supertest');
+var async = require('async');
+
 var mongoose = null;
 var schemaManager = null;
 var app = null;
@@ -67,5 +69,33 @@ describe('Schema API', function() {
                 .send(jsData)
                 .expect(201, done);
         });
+        after(function(done) {
+            schemaManager.deleteSchema("network_element", done);
+        });
     });
+
+    describe("Schema search", function() {
+        before(function(done) {
+            // insert three schemas
+            var schemas = [{ "name":"s1", "definition": { "field" : "String" } },
+                           { "name":"s2", "definition": { "field" : "String" } },
+                           { "name":"t1", "definition": { "field" : "String" } }];
+            // async magic - https://github.com/caolan/async
+            async.map(schemas, schemaManager.addSchema.bind(schemaManager), done);
+        });
+        after(function(done) {
+            async.map(['s1', 's2', 't1'], schemaManager.deleteSchema.bind(schemaManager), done);
+        });
+        it("Should return 2 results", function(done) {
+            request(app).get("/api/v1/schemas")
+                .query({ offset : 1, limit : 2})
+                .expect(200)
+                .end(function(err, res) {
+                    should.exist(res.body);
+                    res.body.length.should.eql(2);
+                    done();
+                });
+        });
+    });
+
 });

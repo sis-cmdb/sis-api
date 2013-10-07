@@ -32,5 +32,7 @@
         res.jsonp(code, obj);
     }
 
+    module.exports.MAX_RESULTS = 200;
+
 })();
 

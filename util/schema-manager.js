@@ -29,7 +29,7 @@
         // this..
         var self = this;
 
-        var reservedFields = {
+        this.reservedFields = {
             "_id" : true,
             "__v" : true
         };
@@ -47,8 +47,8 @@
         }
 
         // Get all the SIS Schemas in the system
-        this.getAll = function(callback) {
-            SisSchemaModel.find({}, callback);
+        this.getAll = function(condition, options, callback) {
+            SisSchemaModel.find(condition, null, options, callback);
         }
 
         // Get a SIS Schema by name
@@ -67,8 +67,8 @@
                     return "Cannot add an empty schema.";
                 }
                 for (var i = 0; i < fields.length; ++i) {
-                    if (i in reservedFields) {
-                        return i + " is a reserved field";
+                    if (fields[i] in self.reservedFields) {
+                        return fields[i] + " is a reserved field";
                     }
                 }
                 var testSchema = mongoose.Schema(modelObj.definition);
@@ -148,10 +148,9 @@
                 // find all paths that need to be unset/deleted
                 var pathsToDelete = null;
                 currentMongooseSchema.eachPath(function(name, type) {
-                    if (!(name in newDef) && !(name in reservedFields)) {
+                    if (!(name in newDef) && !(name in self.reservedFields)) {
                         pathsToDelete = pathsToDelete || { };
                         pathsToDelete[name] = true;
-                        console.log(name + " with type " + JSON.stringify(type));
                     }
                 });
 
@@ -207,12 +206,10 @@
                     // schema document is removed.. now delete the 
                     // mongoose caches
                     // and documents for that schema
-                    var model = mongoose.models[name];
-                    if (!model) {
-                        model = mongoose.model(name, schema);
-                    }
+                    var model = self.getEntityModel(schema);
                     model.collection.drop(function(err, reply) {
-                        if (err) {
+                        // mongoose throws an error if the collection isn't found..
+                        if (err && err.message != 'ns not found') {
                             // at this point we're in a bad state.. we deleted the instance
                             // but still have documents
                             // TODO: handle this

@@ -65,7 +65,16 @@
                 if (err || !EntityModel) {
                     Common.sendError(res, 404, "Unknown type specified: ", type);
                 } else {
-                    EntityModel.find({}, function(err, entities) {
+                    var query = req.query.q || {};
+                    // try parsing..
+                    try {
+                        query = JSON.parse(query);
+                    } catch (ex) {
+                        query = {};
+                    }
+                    var limit = parseInt(req.query.limit) || Common.MAX_RESULTS;
+                    var offset = parseInt(req.query.offset) || 0;
+                    EntityModel.find(query, null, { skip : offset, limit: limit}, function(err, entities) {
                         Common.sendObject(res, 200, entities);
                     });
                 }
@@ -107,6 +116,20 @@
             });
         }
 
+        var validateEntity = function(entity) {
+            try {
+                var keys = Object.keys(entity);
+                for (var i = 0; i < keys.length; ++i) {
+                    if (keys[i] in schemaManager.reservedFields) {
+                        return keys[i] + " is a reserved field";
+                    }
+                }
+            } catch (ex) {
+                return "cannot be empty or is not an object";
+            }
+            return null;
+        }
+
         // Handler for POST /
         this.add = function(req, res) {
             // Make sure type is specified
@@ -114,14 +137,20 @@
             if (!type) {
                 Common.sendError(res, 400, "No type specified");
                 return;
-            }            
+            }  
+            var entity = req.body;
+            var err = validateEntity(entity);
+            if (err) {
+                Common.sendError(res, 400, "Entity is invalid: " + err);
+                return;
+            }          
+
             // Ensure the schema exists
             getModelForType(type, function(err, EntityModel) {                
                 if (err || !EntityModel) {
                     Common.sendError(res, 400, "Unknown type specified: ", type);
                 } else {
                     // EntityModel is a mongoose model
-                    var entity = req.body;
                     var mongooseEntity = new EntityModel(entity);
                     // TODO: need to cleanup the entity returned to callback
                     mongooseEntity.save(function(err, result) {
@@ -137,8 +166,9 @@
 
         this.update = function(req, res) {
             var entity = req.body;
-            if (!entity) {
-                Common.sendError(res, 400, "Update requires an entity body");
+            var err = validateEntity(entity);
+            if (err) {
+                Common.sendError(res, 400, "Entity is invalid: " + err);
                 return;
             }
             // Get the entity by id
