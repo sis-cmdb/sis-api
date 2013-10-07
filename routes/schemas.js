@@ -32,11 +32,25 @@
         }
 
         this.get = function(req, res) {
-
+            var schemaName = req.params.id;
+            schemaManager.getByName(schemaName, function(err, result) {
+                if (err || !result) {
+                    Common.sendError(res, 404, "Schema with name " + name + " not found.");
+                } else {
+                    res.send(200, result);
+                }
+            });
         }
 
         this.delete = function(req, res) {
-
+            var schemaName = req.params.id;
+            schemaManager.deleteSchema(schemaName, function(err, result) {
+                if (err) {
+                    Common.sendError(res, 404, "Unable to delete schema with name " + name + " : " + err);
+                } else {
+                    res.send(200, true);
+                }
+            })
         }
 
         this.add = function(req, res) {

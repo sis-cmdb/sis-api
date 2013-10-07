@@ -29,6 +29,11 @@
         // this..
         var self = this;
 
+        var reservedFields = {
+            "_id" : true,
+            "__v" : true
+        };
+
         // initializer funct
         var init = function() {
             // Set up the mongoose.Schema for a SIS Schema
@@ -51,28 +56,38 @@
             SisSchemaModel.findOne({"name" : name}, callback);
         }
 
+        var validateSchemaObject = function(modelObj) {
+            if (!modelObj || !modelObj.name) {
+                return "Schema has no name.";
+            }
+            try {
+                // object.keys will fail if the var is not an object..
+                var fields = Object.keys(modelObj.definition);
+                if (fields.length == 0) {
+                    return "Cannot add an empty schema.";
+                }
+                for (var i = 0; i < fields.length; ++i) {
+                    if (i in reservedFields) {
+                        return i + " is a reserved field";
+                    }
+                }
+                var testSchema = mongoose.Schema(modelObj.definition);
+                if (!testSchema) {
+                    return "Schema is invalid";    
+                }
+            } catch (ex) {
+                return "Schema is invalid: " + ex;
+            }
+            return null;
+        }
+
         // Add a SIS Schema.  The modelObj must have the following properties:
         // - "name" : "Schema Name" - cannot be empty
         // - "definition" : <json_object> that is a mongoose schema
         this.addSchema = function(modelObj, callback) {
-            if (!modelObj.name) {
-                callback("Schema has no name.", null);
-                return;
-            }
-            // see if the object itself is a valid schema
-            try {
-                // object.keys will fail if the var is not an object..
-                if (Object.keys(modelObj.definition).length == 0) {
-                    callback("Cannot add an empty schema.", null);
-                    return;
-                }
-                var testSchema = mongoose.Schema(modelObj.definition);
-                if (!testSchema) {
-                    callback("Schema is invalid: " + ex, null);    
-                    return;
-                }
-            } catch (ex) {
-                callback("Schema is invalid: " + ex, null);
+            var err = validateSchemaObject(modelObj);
+            if (err) {
+                callback(err, null);
                 return;
             }
             // Valid schema, so now we can create a SIS Schema object to persist
@@ -103,6 +118,79 @@
             }
         }
 
+        // Update an object schema
+        this.updateSchema = function(sisSchema, callback) {
+            var err = validateSchemaObject(sisSchema);
+            if (err) {
+                callback(err, null);
+                return;
+            }
+            // get the existing schema document
+            this.getByName(sisSchema.name, function(err, currentSchema) {
+                if (err || !currentSchema) {
+                    err = err || "Schema does not exist";
+                    callback(err, null);
+                    return;
+                }
+
+                // now we have the persisted schema document.
+                // we will get the mongoose model to unset any fields
+                // then we will delete the mongoose cached versions and 
+                // create a new schema/model using the updated one
+                // and finally save the document after it's been converted.
+                
+                var currentMongooseModel = self.getEntityModel(currentSchema);
+                var currentMongooseSchema = currentMongooseModel.schema;
+                var name = sisSchema.name;
+
+                var newDef = sisSchema.definition;
+                
+                // find all paths that need to be unset/deleted
+                var pathsToDelete = null;
+                currentMongooseSchema.eachPath(function(name, type) {
+                    if (!(name in newDef) && !(name in reservedFields)) {
+                        pathsToDelete = pathsToDelete || { };
+                        pathsToDelete[name] = true;
+                        console.log(name + " with type " + JSON.stringify(type));
+                    }
+                });
+
+                // delete the old mongoose models and create new ones
+                var deleteCachedAndSaveNew = function() {
+                    delete mongoose.modelSchemas[name];
+                    delete mongoose.models[name];
+
+                    var schema = mongoose.Schema(sisSchema.definition);
+                    mongoose.model(name, schema);
+
+                    // update the document
+                    currentSchema.definition = newDef;
+                    currentSchema.save(callback);
+                }
+                
+                if (pathsToDelete) {
+                    // see http://bites.goodeggs.com/post/36553128854/how-to-remove-a-property-from-a-mongoosejs-schema/
+                    currentMongooseModel.update({},{ $unset : pathsToDelete}, {multi: true, safe : true, strict: false},
+                        function(err) {
+                            if (err) {
+                                callback(err, null);
+                            } else {
+                                // cleanup the mongoose models and save the new document
+                                deleteCachedAndSaveNew();
+                            }
+                        }
+                    );
+                } else {
+                    // nothing to delete so cleanup the mongoose models and
+                    // save the new object
+                    deleteCachedAndSaveNew();
+                }
+
+            });
+        }
+
+        // Delete a schema by name.  This will also remove all entities
+        // associated with that schema
         this.deleteSchema = function(name, callback) {
             this.getByName(name, function(err, schema) {
                 if (err || !schema) {
@@ -137,7 +225,6 @@
                     });
                     
                 });
-
             });
         }
 

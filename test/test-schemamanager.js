@@ -151,7 +151,7 @@ describe('SchemaManager', function() {
       });
     });
 
-    it("Should no have no documents ", function(done) {
+    it("Should have no documents ", function(done) {
       schemaManager.addSchema({"name" : schemaName, "definition" : schemaDef}, function(err, entity) {
         if (err) {
           done(err);
@@ -164,5 +164,103 @@ describe('SchemaManager', function() {
         });
       });
     });
+  });
+
+  describe("update-schema", function() {
+    var schema = {
+      "name":"testEntity",
+      "definition": {
+        "str":   "String",
+        "num":   "Number",
+        "date":  "Date",
+        "bool":  "Boolean",
+        "arr": [],
+      }
+    };
+
+    var initialEntity = {
+      "str" : "foobar",
+      "num" : 10,
+      "date" : new Date(),
+      "bool" : false,
+      "arr" : "helloworld".split("")
+    };
+
+    var savedEntity = null;
+
+    // create the schema and add an entity
+    before(function(done) {
+        schemaManager.addSchema(schema, function(err, result) {
+          if (err) return done(err);
+          var EntityType = schemaManager.getEntityModel(schema);
+          var doc = new EntityType(initialEntity);
+          doc.save(function(err, e) {
+            if (err) { return done(err); }
+            savedEntity = e;
+            done();
+          });
+        });
+    });
+    after(function(done) {
+        schemaManager.deleteSchema(schema.name, done);
+    });
+
+    it("Should update the schema", function(done) {
+      // delete the num field, change bool to string, add field
+      delete schema.definition['num'];
+      schema.definition['bool'] = 'String';
+      schema.definition['newBool'] = "Boolean";
+      schemaManager.updateSchema(schema, function(err, updated) {
+        should.not.exist(err);
+        should.exist(updated.definition.newBool);
+        should.not.exist(updated.definition.num);
+        done();
+      });
+    });
+
+    it("Should retrieve the existing entity", function(done) {
+      schemaManager.getByName(schema.name, function(err, entitySchema) {
+        should.not.exist(err);
+        var EntityType = schemaManager.getEntityModel(entitySchema);
+        EntityType.findOne({"_id" : savedEntity['_id']}, function(err, result) {
+          should.not.exist(err);
+          should.exist(result);
+          // ensure that the bool is removed
+          should.not.exist(result.num);
+          done();
+        });
+      });
+    });
+
+    it("Should not save the initial entity num field " + JSON.stringify(initialEntity), function(done) {
+      schemaManager.getByName(schema.name, function(err, entitySchema) {
+        should.not.exist(err);
+        var EntityType = schemaManager.getEntityModel(entitySchema);
+        var doc = new EntityType(initialEntity);
+        var docSchema = doc.schema;
+        should.not.exist(doc.schema.num);
+        doc.save(function(err, e) {
+            should.not.exist(err);
+            should.exist(e.str);
+            should.not.exist(e.num);
+            done();
+        });
+      });
+    });
+
+    it("Should save an updated entity", function(done) {
+      schemaManager.getByName(schema.name, function(err, entitySchema) {
+        should.not.exist(err);
+        var EntityType = schemaManager.getEntityModel(entitySchema);
+        var doc = new EntityType({
+          "str" : "new",
+          "newBool" : true,
+          "date" : new Date(),
+          "arr" : [0,1,2],
+          "bool" : "became a string"
+          });
+          doc.save(done);
+      });
+    })
   });
 });
