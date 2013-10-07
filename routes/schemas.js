@@ -63,13 +63,7 @@
         }
 
         this.add = function(req, res) {
-            var name = req.body.name;
-            var schema = req.body.definition;
-            if (!name || typeof schema != 'object') {
-                Common.sendError(res, 400, "JSON object must contain a 'name', and a 'definition' object");
-                return;
-            }
-            schemaManager.addSchema({"name" : name, "definition" : schema}, function(err, entity) {
+            schemaManager.addSchema(req.body, function(err, entity) {
                 if (err) {
                     Common.sendError(res, 400, "Unable to save schema " + err);
                 } else {

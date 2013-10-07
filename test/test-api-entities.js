@@ -52,6 +52,7 @@ describe('Entity API', function() {
     describe("CRUD Entity", function() {
         var schema = {
             "name":"testEntity",
+            "owner" : "test",
             "definition": {
                 "str":   "String",
                 "num":   "Number",

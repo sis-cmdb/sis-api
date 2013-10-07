@@ -48,6 +48,7 @@
             // Set up the mongoose.Schema for a SIS Schema
             var definition = {
                 "name" : {"type" : "String", "required" : true },
+                "owner" : { "type" : "String", "required" : true },
                 "definition" : { "type" : {}, "required" : true }
             }
             var name = self.SIS_SCHEMA_NAME;
@@ -68,6 +69,9 @@
         var validateSchemaObject = function(modelObj) {
             if (!modelObj || !modelObj.name || typeof modelObj.name != 'string') {
                 return "Schema has an invalid name.";
+            }
+            if (typeof modelObj.owner != 'string') {
+                return "Schema has an invalid owner.";
             }
 
             if (modelObj.name in self.reservedSchemas) {
