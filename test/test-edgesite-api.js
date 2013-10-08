@@ -80,7 +80,7 @@ describe('API at the Edge ', function() {
 
     paths.map(function(path) {
         it("should 404 when POSTing to " + path, function(done) {
-            request(app).post("/api/v1/schemas")
+            request(app).post(path)
                 .set('Content-Encoding', 'application/json')
                 .send({"unprocessed" : "entity"})
                 .expect(404, done);

@@ -26,8 +26,6 @@ var routes = [
     'hiera'
 ];
 
-var server = null;
-
 var startServer = function(config, callback) {
     var app = express();
     app.use(express.bodyParser());
