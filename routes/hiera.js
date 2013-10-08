@@ -130,6 +130,11 @@
                 Common.sendError(res, 400, err);
                 return;
             }
+            var id = req.params.id;
+            if (id != entry.name) {
+                Common.sendError(res, 400, "Name in body does not match name in path.");
+                return;
+            }
             // find it and update
             HieraSchemaModel.find({"name" : entry.name}, function(err, result) {
                 if (err || !result) {
