@@ -40,7 +40,8 @@
 
         this.reservedSchemas = {
             "HieraDataSchema" : true,
-            "SisSchema" : true
+            "SisSchema" : true,
+            "SisHook" : true
         };
 
         // initializer funct
@@ -120,6 +121,7 @@
         // Do not hang on to any of these objects
         this.getEntityModel = function(sisSchema) {
             if (!sisSchema || !sisSchema.name || !sisSchema.definition) {
+                console.log("getEntityModel: Invalid schema " + JSON.stringify(sisSchema));
                 return null;
             }
             var name = sisSchema.name;
@@ -129,8 +131,9 @@
             // convert to mongoose
             try {
                 var schema = mongoose.Schema(sisSchema.definition);
-                return mongoose.model(name, schema);
+                return mongoose.model(name, schema);                
             } catch (ex) {
+                console.log("getEntityModel: Invalid schema " + JSON.stringify(sisSchema) + " w/ ex " + ex);
                 return null;
             }
         }

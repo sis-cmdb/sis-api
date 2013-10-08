@@ -26,6 +26,7 @@
         // this..
         var self = this;
 
+        var schemaManager = require('./schema-manager')(mongoose);
 
         // initializer funct
         var init = function() {
@@ -34,12 +35,12 @@
             var schema_definition = {
                 "name" : "String",
                 "target" : { },
-                "on": [],
+                "events": [],
                 "owner": "String",
                 "entity_type": "String"
             }
             var schema_name = "SisHook";
-            SisHookModel = self.getEntityModel({name : schema_name, definition : schema_definition});
+            SisHookModel = schemaManager.getEntityModel({name : schema_name, definition : schema_definition, owner : "SIS"});
         }
 
         // Get all the SIS Hooks in the system
@@ -74,10 +75,10 @@
             if(!modelObj.target.action) {
                 return "Hook target has no action.";
             }
-            if(!modelObj.on) {
+            if(!modelObj.events) {
                 return "Hook has no on parameter.";
             }
-            if(!modelObj.on.length) {
+            if(!modelObj.events.length) {
                 return "Hook on parameter has no values.";
             }
             return null;
@@ -103,29 +104,6 @@
             entity.save(callback);
         }
         
-        // get a mongoose model back based on the sis schema
-        // passed in.  sisSchema would be an object returned by
-        // calls like getByName 
-        // the mongoose cached version is returned if available
-        // Do not hang on to any of these objects
-        // ----------------------------------------------------
-        this.getEntityModel = function(sisSchema) {
-            if (!sisSchema || !sisSchema.name || !sisSchema.definition) {
-                return null;
-            }
-            var name = sisSchema.name;
-            if (name in mongoose.models) {
-                return mongoose.models[name];
-            }
-            // convert to mongoose
-            try {
-                var schema = mongoose.Schema(sisSchema.definition);
-                return mongoose.model(name, schema);
-            } catch (ex) {
-                return null;
-            }
-        }
-
         // Update an object schema
         this.updateHook = function(sisHook, callback) {
             var err = validateHookObject(sisHook);
@@ -140,15 +118,20 @@
 
         // Delete a hook by name.
         this.deleteHook = function(name, callback) {
-            SisHookModel.findOneAndRemove({"name": name},callback);
-            return;
+            SisHookModel.findOneAndRemove({"name": name}, function(err, result) {
+                if (!result) {
+                    callback("Entity does not exist.", false);
+                } else {
+                    callback(null, true);
+                }
+            });
         }
 
         init();
     }
 
     module.exports = function(mongoose) {
-        return new SchemaManager(mongoose);
+        return new HookManager(mongoose);
     }
 
 })();

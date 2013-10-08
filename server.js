@@ -23,7 +23,8 @@ var app = null;
 var routes = [
     'schemas',
     'entities',
-    'hiera'
+    'hiera',
+    'hooks'
 ];
 
 var startServer = function(config, callback) {

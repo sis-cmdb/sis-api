@@ -44,7 +44,7 @@
             };
             var name = schemaManager.HIERA_SCHEMA_NAME;
             // Get the model from the definition and name
-            HieraSchemaModel = schemaManager.getEntityModel({name : name, definition : definition});
+            HieraSchemaModel = schemaManager.getEntityModel({name : name, definition : definition, owner : "SIS"});
         }
 
         this.getAll = function(req, res) {

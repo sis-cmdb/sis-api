@@ -24,6 +24,17 @@ Manage schemas of all entities in the system.  A sample schema object looks like
 }
 ```
 
+Reserved schema names include:
+
+* HieraDataSchema
+* SisSchema
+* SisHook
+
+Reserved definition fields include:
+
+* _id
+* __v
+
 Please consult the [mongoosejs schematypes doc][http://mongoosejs.com/docs/schematypes.html] for more information on what the definition object may look like.
 
 ### Reading schemas
@@ -35,21 +46,28 @@ If no name is specified in the path, returns a list of schema objects.
 
 ### Creating a new schema
 
-* `PUT /api/v1/schemas`
+* `POST /api/v1/schemas`
 
 The request body must be a valid schema object.  This method will error if a schema with the same name exists.
 
-The response is the schema object along with two additional fields:
+The response is the schema object along with two additional fields assigned by mongoose:
 
+* `_id` - the database assigned ID of the schema.  Not used in this API
+* `__v` - the version number of the schema.
 
-| HTTP Method | URI             | Action                            |
-|-------------|-----------------|-----------------------------------|
-| GET    | /api/v1/schemas      | List all of the schemas           |
-| GET    | /api/v1/schemas/:id  | Display the specified schema      |
-| PUT    | /api/v1/schemas/:id  | Update the specified schema       |
-| POST   | /api/v1/schemas      | Create a new schema               |
-| DELETE | /api/v1/schemas/:id  | Delete the specified schema       |
+### Updating a schema
 
+* `PUT /api/v1/schemas/:name`
+
+The request body must be a valid schema object.  The name in the schema object must match the name in the path parameter.
+
+The response is the updated schema object.  If a field is removed, it is removed from all entities adhering to that schema.
+
+### Deleting a schema
+
+* `DELETE /api/v1/schemas/:name`
+
+Removes the schema with the specified name along with all entities adhering to it.
 
 
 ### URIs
@@ -70,14 +88,14 @@ The response is the schema object along with two additional fields:
 | POST   | /api/v1/hiera        | Create a new hiera entry          |
 | DELETE | /api/v1/hiera/:key   | Delete the specified hiera entry  |
 
-## Developer Info
+# Developer Info
 
-### Frameworks
+## Frameworks
 - express web framework
 - mocha testing
 - jade templating
 
-### Project Layout
+## Project Layout
 - server.js - main server
 - routes/ - routes go here.  server.js will bootstrap them.  different files for different API bases (devices, vips, etc.)
 - test/ - mocha tests

@@ -23,19 +23,21 @@ var async = require('async');
 var mongoose = null;
 var hookManager = null;
 var app = null;
+var httpServer = null;
 
 describe('Hook API', function() {
     before(function(done) {
-        server.startServer(config, function(expressApp) {
+        server.startServer(config, function(expressApp, httpSrv) {
             mongoose = server.mongoose;
             hookManager = require('../util/hook-manager')(mongoose);
             app = expressApp;
+            httpServer = httpSrv;
             done();
         });
     });
 
     after(function(done) {
-        server.stopServer();
+        server.stopServer(httpServer);
         mongoose.connection.db.dropDatabase();
         mongoose.connection.close();
         done();
@@ -58,7 +60,7 @@ describe('Hook API', function() {
                     "action" : "POST",
                     "url" : "http://foo.bar.com/foo"
                 },
-                on: ['insert','update']
+                "events": ['insert','update']
             };
             request(app).post("/api/v1/hooks")
                 .set('Content-Encoding', 'application/json')
@@ -82,7 +84,7 @@ describe('Hook API', function() {
                         "action" : "POST",
                         "url" : "http://foo.bar.com/foo"
                     },
-                    on: ['insert','update']
+                    "events": ['insert','update']
                 },
                 { 
                     "name" : "TestHook-2",
@@ -92,7 +94,7 @@ describe('Hook API', function() {
                         "action" : "POST",
                         "url" : "http://foo.bar.com/foo"
                     },
-                    on: ['insert','update']
+                    "events": ['insert','update']
                 },
                 { 
                     "name" : "TestHook-3",
@@ -102,7 +104,7 @@ describe('Hook API', function() {
                         "action" : "POST",
                         "url" : "http://foo.bar.com/foo"
                     },
-                    on: ['insert','update']
+                    "events": ['insert','update']
                 }
             ];
             // async magic - https://github.com/caolan/async
@@ -123,7 +125,7 @@ describe('Hook API', function() {
         });
         it("Should return 1 results", function(done) {
             request(app).get("/api/v1/hooks")
-                .query({ q: JSON.encode({"name","TestHook-1"}) })
+                .query({ q: JSON.stringify({"name" : "TestHook-1"}) })
                 .expect(200)
                 .end(function(err, res) {
                     should.exist(res.body);

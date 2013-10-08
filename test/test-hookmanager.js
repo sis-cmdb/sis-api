@@ -62,7 +62,7 @@ describe('HookManager', function() {
             "action" : "POST",
             "url" : "http://foo.bar.com/foo"
         },
-        on: ['insert','update']
+        "events": ['insert','update']
       };
       hookManager.addHook(hook, function(err, entity) {
         should.exist(err);
@@ -78,7 +78,7 @@ describe('HookManager', function() {
             "action" : "POST",
             "url" : "http://foo.bar.com/foo"
         },
-        on: ['insert','update']
+        "events": ['insert','update']
       };
       hookManager.addHook(hook, function(err, entity) {
         should.exist(err);
@@ -94,7 +94,7 @@ describe('HookManager', function() {
             "action" : "POST",
             "url" : "http://foo.bar.com/foo"
         },
-        on: ['insert','update']
+        "events": ['insert','update']
       };
       hookManager.addHook(hook, function(err, entity) {
         should.exist(err);
@@ -107,7 +107,7 @@ describe('HookManager', function() {
         "name" : "TestHook", 
         "owner" : "Test",
         "entity_type" : "Schema",
-        on: ['insert','update']
+        "events": ['insert','update']
       };
       hookManager.addHook(hook, function(err, entity) {
         should.exist(err);
@@ -122,7 +122,7 @@ describe('HookManager', function() {
         "target" : {
             "action" : "POST"
         },
-        on: ['insert','update']
+        "events": ['insert','update']
       };
       hookManager.addHook(hook, function(err, entity) {
         should.exist(err);
@@ -137,14 +137,29 @@ describe('HookManager', function() {
         "target" : {
             "url" : "http://foo.bar.com/foo"
         },
-        on: ['insert','update']
+        "events": ['insert','update']
       };
       hookManager.addHook(hook, function(err, entity) {
         should.exist(err);
         done();
       });
     });
-    it("should error adding a hook with no on ", function(done) {
+    it("should error adding a hook with no events ", function(done) {
+      var hook = { 
+        "name" : "TestHook", 
+        "owner" : "Test",
+        "entity_type" : "Schema",
+        "target" : {
+            "action" : "POST",
+            "url" : "http://foo.bar.com/foo"
+        }
+      };
+      hookManager.addHook(hook, function(err, entity) {
+        should.exist(err);
+        done();
+      });
+    });
+    it("should error adding a hook with no event values ", function(done) {
       var hook = { 
         "name" : "TestHook", 
         "owner" : "Test",
@@ -153,22 +168,7 @@ describe('HookManager', function() {
             "action" : "POST",
             "url" : "http://foo.bar.com/foo"
         },
-      };
-      hookManager.addHook(hook, function(err, entity) {
-        should.exist(err);
-        done();
-      });
-    });
-    it("should error adding a hook with no on values ", function(done) {
-      var hook = { 
-        "name" : "TestHook", 
-        "owner" : "Test",
-        "entity_type" : "Schema",
-        "target" : {
-            "action" : "POST",
-            "url" : "http://foo.bar.com/foo"
-        },
-        on: []
+        "events": []
       };
       hookManager.addHook(hook, function(err, entity) {
         should.exist(err);
@@ -192,7 +192,7 @@ describe('HookManager', function() {
             "action" : "POST",
             "url" : "http://foo.bar.com/foo"
         },
-        on: ['insert','update']
+        "events": ['insert','update']
       };
       hookManager.addHook(hook, function(err, entity) {
         should.not.exist(err);
@@ -201,7 +201,8 @@ describe('HookManager', function() {
         entity.should.have.property('owner', 'Test');
         entity.should.have.property('entity_type', 'Schema');
         entity['target'].should.eql(hook.target);
-        entity['on'].should.eql(hook.on);
+        
+        JSON.stringify(entity['events']).should.eql(JSON.stringify(hook.events));
         done();
       });
     });
@@ -217,7 +218,7 @@ describe('HookManager', function() {
           "action" : "POST",
           "url" : "http://foo.bar.com/foo"
       },
-      on: ['insert','update']
+      "events": ['insert','update']
     };
 
     before(function(done) {
@@ -266,7 +267,7 @@ describe('HookManager', function() {
           "action" : "POST",
           "url" : "http://foo.bar.com/foo"
       },
-      on: ['insert','update']
+      "events": ['insert','update']
     };
     var updatedHook = { 
       "name" : hookName, 
@@ -276,7 +277,7 @@ describe('HookManager', function() {
           "action" : "GET",
           "url" : "http://frob.com/foo"
       },
-      on: ['update']
+      "events": ['update']
     };
 
     // create the hook
@@ -297,7 +298,7 @@ describe('HookManager', function() {
         updated.should.have.property('owner','Bob');
         updated.should.have.property('entity_type','EntityA');
         updated['target'].should.eql(updatedHook.target);
-        updated['on'].should.eql(updatedHook.on);
+        JSON.stringify(updated['events']).should.eql(JSON.stringify(updatedHook.events));
 
         done();
       });
