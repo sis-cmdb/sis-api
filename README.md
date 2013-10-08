@@ -3,6 +3,8 @@ sis-web
 
 # API Description
 
+Every API method described below returns data with `Content-Type: application/json`.
+
 ## Schema API
 
 Manage schemas of all entities in the system.  A sample schema object looks like:
@@ -30,6 +32,15 @@ Please consult the [mongoosejs schematypes doc][http://mongoosejs.com/docs/schem
 * `GET /api/v1/schemas/:name`
 
 If no name is specified in the path, returns a list of schema objects.
+
+### Creating a new schema
+
+* `PUT /api/v1/schemas`
+
+The request body must be a valid schema object.  This method will error if a schema with the same name exists.
+
+The response is the schema object along with two additional fields:
+
 
 | HTTP Method | URI             | Action                            |
 |-------------|-----------------|-----------------------------------|
