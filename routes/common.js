@@ -17,10 +17,12 @@
 (function() {
     module.exports.attachController = function(app, controller, prefix) {
         app.get(prefix, controller.getAll);
-        app.get(prefix + "/:id", controller.get);
-        app.put(prefix + "/:id", controller.update);
-        app.post(prefix, controller.add);
-        app.delete(prefix + "/:id", controller.delete);
+        app.get(prefix + "/:id", controller.get);        
+        if (!app.get("edgesite")) {                
+            app.put(prefix + "/:id", controller.update);
+            app.post(prefix, controller.add);
+            app.delete(prefix + "/:id", controller.delete);
+        }
     }
 
     // wrapped in case we want to do more things here..
