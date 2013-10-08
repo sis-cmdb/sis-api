@@ -36,7 +36,7 @@
                 "target" : { },
                 "on": [],
                 "owner": "String",
-                "entity_type: "String"
+                "entity_type": "String"
             }
             var schema_name = "SisHook";
             SisHookModel = self.getEntityModel({name : schema_name, definition : schema_definition});
