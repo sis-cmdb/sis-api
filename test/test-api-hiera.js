@@ -21,21 +21,24 @@ var request = require('supertest');
 
 var mongoose = null;
 var app = null;
+var httpServer = null;
 
 describe('Hiera API', function() {
     before(function(done) {
-        server.startServer(config, function(expressApp) {
+        server.startServer(config, function(expressApp, httpSrv) {
             mongoose = server.mongoose;            
             app = expressApp;
+            httpServer = httpSrv;
             done();
         });
     });
 
     after(function(done) {
-        server.stopServer();
-        mongoose.connection.db.dropDatabase();
-        mongoose.connection.close();
-        done();
+        server.stopServer(httpServer, function() {
+            mongoose.connection.db.dropDatabase();
+            mongoose.connection.close();
+            done();    
+        });
     });
 
     describe("Hiera success cases", function() {

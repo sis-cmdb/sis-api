@@ -17,8 +17,7 @@
 var express = require('express');
 var mongoose = require('mongoose');
 
-var app = express();
-app.use(express.bodyParser());
+var app = null;
 
 // routes we want to include 
 var routes = [
@@ -30,8 +29,16 @@ var routes = [
 var server = null;
 
 var startServer = function(config, callback) {
+    var app = express();
+    app.use(express.bodyParser());
     app.configure(function() {
         mongoose.connect(config.db.url);
+        // express app settings
+        if (config.app) {
+            for (var k in config.app) {
+                app.set(k, config.app[k]);
+            }
+        }
         var db = mongoose.connection;
         db.on('error', function(err) {
             console.log("Error connecting to mongo: " + err);
@@ -47,9 +54,9 @@ var startServer = function(config, callback) {
                 route.setup(app, cfg);
             });
             // listen
-            server = app.listen(config.server.port, function() {
+            httpServer = app.listen(config.server.port, function() {
                 if (callback) {
-                    callback(app);
+                    callback(app, httpServer);
                 }
             });
         });
@@ -64,8 +71,6 @@ if (!module.parent) {
 
 module.exports.mongoose = mongoose; 
 module.exports.startServer = startServer;
-module.exports.stopServer = function() {
-    if (server) {
-        server.close();
-    }
+module.exports.stopServer = function(server, callback) {    
+    server.close(callback);    
 }
