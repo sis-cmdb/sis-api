@@ -25,6 +25,7 @@
         var self = this;
         var mongoose = config['mongoose'];
         var schemaManager = require('../util/schema-manager')(mongoose);
+        var hookManager = require('../util/hook-manager')(mongoose);
 
         // Helper to get a model for a particular type.  Async 
         // in case the behavior changes
@@ -111,6 +112,7 @@
                             Common.sendError(res, 500, "Could not delete entity " + id + ": " + err);
                         } else {
                             Common.sendObject(res, 200, true);
+                            hookManager.dispatchHooks(result, type, hookManager.EVENT_DELETE);
                         }
                     })
                 }
@@ -159,6 +161,7 @@
                             Common.sendError(res, 500, "Unable to add entity: " + err);
                         } else {
                             Common.sendObject(res, 201, result);
+                            hookManager.dispatchHooks(result, type, hookManager.EVENT_INSERT);
                         }
                     });
                 }
@@ -192,6 +195,7 @@
                             Common.sendError(res, 500, "Unable to save entity of type " + type + " with id " + id + ": " + err);
                         } else {
                             Common.sendObject(res, 200, updated);
+                            hookManager.dispatchHooks(updated, type, hookManager.EVENT_UPDATE);
                         }
                     });
                 }

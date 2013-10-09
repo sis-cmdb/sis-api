@@ -24,6 +24,7 @@
         var self = this;
         var mongoose = config['mongoose'];
         var schemaManager = require('../util/schema-manager')(mongoose);
+        var hookManager = require('../util/hook-manager')(mongoose);
 
         this.getAll = function(req, res) {
             var query = req.query.q || {};
@@ -59,6 +60,7 @@
                     Common.sendError(res, 404, "Unable to delete schema with name " + name + " : " + err);
                 } else {
                     Common.sendObject(res, 200, true);
+                    hookManager.dispatchHooks(result, schemaManager.SIS_SCHEMA_NAME, hookManager.EVENT_DELETE);
                 }
             })
         }
@@ -69,6 +71,7 @@
                     Common.sendError(res, 400, "Unable to save schema " + err);
                 } else {
                     Common.sendObject(res, 201, entity);
+                    hookManager.dispatchHooks(entity, schemaManager.SIS_SCHEMA_NAME, hookManager.EVENT_UPDATE);
                 }
             });
         }
@@ -85,6 +88,7 @@
                     Common.sendError(res, 400, "Unable to update schema " + err);
                 } else {
                     Common.sendObject(res, 200, entity);
+                    hookManager.dispatchHooks(entity, schemaManager.SIS_SCHEMA_NAME, hookManager.EVENT_UPDATE);
                 }
             });
         }

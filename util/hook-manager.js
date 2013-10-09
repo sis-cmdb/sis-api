@@ -28,6 +28,10 @@
 
         var schemaManager = require('./schema-manager')(mongoose);
 
+        this.EVENT_INSERT = "insert";
+        this.EVENT_UPDATE = "update";
+        this.EVENT_DELETE = "delete";
+
         // initializer funct
         var init = function() {
             // Set up the mongoose.Hook for a SIS Hook
@@ -39,7 +43,7 @@
                 "owner": "String",
                 "entity_type": "String"
             }
-            var schema_name = "SisHook";
+            var schema_name = schemaManager.SIS_HOOK_SCHEMA_NAME;
             SisHookModel = schemaManager.getEntityModel({name : schema_name, definition : schema_definition, owner : "SIS"});
             // add an index
             SisHookModel.schema.index({"name": 1, "entity_type": 1},{"unique" : true});
@@ -127,6 +131,11 @@
                     callback(null, true);
                 }
             });
+        }
+
+        // hook dispatching methods
+        this.dispatchHooks = function(entity, entity_type, event) {
+
         }
 
         init();

@@ -35,13 +35,14 @@
         };
 
         // reserved schemas
-        this.HIERA_SCHEMA_NAME = "HieraDataSchema";
-        this.SIS_SCHEMA_NAME = "SisSchema";
+        this.HIERA_SCHEMA_NAME = "sis_hiera";
+        this.SIS_SCHEMA_NAME = "sis_schemas";
+        this.SIS_HOOK_SCHEMA_NAME = "sis_hooks";
 
         this.reservedSchemas = {
-            "HieraDataSchema" : true,
-            "SisSchema" : true,
-            "SisHook" : true
+            "sis_hiera" : true,
+            "sis_schemas" : true,
+            "sis_hooks" : true
         };
 
         // initializer funct
@@ -237,7 +238,7 @@
                         } else {
                             delete mongoose.modelSchemas[name];
                             delete mongoose.models[name];
-                            callback(null, true);
+                            callback(null, schema);
                         }
                     });
                     

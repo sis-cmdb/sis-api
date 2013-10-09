@@ -24,6 +24,7 @@
         var self = this;
         var mongoose = config['mongoose'];
         var schemaManager = require('../util/schema-manager')(mongoose);
+        var hookManager = require('../util/hook-manager')(mongoose);
 
         // A mongoose.model object for HieraData
         var HieraSchemaModel = null;
@@ -86,6 +87,7 @@
                             Common.sendError(res, 500, "Could not delete hieradata for " + id + ": " + err);
                         } else {
                             Common.sendObject(res, 200, true);
+                            hookManager.dispatchHooks(result, schemaManager.HIERA_SCHEMA_NAME, hookManager.EVENT_DELETE);
                         }
                     });
                 }
@@ -120,6 +122,7 @@
                     Common.sendError(res, 500, "Unable to add hieradata: " + err);
                 } else {
                     Common.sendObject(res, 201, result);
+                    hookManager.dispatchHooks(result, schemaManager.HIERA_SCHEMA_NAME, hookManager.EVENT_INSERT);
                 }
             });
         }
@@ -147,6 +150,7 @@
                             Common.sendError(res, 500, "Unable to save hieradata: " + err);
                         } else {
                             Common.sendObject(res, 200, result);
+                            hookManager.dispatchHooks(result, schemaManager.HIERA_SCHEMA_NAME, hookManager.EVENT_UPDATE);
                         }
                     });
                 }

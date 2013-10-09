@@ -28,9 +28,9 @@ Manage schemas of all entities in the system.  A sample schema object looks like
 
 Reserved schema names include:
 
-* HieraDataSchema
-* SisSchema
-* SisHook
+* sis_hiera
+* sis_hooks
+* sis_schemas
 
 Reserved definition fields include:
 
@@ -222,4 +222,13 @@ For instance:
 - test/ - mocha tests
 - public/ - static files
 - views/ - jade templates
+
+## Running tests
+
+Mocha must be installed in the global path
+
+`npm install -g mocha`
+
+From the sis-web dir run `mocha`
+
 
