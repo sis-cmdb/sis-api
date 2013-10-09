@@ -15,6 +15,13 @@
  ***********************************************************/
 
 // A class used to manage the SIS Hooks defined by the /hooks api
+// imports..
+// node http lib
+var http = require('http');
+// async js for parallel hook exec
+var async = require('async');
+// simplified http req
+var request = require('request');
 
 (function() {
 
@@ -38,8 +45,17 @@
             // Get the model from the definition and name
             var schema_definition = {
                 "name" : {"type" : "String", "required" : true, match : /^[a-z0-9_]+$/ },
-                "target" : { },
-                "events": [],
+                "target" : { 
+                        "type" : { 
+                            "url" : { "type" : "String", "required" : true },
+                            "action" : {"type" : "String", "required" : true, enum : ["GET", "POST", "PUT"]}
+                        }, 
+                        "required" : true 
+                },
+                "events": { "type" : [{ "type" : "String", 
+                                        "required" : true, 
+                                        "enum" : [self.EVENT_INSERT, self.EVENT_UPDATE, self.EVENT_DELETE]
+                                       }], "required" : true},
                 "owner": "String",
                 "entity_type": "String"
             }
@@ -133,9 +149,36 @@
             });
         }
 
-        // hook dispatching methods
-        this.dispatchHooks = function(entity, entity_type, event) {
+        var dispatchHook = function(hook, entity, callback) {
+            var options = {
+                "uri" : hook.target.url,
+                "method" : hook.target.action,                
+                "json" : entity
+            };
+            request(options, callback);
+        }
 
+        // hook dispatching methods
+        this.dispatchHooks = function(entity, entity_type, event, callback) {
+            if (!callback) {
+                callback = function(err) {
+                    if (err) {
+                        console.log("Error running hooks " + err);
+                    }
+                }
+            }
+            // find hooks that have the entity_type w/ the
+            // event
+            var query = {"entity_type" : entity_type, "events" : { "$all" : [ event ]}};
+            SisHookModel.find(query, function(err, hooks) {
+                if (err) {
+                    callback(err);
+                } else {
+                    async.map(hooks, function(hook, cb) {
+                        dispatchHook(hook, entity, cb);
+                    }, callback);
+                }
+            });
         }
 
         init();
