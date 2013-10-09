@@ -34,6 +34,7 @@
                 query = {};
             }
             var limit = parseInt(req.query.limit) || Common.MAX_RESULTS;
+            if (limit > Common.MAX_RESULTS) { limit = Common.MAX_RESULTS };
             var offset = parseInt(req.query.offset) || 0;
             hookManager.getAll(query, { limit : limit, skip : offset }, function(err, results) {
                 Common.sendObject(res, 200, results);

@@ -73,6 +73,7 @@
                         query = {};
                     }
                     var limit = parseInt(req.query.limit) || Common.MAX_RESULTS;
+                    if (limit > Common.MAX_RESULTS) { limit = Common.MAX_RESULTS };
                     var offset = parseInt(req.query.offset) || 0;
                     EntityModel.find(query, null, { skip : offset, limit: limit}, function(err, entities) {
                         Common.sendObject(res, 200, entities);

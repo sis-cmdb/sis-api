@@ -190,6 +190,25 @@ The response is the updated hiera entry object.
 
 Deletes the heira entry with the specified `name` or errors.
 
+## Pagination and searching
+
+All GET requests that retrieve a list of entities support pagination and search.
+
+### Pagination
+
+The following query parameters are used in pagination:
+
+* limit - the number of items to fetch.  200 by default.  At most 200 items can be retrieved
+* offset - the number of items to skip before fetching.  0 based.
+
+### Search
+
+Search / filtering is done by passing a URL encoded JSON object in the q parameter.  The object looks like a mongo query object.
+
+For instance:
+
+`/api/v1/schemas?q={"owner":"SIS"}` returns a list of schemas where the owner is "SIS"
+
 # Developer Info
 
 ## Frameworks

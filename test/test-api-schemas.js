@@ -100,6 +100,19 @@ describe('Schema API', function() {
                     done();
                 });
         });
+        it("Should return s1 and s2 ", function(done) {
+            request(app).get("/api/v1/schemas")
+                .query({q : JSON.stringify({ "owner" : "ResOps" }) })
+                .expect(200)
+                .end(function(err, res) {
+                    should.exist(res.body);
+                    res.body.length.should.eql(2);
+                    for (var i = 0; i < 2; ++i) {
+                        res.body[i]['owner'].should.eql('ResOps');
+                    }
+                    done();
+                });
+        });
     });
 
 });

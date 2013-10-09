@@ -29,11 +29,12 @@
             var query = req.query.q || {};
             // try parsing..
             try {
-                query = JSON.parse(query);
-            } catch (ex) {
+                query = JSON.parse(query);                
+            } catch (ex) {                
                 query = {};
             }
             var limit = parseInt(req.query.limit) || Common.MAX_RESULTS;
+            if (limit > Common.MAX_RESULTS) { limit = Common.MAX_RESULTS };
             var offset = parseInt(req.query.offset) || 0;
             schemaManager.getAll(query, { limit : limit, skip : offset }, function(err, results) {
                 Common.sendObject(res, 200, results);
