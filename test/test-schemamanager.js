@@ -178,7 +178,7 @@ describe('SchemaManager', function() {
 
   describe("update-schema", function() {
     var schema = {
-      "name":"testEntity",
+      "name":"test_entity",
       "owner" : "test",
       "definition": {
         "str":   "String",

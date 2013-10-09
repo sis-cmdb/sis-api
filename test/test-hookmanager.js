@@ -72,7 +72,7 @@ describe('HookManager', function() {
 
     it("should error adding a hook with no owner ", function(done) {
       var hook = { 
-        "name" : "TestHook", 
+        "name" : "test_hook", 
         "entity_type" : "Schema",
         "target" : {
             "action" : "POST",
@@ -88,7 +88,7 @@ describe('HookManager', function() {
 
     it("should error adding a hook with no entity_type ", function(done) {
       var hook = { 
-        "name" : "TestHook", 
+        "name" : "test_hook", 
         "owner" : "Test",
         "target" : {
             "action" : "POST",
@@ -104,7 +104,7 @@ describe('HookManager', function() {
 
     it("should error adding a hook with no target ", function(done) {
       var hook = { 
-        "name" : "TestHook", 
+        "name" : "test_hook", 
         "owner" : "Test",
         "entity_type" : "Schema",
         "events": ['insert','update']
@@ -116,7 +116,7 @@ describe('HookManager', function() {
     });
     it("should error adding a hook with no target.url ", function(done) {
       var hook = { 
-        "name" : "TestHook", 
+        "name" : "test_hook", 
         "owner" : "Test",
         "entity_type" : "Schema",
         "target" : {
@@ -131,7 +131,7 @@ describe('HookManager', function() {
     });
     it("should error adding a hook with no target.action ", function(done) {
       var hook = { 
-        "name" : "TestHook", 
+        "name" : "test_hook", 
         "owner" : "Test",
         "entity_type" : "Schema",
         "target" : {
@@ -146,7 +146,7 @@ describe('HookManager', function() {
     });
     it("should error adding a hook with no events ", function(done) {
       var hook = { 
-        "name" : "TestHook", 
+        "name" : "test_hook", 
         "owner" : "Test",
         "entity_type" : "Schema",
         "target" : {
@@ -161,7 +161,7 @@ describe('HookManager', function() {
     });
     it("should error adding a hook with no event values ", function(done) {
       var hook = { 
-        "name" : "TestHook", 
+        "name" : "test_hook", 
         "owner" : "Test",
         "entity_type" : "Schema",
         "target" : {
@@ -179,7 +179,7 @@ describe('HookManager', function() {
   });
 
   describe('add-valid-hook', function() {
-    var hookName = "TestHook"; 
+    var hookName = "test_hook"; 
     after(function(done) {
         hookManager.deleteHook(hookName, done);
     });
@@ -197,7 +197,7 @@ describe('HookManager', function() {
       hookManager.addHook(hook, function(err, entity) {
         should.not.exist(err);
 
-        entity.should.have.property('name', 'TestHook');
+        entity.should.have.property('name', 'test_hook');
         entity.should.have.property('owner', 'Test');
         entity.should.have.property('entity_type', 'Schema');
         entity['target'].should.eql(hook.target);
@@ -209,7 +209,7 @@ describe('HookManager', function() {
   });
 
   describe('delete-hook', function() {
-    var hookName = "DeleteTest";
+    var hookName = "delete_test";
     var hook = { 
       "name" : hookName, 
       "owner" : "Test",
@@ -232,7 +232,7 @@ describe('HookManager', function() {
     });
 
     it("Should return false if hook dne ", function(done) {
-      hookManager.deleteHook("DNE", function(err, result) {
+      hookManager.deleteHook("dne", function(err, result) {
         should.exist(err);
         result.should.not.be.ok;
         done();
@@ -258,7 +258,7 @@ describe('HookManager', function() {
   });
 
   describe("update-hook", function() {
-    var hookName = "UpdateTest";
+    var hookName = "update_test";
     var initialHook = { 
       "name" : hookName, 
       "owner" : "Test",

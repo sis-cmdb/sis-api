@@ -29,7 +29,7 @@ var httpServer = null;
 describe('API at the Edge ', function() {
 
     var schema = {
-        "name":"testEntity",
+        "name":"test_entity",
         "owner" : "test",
         "definition": {
             "str":   "String",
@@ -67,7 +67,7 @@ describe('API at the Edge ', function() {
     var paths = [
         "/api/v1/schemas",
         "/api/v1/hiera",
-        "/api/v1/entities/testEntity"
+        "/api/v1/entities/test_entity"
     ];
 
     paths.map(function(path) {

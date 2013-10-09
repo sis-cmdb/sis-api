@@ -39,7 +39,7 @@
         var init = function() {
             // Set up the mongoose.Schema for a SIS Schema
             var definition = {
-                "name" : { "type" : "String", "required" : true },
+                "name" : { "type" : "String", "required" : true, "unique" : true },
                 "hieradata" : { "type" : {}, "required" : true }
             };
             var name = schemaManager.HIERA_SCHEMA_NAME;

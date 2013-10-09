@@ -48,7 +48,7 @@
         var init = function() {
             // Set up the mongoose.Schema for a SIS Schema
             var definition = {
-                "name" : {"type" : "String", "required" : true },
+                "name" : {"type" : "String", "required" : true, "unique" : true, match : /^[a-z0-9_]+$/ },
                 "owner" : { "type" : "String", "required" : true },
                 "definition" : { "type" : {}, "required" : true }
             }

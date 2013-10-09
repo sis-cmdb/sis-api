@@ -33,7 +33,7 @@
             // Set up the mongoose.Hook for a SIS Hook
             // Get the model from the definition and name
             var schema_definition = {
-                "name" : "String",
+                "name" : {"type" : "String", "required" : true, "unique" : true, match : /^[a-z0-9_]+$/ },
                 "target" : { },
                 "events": [],
                 "owner": "String",

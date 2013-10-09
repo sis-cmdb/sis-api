@@ -53,7 +53,7 @@ describe('Hook API', function() {
     describe("POST hooks", function() {
         it("Should create new hook", function(done) {
             var hook = { 
-                "name" : "TestHook", 
+                "name" : "test_hook", 
                 "owner" : "Test",
                 "entity_type" : "Schema",
                 "target" : {
@@ -68,7 +68,7 @@ describe('Hook API', function() {
                 .expect(201, done);
         });
         after(function(done) {
-            hookManager.deleteHook("TestHook", done);
+            hookManager.deleteHook("test_hook", done);
         });
     });
 
@@ -77,7 +77,7 @@ describe('Hook API', function() {
             // insert three hooks
             var hooks = [
                 { 
-                    "name" : "TestHook-1",
+                    "name" : "test_hook1",
                     "owner" : "Test",
                     "entity_type" : "Schema",
                     "target" : {
@@ -87,7 +87,7 @@ describe('Hook API', function() {
                     "events": ['insert','update']
                 },
                 { 
-                    "name" : "TestHook-2",
+                    "name" : "test_hook2",
                     "owner" : "Test",
                     "entity_type" : "Schema",
                     "target" : {
@@ -97,7 +97,7 @@ describe('Hook API', function() {
                     "events": ['insert','update']
                 },
                 { 
-                    "name" : "TestHook-3",
+                    "name" : "test_hook3",
                     "owner" : "Test",
                     "entity_type" : "Schema",
                     "target" : {
@@ -111,7 +111,7 @@ describe('Hook API', function() {
             async.map(hooks, hookManager.addHook.bind(hookManager), done);
         });
         after(function(done) {
-            async.map(['TestHook-1', 'TestHook-2', 'TestHook-3'], hookManager.deleteHook.bind(hookManager), done);
+            async.map(['test_hook1', 'test_hook2', 'test_hook3'], hookManager.deleteHook.bind(hookManager), done);
         });
         it("Should return 2 results", function(done) {
             request(app).get("/api/v1/hooks")
@@ -125,7 +125,7 @@ describe('Hook API', function() {
         });
         it("Should return 1 results", function(done) {
             request(app).get("/api/v1/hooks")
-                .query({ q: JSON.stringify({"name" : "TestHook-1"}) })
+                .query({ q: JSON.stringify({"name" : "test_hook1"}) })
                 .expect(200)
                 .end(function(err, res) {
                     should.exist(res.body);
