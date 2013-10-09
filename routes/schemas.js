@@ -71,7 +71,7 @@
                     Common.sendError(res, 400, "Unable to save schema " + err);
                 } else {
                     Common.sendObject(res, 201, entity);
-                    hookManager.dispatchHooks(entity, schemaManager.SIS_SCHEMA_NAME, hookManager.EVENT_UPDATE);
+                    hookManager.dispatchHooks(entity, schemaManager.SIS_SCHEMA_NAME, hookManager.EVENT_INSERT);
                 }
             });
         }

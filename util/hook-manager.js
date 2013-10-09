@@ -154,7 +154,7 @@ var request = require('request');
                 "uri" : hook.target.url,
                 "method" : hook.target.action,                
                 "json" : entity
-            };
+            };            
             request(options, callback);
         }
 
@@ -169,12 +169,12 @@ var request = require('request');
             }
             // find hooks that have the entity_type w/ the
             // event
-            var query = {"entity_type" : entity_type, "events" : { "$all" : [ event ]}};
+            var query = {"entity_type" : entity_type, "events" :  event };            
             SisHookModel.find(query, function(err, hooks) {
                 if (err) {
                     callback(err);
                 } else {
-                    async.map(hooks, function(hook, cb) {
+                    async.map(hooks, function(hook, cb) {                        
                         dispatchHook(hook, entity, cb);
                     }, callback);
                 }

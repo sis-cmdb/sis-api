@@ -24,12 +24,15 @@ var mongoose = null;
 var schemaManager = null;
 var app = null;
 var httpServer = null;
+var hookManager = null;
 
 describe('Schema API', function() {
+
     before(function(done) {
         server.startServer(config, function(expressApp, httpSrv) {
             mongoose = server.mongoose;
             schemaManager = require('../util/schema-manager')(mongoose);
+            hookManager = require("../util/hook-manager")(mongoose);
             app = expressApp;
             httpServer = httpSrv;
             done();
@@ -79,7 +82,7 @@ describe('Schema API', function() {
     });
 
     describe("Schema search", function() {
-        before(function(done) {
+        before(function(done) {            
             // insert three schemas
             var schemas = [{ "name":"s1", "definition": { "field" : "String" }, "owner" : "ResOps" },
                            { "name":"s2", "definition": { "field" : "String" }, "owner" : "ResOps" },
@@ -87,10 +90,10 @@ describe('Schema API', function() {
             // async magic - https://github.com/caolan/async
             async.map(schemas, schemaManager.addSchema.bind(schemaManager), done);
         });
-        after(function(done) {
+        after(function(done) {            
             async.map(['s1', 's2', 't1'], schemaManager.deleteSchema.bind(schemaManager), done);
         });
-        it("Should return 2 results", function(done) {
+        it("Should return 2 results", function(done) {            
             request(app).get("/api/v1/schemas")
                 .query({ offset : 1, limit : 2})
                 .expect(200)
@@ -100,7 +103,7 @@ describe('Schema API', function() {
                     done();
                 });
         });
-        it("Should return s1 and s2 ", function(done) {
+        it("Should return s1 and s2 ", function(done) {            
             request(app).get("/api/v1/schemas")
                 .query({q : JSON.stringify({ "owner" : "ResOps" }) })
                 .expect(200)
@@ -115,4 +118,69 @@ describe('Schema API', function() {
         });
     });
 
+    describe("test-hook-dispatch", function() {
+        // the done callback that our listening server will callback on
+        var doneCallback = null;
+        // hook server - receives the hook events
+        var hookServer = null;
+        var hookHttpServer = null;
+        var hookName = "test_hook"; 
+        var hook = null;
+        
+        before(function(done) {            
+            var express = require('express');
+            hookServer = express();
+            hookServer.use(express.bodyParser());
+            hookServer.post('/hook', function(req, res) {                                
+                if (doneCallback) {
+                    doneCallback();
+                }
+            });
+
+            hook = { 
+                "name" : hookName,
+                "owner" : "Test",
+                "entity_type" : schemaManager.SIS_SCHEMA_NAME,
+                "target" : {
+                    "action" : "POST",
+                    "url" : "http://localhost:3334/hook"
+                },
+                "events": [ hookManager.EVENT_INSERT ]
+            };
+
+            hookHttpServer = hookServer.listen(3334, function(err) {
+                if (err) {
+                    done(err);
+                }                
+                hookManager.addHook(hook, function(err, result) {
+                    done();
+                });
+            });
+        });
+
+        after(function(done) {            
+            hookHttpServer.close();
+            hookManager.deleteHook(hookName, function() {                
+                done();
+            });
+        });
+
+        var hookSchema = {
+            "name" : "test", 
+            "owner" : "test", 
+            "definition" : {
+                "field" : "String",
+                "field2" : "Number"
+            }
+        };
+
+        it("Should dispatch the schema hook", function(doneCb) {            
+            doneCallback = doneCb;
+            request(app).post("/api/v1/schemas")
+                .set('Content-Encoding', 'application/json')
+                .send(hookSchema)
+                .end(function(err, res) { });
+        });
+    });
 });
+
