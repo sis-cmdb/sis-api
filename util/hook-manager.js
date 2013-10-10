@@ -149,12 +149,23 @@ var request = require('request');
             });
         }
 
-        var dispatchHook = function(hook, entity, callback) {
+        var dispatchHook = function(hook, entity, event, callback) {
+            var data = {
+                'hook' : hook.name,
+                'entity_type' : hook.entity_type,
+                'event' : event,
+                'data' : entity
+            };
             var options = {
                 "uri" : hook.target.url,
                 "method" : hook.target.action,                
-                "json" : entity
             };            
+            if (options['method'] == 'GET') {
+                data['data'] = JSON.stringify(entity);
+                options['qs'] = data;
+            } else {
+                options['json'] = data;
+            }
             request(options, callback);
         }
 
@@ -175,7 +186,7 @@ var request = require('request');
                     callback(err);
                 } else {
                     async.map(hooks, function(hook, cb) {                        
-                        dispatchHook(hook, entity, cb);
+                        dispatchHook(hook, entity, event, cb);
                     }, callback);
                 }
             });

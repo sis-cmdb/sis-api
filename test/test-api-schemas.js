@@ -131,7 +131,11 @@ describe('Schema API', function() {
             var express = require('express');
             hookServer = express();
             hookServer.use(express.bodyParser());
-            hookServer.post('/hook', function(req, res) {                                
+            hookServer.post('/hook', function(req, res) {     
+                should.exist(req.body);
+                req.body.entity_type.should.eql(schemaManager.SIS_SCHEMA_NAME);
+                req.body.hook.should.eql(hookName);
+                req.body.event.should.eql(hookManager.EVENT_INSERT);
                 if (doneCallback) {
                     doneCallback();
                 }
@@ -145,7 +149,7 @@ describe('Schema API', function() {
                     "action" : "POST",
                     "url" : "http://localhost:3334/hook"
                 },
-                "events": [ hookManager.EVENT_INSERT ]
+                "events": [ hookManager.EVENT_INSERT, hookManager.EVENT_UPDATE ]
             };
 
             hookHttpServer = hookServer.listen(3334, function(err) {

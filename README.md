@@ -25,7 +25,7 @@ Manage schemas of all entities in the system.  A sample schema object looks like
         "numberField" : "Number",
         "nestedDocument" : {
             "nestedString" : "String",
-            "nestedBoolean" : { "type" : "Boolean", "required" : true }
+            "nestedBoolean" : "Boolean"
         },
         "anythingField" : { }
     }
@@ -131,19 +131,90 @@ The response is the updated entity object.
 Removes the entity belonging to the schema with name `schema_name` that has the `_id` specified by the `id` path parameter.
 
 
-## Web Hooks API
+## Hooks API
 
-TODO
+Hooks allow users to receive notifications when objects are inserted, updated, and deleted from the SIS database.
 
-| Method | Path                 | Description                       |
-|--------|----------------------|-----------------------------------|
-| GET    | /api/v1/hooks        | List all of the web hooks         |
-| GET    | /api/v1/hooks/:id    | Display the specified web hook    |
-| PUT    | /api/v1/hooks/:id    | Update the specified web hook     |
-| POST   | /api/v1/hooks        | Create a new web hook             |
-| DELETE | /api/v1/hooks/:id    | Delete the specified web hook     |
+For example, a hook that listens for all events on the 'sample' entities above would look like:
 
+```json
+{ 
+    "name" : "hook_name", 
+    "owner" : "hook_owner",
+    "entity_type" : "sample",
+    "target" : {
+        "action" : "POST",
+        "url" : "http://sample.service.com/endpoint"
+    },
+    "events": ['update', 'insert', 'delete']
+};
+```
 
+All fields are required.
+
+The `name` must contain only lowercase ascii characters, digits, or underscores.
+
+The `entity_type` field specifies which entity type the hook should be dispatched for.  This is typically the same value as the `name` field in a schema object.
+
+Hooks can also be registered for schemas and hiera data by specifying `sis_schemas` and `sis_hiera` as the entity_type, respectively.
+
+The `target` field specifies the endpoint that the payload is sent to and which HTTP method to use.  POST, GET, and PUT are the only valid actions.
+
+The `events` field specifies which event triggers the hook dispatch.
+
+The payload is sent via HTTP to `target.url`.  Assuming the entity above was inserted, the following payload would be posted to `target.url`:
+
+```json
+{
+    "hook" : "hook_name",
+    "entity_type" : "sample",
+    "event" : "insert",
+    "data" : {
+        "stringField":    "sampleString",
+        "numberField" : 20,
+        "anythingField" : {
+            "anything" : "goes",
+            "in" : ["this", "field"]
+         }
+    }
+}
+```
+
+In the case of PUT and POST, the payload is sent in the request body.  When a GET request is issued, all fields are sent as a query parameter (i.e. hook=hook_name&entity_type=sample&event=insert).  The `data` parameter is the JSON encoded representation of the entity.
+
+### Retrieving hooks
+
+* `GET /api/v1/hooks`
+* `GET /api/v1/hooks/:name`
+
+If no name is specified in the path, returns a list of hook objects.  Otherwise a single hook is returned or 404.
+
+The name must contain only lowercase ascii characters, digits, or underscores.
+
+### Creating a new hook
+
+* `POST /api/v1/hooks`
+
+The request body must be a valid hook object.  This method will error if a hook with the same name and entity_type exists.
+
+The response is the hook object along with two additional fields assigned by mongoose:
+
+* `_id` - the database assigned ID of the schema.  Not used in this API
+* `__v` - the version number of the schema.
+
+### Updating a hook
+
+* `PUT /api/v1/hooks/:name`
+
+The request body must be a valid hook object.  The name in the hook object must match the name in the path parameter.  This implies that hook names cannot be changed.
+
+The response is the updated hook object.
+
+### Deleting a hook
+
+* `DELETE /api/v1/hooks/:name`
+
+Removes the hook with the specified name.
 
 ## Hiera API
 
@@ -235,6 +306,7 @@ Mocha must be installed in the global path
 
 `npm install -g mocha`
 
-From the sis-web dir run `mocha`
+From the sis-web dir run `mocha --timeout 4000`
 
+Tests require a mongo instance to be running.  See test/test-config.js.  Additionally, the connection url may be specified as the `db__url` environment variable.
 
