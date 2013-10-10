@@ -175,7 +175,9 @@ The payload is sent via HTTP to `target.url`.  Assuming the entity above was ins
         "anythingField" : {
             "anything" : "goes",
             "in" : ["this", "field"]
-         }
+         },
+         "_id" : "database_generated_id",
+         "__v" : 0
     }
 }
 ```
