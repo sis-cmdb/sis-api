@@ -28,14 +28,20 @@ var routes = [
 ];
 
 var startServer = function(config, callback) {
+
+    var nconf = require('nconf');
+    nconf.env('__').argv();
+    nconf.defaults(config);
+
     var app = express();
     app.use(express.bodyParser());
     app.configure(function() {
-        mongoose.connect(config.db.url);
+        mongoose.connect(nconf.get('db').url);
         // express app settings
-        if (config.app) {
-            for (var k in config.app) {
-                app.set(k, config.app[k]);
+        if (nconf.get('app')) {
+            var appConfig = nconf.get('app');
+            for (var k in appConfig) {
+                app.set(k, appConfig[k]);
             }
         }
         var db = mongoose.connection;
@@ -53,7 +59,7 @@ var startServer = function(config, callback) {
                 route.setup(app, cfg);
             });
             // listen
-            httpServer = app.listen(config.server.port, function() {
+            httpServer = app.listen(nconf.get('server').port, function(err) {
                 if (callback) {
                     callback(app, httpServer);
                 }
