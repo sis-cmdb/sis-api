@@ -9,7 +9,7 @@ Every API method described below returns data with `Content-Type: application/js
 
 Manage schemas of all entities in the system.  A sample schema object looks like:
 
-```json
+```javascript
 {
     // The name of the schema
     "name" : "sample",
@@ -83,7 +83,7 @@ Removes the schema with the specified name along with all entities adhering to i
 
 Manage the entities that adhere to a particular schema.  For example, an entity that adheres to the "sample" schema above would be:
 
-```json
+```javascript
 {
     "stringField":    "sampleString",
     "numberField" : 20,
@@ -137,7 +137,7 @@ Hooks allow users to receive notifications when objects are inserted, updated, a
 
 For example, a hook that listens for all events on the 'sample' entities above would look like:
 
-```json
+```javascript
 { 
     "name" : "hook_name", 
     "owner" : "hook_owner",
@@ -146,8 +146,8 @@ For example, a hook that listens for all events on the 'sample' entities above w
         "action" : "POST",
         "url" : "http://sample.service.com/endpoint"
     },
-    "events": ['update', 'insert', 'delete']
-};
+    "events": ["update", "insert", "delete"]
+}
 ```
 
 All fields are required.
@@ -164,7 +164,7 @@ The `events` field specifies which event triggers the hook dispatch.
 
 The payload is sent via HTTP to `target.url`.  Assuming the entity above was inserted, the following payload would be posted to `target.url`:
 
-```json
+```javascript
 {
     "hook" : "hook_name",
     "entity_type" : "sample",
@@ -222,7 +222,7 @@ This API is based off the Hiera http-backend.  More information about the Hiera 
 
 A Hiera object in SIS looks like:
 
-```json
+```javascript
 {
     "name" : "fqdn, env, etc.",
     "hieradata" : {
