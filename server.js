@@ -36,20 +36,18 @@ var startServer = function(config, callback) {
     var app = express();
     app.use(express.bodyParser());
     app.configure(function() {
-        mongoose.connect(nconf.get('db').url);
-        // express app settings
-        if (nconf.get('app')) {
-            var appConfig = nconf.get('app');
-            for (var k in appConfig) {
-                app.set(k, appConfig[k]);
+        mongoose.connect(nconf.get('db').url, function(err) {
+            if (err) {
+                throw err;
             }
-        }
-        var db = mongoose.connection;
-        db.on('error', function(err) {
-            console.log("Error connecting to mongo: " + err);
-            throw err;
-        })
-        db.once('open', function() {
+
+            // express app settings
+            if (nconf.get('app')) {
+                var appConfig = nconf.get('app');
+                for (var k in appConfig) {
+                    app.set(k, appConfig[k]);
+                }
+            }
             var cfg = {
                 'mongoose' : mongoose
             }        
@@ -64,7 +62,7 @@ var startServer = function(config, callback) {
                     callback(app, httpServer);
                 }
             });
-        });
+        });        
     });    
 }
 

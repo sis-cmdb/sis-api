@@ -15,13 +15,19 @@ Manage schemas of all entities in the system.  A sample schema object looks like
     "name" : "sample",
     // an owner field, for future use / organization.
     // (i.e. "ResOps", "ProvOps", etc.)
-    "owner" : "SIS"
+    "owner" : "SIS",
     // A definition of what entities will look like
     // leveraging mongoose syntax 
     "definition" : {
+        "requiredField" : { "type" : "String", "required" : true },
+        "uniqueNumberField" : { "type" : "Number", "unique" : true },
         "stringField":    "String",
         "numberField" : "Number",
-        "anythingField" : { },
+        "nestedDocument" : {
+            "nestedString" : "String",
+            "nestedBoolean" : { "type" : "Boolean", "required" : true }
+        },
+        "anythingField" : { }
     }
 }
 ```

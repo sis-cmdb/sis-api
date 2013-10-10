@@ -15,7 +15,7 @@
  ***********************************************************/
 
 // use the edge config
-var config = require('./test-edge-config');
+var config = require('./test-config');
 var server = require("../server")
 var should = require('should');
 var request = require('supertest');
@@ -41,6 +41,8 @@ describe('API at the Edge ', function() {
     };
 
     before(function(done) {        
+        config.app = config.app || { };
+        config.app['edgesite'] = true;
         server.startServer(config, function(expressApp, httpSrv) {
             mongoose = server.mongoose;
             schemaManager = require('../util/schema-manager')(mongoose);
@@ -52,6 +54,7 @@ describe('API at the Edge ', function() {
     });
 
     after(function(done) {
+        delete config.app['edgesite'];
         server.stopServer(httpServer, function() {
             mongoose.connection.db.dropDatabase();
             mongoose.connection.close();
