@@ -20,8 +20,14 @@ var hookManager;
 var should = require('should');
 
 describe('HookManager', function() {
+
+  var nconf = require('nconf');
+  nconf.env('__').argv();
+  nconf.defaults(config);
+
+
   before(function(done) {
-    mongoose.connect(config.db.url);
+    mongoose.connect(nconf.get('db').url);
     var db = mongoose.connection;
     db.once('open', function() {
       hookManager = require('../util/hook-manager')(mongoose);

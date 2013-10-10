@@ -20,8 +20,14 @@ var schemaManager;
 var should = require('should');
 
 describe('SchemaManager', function() {
+
+  var nconf = require('nconf');
+  nconf.env('__').argv();
+  nconf.defaults(config);
+
+
   before(function(done) {
-    mongoose.connect(config.db.url);
+    mongoose.connect(nconf.get('db').url);
     var db = mongoose.connection;
     db.once('open', function() {
       schemaManager = require('../util/schema-manager')(mongoose);
