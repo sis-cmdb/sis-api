@@ -24,7 +24,8 @@ var routes = [
     'schemas',
     'entities',
     'hiera',
-    'hooks'
+    'hooks',
+    'index'
 ];
 
 var startServer = function(config, callback) {

@@ -5,6 +5,8 @@ sis-web
 
 Every API method described below returns data with `Content-Type: application/json`.
 
+All POST and PUT requests must have the `content-type: application/json` header set.
+
 ## Schema API
 
 Manage schemas of all entities in the system.  A sample schema object looks like:
