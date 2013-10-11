@@ -31,7 +31,7 @@
         // in case the behavior changes
         var getModelForType = function(type, callback) {
             schemaManager.getByName(type, function(err, result) {
-                if (err) { 
+                if (err || !result) { 
                     callback(err, null); 
                 } else {
                     // convert the schema object from the model to a 

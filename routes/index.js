@@ -22,8 +22,9 @@
     var fs = require('fs');
 
     marked.setOptions({
-        highlight: function(code, lang) {
-            return hljs.highlightAuto(lang, code).value;
+        highlight: function(code, lang) {            
+            var result =  hljs.highlight(lang, code).value;            
+            return result;
         }
     });
 

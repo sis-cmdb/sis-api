@@ -1,0 +1,10 @@
+{ 
+    "name" : "sample_hook_name", 
+    "owner" : "hook_owner",
+    "entity_type" : "sample",
+    "target" : {
+        "action" : "POST",
+        "url" : "http://sample.service.com/endpoint"
+    },
+    "events": ["update", "insert", "delete"]
+}

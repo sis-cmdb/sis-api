@@ -57,7 +57,7 @@
             var schemaName = req.params.id;
             schemaManager.deleteSchema(schemaName, function(err, result) {
                 if (err) {
-                    Common.sendError(res, 404, "Unable to delete schema with name " + name + " : " + err);
+                    Common.sendError(res, 404, "Unable to delete schema with name " + schemaName + " : " + err);
                 } else {
                     Common.sendObject(res, 200, true);
                     hookManager.dispatchHooks(result, schemaManager.SIS_SCHEMA_NAME, hookManager.EVENT_DELETE);

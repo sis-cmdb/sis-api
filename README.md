@@ -29,7 +29,7 @@ Manage schemas of all entities in the system.  A sample schema object looks like
             "nestedString" : "String",
             "nestedBoolean" : "Boolean"
         },
-        "anythingField" : { }
+        "anythingField" : { "type" : "Mixed" }
     }
 }
 ```
@@ -89,6 +89,8 @@ Manage the entities that adhere to a particular schema.  For example, an entity 
 {
     "stringField":    "sampleString",
     "numberField" : 20,
+    "uniqueNumberField" : 1,
+    "requiredField" : "required string",
     "anythingField" : {
         "anything" : "goes",
         "in" : ["this", "field"]
@@ -154,7 +156,7 @@ For example, a hook that listens for all events on the 'sample' entities above w
 
 All fields are required.
 
-The `name` must contain only lowercase ascii characters, digits, or underscores.
+The `name` must contain only lowercase ascii characters, digits, or underscores.  It must be unique across all hooks.
 
 The `entity_type` field specifies which entity type the hook should be dispatched for.  This is typically the same value as the `name` field in a schema object.
 
@@ -199,7 +201,7 @@ The name must contain only lowercase ascii characters, digits, or underscores.
 
 * `POST /api/v1/hooks`
 
-The request body must be a valid hook object.  This method will error if a hook with the same name and entity_type exists.
+The request body must be a valid hook object.  This method will error if a hook with the same name exists.
 
 The response is the hook object along with two additional fields assigned by mongoose:
 
@@ -289,6 +291,71 @@ Search / filtering is done by passing a URL encoded JSON object in the q paramet
 For instance:
 
 `/api/v1/schemas?q={"owner":"SIS"}` returns a list of schemas where the owner is "SIS"
+
+# Examples using resty
+
+The following example utilizes [resty](https://github.com/micha/resty), a convenient wrapper around curl.  All sample files are in the [samples](./samples) directory.
+
+```bash
+# initialize resty
+. resty
+resty http://sis.endpoint.com/api/v1 -H "Content-Type: application/json" -H "Accept: application/json"
+
+# assuming we're in the samples directory...
+
+# create a hook that listens for schema inserts - modify this to point to your server if you actually want to receive them.
+
+POST /hooks < hook_schema.json
+
+# create a hook that listens for inserts on the sample entity
+
+POST /hooks < hook_sample.json
+
+# retrieve all the hooks
+
+GET /hooks
+
+# create the sample schema
+
+POST /schemas < schema_sample.json
+
+# create a sample entity
+
+POST /entities/sample < entity_sample.json
+
+# creating it again will fail the unique number test
+
+POST /entities/sample < entity_sample.json
+
+# Create more stuff if you want and then retrieve them.
+
+GET /entities/sample
+
+# Delete the sample schema
+
+DELETE /schemas/sample
+
+# Note that the sample type is now unknown
+
+GET /entities/sample
+
+# Add some hiera data
+
+POST /hiera < hiera_common.json
+
+# note the full object returned.. but get the hiera data for common
+# returns just the data portion
+
+GET /hiera/common
+
+# Cleanup
+
+DELETE /hooks/schema_hook_name
+DELETE /hooks/sample_hook_name
+DELETE /hiera/common
+
+```
+
 
 # Developer Info
 

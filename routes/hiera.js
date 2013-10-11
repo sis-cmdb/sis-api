@@ -68,7 +68,7 @@
             var hieraName = req.params.id;
             HieraSchemaModel.findOne({"name" : hieraName}, function(err, result) {
                 if (err || !result) {
-                    Common.sendError(res, 404, "HieraData for " + name + " not found.");
+                    Common.sendError(res, 404, "HieraData for " + hieraName + " not found.");
                 } else {                    
                     Common.sendObject(res, 200, result['hieradata']);
                 }
@@ -77,12 +77,12 @@
 
         this.delete = function(req, res) {
             var hieraName = req.params.id;
-            HieraSchemaModel.find({"name" : hieraName}, function(err, result) {
+            HieraSchemaModel.findOne({"name" : hieraName}, function(err, result) {
                 if (err || !result) {
-                    Common.sendError(res, 404, "HieraData for " + name + " not found.");
+                    Common.sendError(res, 404, "HieraData for " + hieraName + " not found.");
                 } else {
                     // delete the hiera entry by the id
-                    HieraSchemaModel.remove({"_id" : result['_id']}, function(err) {
+                    HieraSchemaModel.remove({"name" : hieraName }, function(err) {
                         if (err) {
                             Common.sendError(res, 500, "Could not delete hieradata for " + id + ": " + err);
                         } else {

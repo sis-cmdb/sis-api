@@ -44,7 +44,7 @@ var request = require('request');
             // Set up the mongoose.Hook for a SIS Hook
             // Get the model from the definition and name
             var schema_definition = {
-                "name" : {"type" : "String", "required" : true, match : /^[a-z0-9_]+$/ },
+                "name" : {"type" : "String", "required" : true, match : /^[a-z0-9_]+$/, "unique" : true },
                 "target" : { 
                         "type" : { 
                             "url" : { "type" : "String", "required" : true },
@@ -60,9 +60,7 @@ var request = require('request');
                 "entity_type": "String"
             }
             var schema_name = schemaManager.SIS_HOOK_SCHEMA_NAME;
-            SisHookModel = schemaManager.getEntityModel({name : schema_name, definition : schema_definition, owner : "SIS"});
-            // add an index
-            SisHookModel.schema.index({"name": 1, "entity_type": 1},{"unique" : true});
+            SisHookModel = schemaManager.getEntityModel({name : schema_name, definition : schema_definition, owner : "SIS"});            
         }
 
         // Get all the SIS Hooks in the system

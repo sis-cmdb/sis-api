@@ -1,0 +1,10 @@
+{
+    "stringField":    "sampleString",
+    "numberField" : 20,
+    "uniqueNumberField" : 1,
+    "requiredField" : "required string",
+    "anythingField" : {
+        "anything" : "goes",
+        "in" : ["this", "field"]
+     }
+}

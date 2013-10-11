@@ -1,0 +1,15 @@
+{
+    "name" : "sample",
+    "owner" : "SIS",
+    "definition" : {
+        "requiredField" : { "type" : "String", "required" : true },
+        "uniqueNumberField" : { "type" : "Number", "unique" : true },
+        "stringField":    "String",
+        "numberField" : "Number",
+        "nestedDocument" : {
+            "nestedString" : "String",
+            "nestedBoolean" : "Boolean"
+        },
+        "anythingField" : { "type" : "Mixed" }
+    }
+}
