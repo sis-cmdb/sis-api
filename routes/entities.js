@@ -107,14 +107,16 @@
                     Common.sendError(res, 404, "Unable to find entity of type " + type + " with id " + id);
                 } else {
                     // delete the entity by the id
-                    EntityModel.remove({"_id" : id}, function(err) {
-                        if (err) {
-                            Common.sendError(res, 500, "Could not delete entity " + id + ": " + err);
-                        } else {
-                            Common.sendObject(res, 200, true);
-                            hookManager.dispatchHooks(result, type, hookManager.EVENT_DELETE);
-                        }
-                    })
+                    getModelForType(type, function(err, EntityModel) {
+                        EntityModel.remove({"_id" : id}, function(err) {
+                            if (err) {
+                                Common.sendError(res, 500, "Could not delete entity " + id + ": " + err);
+                            } else {
+                                Common.sendObject(res, 200, true);
+                                hookManager.dispatchHooks(result, type, hookManager.EVENT_DELETE);
+                            }
+                        });
+                    });
                 }
             });
         }
