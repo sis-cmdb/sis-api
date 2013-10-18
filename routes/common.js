@@ -16,6 +16,22 @@
 
 (function() {
     module.exports.attachController = function(app, controller, prefix) {
+        // Setup global options
+        // --------------------
+        app.head(prefix,function(req,res) {
+            res.send(200);
+        });
+        app.options(prefix,function(req,res) {
+            res.send(200);
+        });
+        // Setup global options
+        // --------------------
+        app.head(prefix + "/:id",function(req,res) {
+            res.send(200);
+        });
+        app.options(prefix + "/:id",function(req,res) {
+            res.send(200);
+        });
         app.get(prefix, controller.getAll);
         app.get(prefix + "/:id", controller.get);        
         if (!app.get("edgesite")) {                
@@ -27,12 +43,10 @@
 
     // wrapped in case we want to do more things here..
     module.exports.sendError = function(res, code, err) {
-        res.set('Access-Control-Allow-Origin','*');
         res.jsonp(code, {"error" : err });
     }
 
     module.exports.sendObject = function(res, code, obj) {
-        res.set('Access-Control-Allow-Origin','*');
         res.jsonp(code, obj);
     }
 

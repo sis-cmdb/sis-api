@@ -28,6 +28,14 @@ var routes = [
     'index'
 ];
 
+var allowCrossDomain = function(req,res,next) {
+    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE');
+    res.set('Access-Control-Allow-Headers', 'Content-Type,X-Requested-With');
+    next();
+}
+
+
 var startServer = function(config, callback) {
 
     var nconf = require('nconf');
@@ -36,6 +44,7 @@ var startServer = function(config, callback) {
 
     var app = express();
     app.use(express.bodyParser());
+    app.use(allowCrossDomain);
     app.configure(function() {
         mongoose.connect(nconf.get('db').url, function(err) {
             if (err) {
