@@ -27,10 +27,12 @@
 
     // wrapped in case we want to do more things here..
     module.exports.sendError = function(res, code, err) {
+        res.set('Access-Control-Allow-Origin','*');
         res.jsonp(code, {"error" : err });
     }
 
     module.exports.sendObject = function(res, code, obj) {
+        res.set('Access-Control-Allow-Origin','*');
         res.jsonp(code, obj);
     }
 
