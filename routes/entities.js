@@ -172,6 +172,10 @@
 
         this.update = function(req, res) {
             var entity = req.body;
+            // remove reserved fields..
+            for (var rf in schemaManager.reservedFields) {
+                delete entity[rf];
+            }
 
             // Get the entity by id
             var type = getTypeFromRequest(req);
