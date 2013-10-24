@@ -1,17 +1,17 @@
 /***********************************************************
- 
+
  The information in this document is proprietary
  to VeriSign and the VeriSign Product Development.
  It may not be used, reproduced or disclosed without
  the written approval of the General Manager of
  VeriSign Product Development.
- 
+
  PRIVILEGED AND CONFIDENTIAL
  VERISIGN PROPRIETARY INFORMATION
  REGISTRY SENSITIVE INFORMATION
- 
+
  Copyright (c) 2013 VeriSign, Inc.  All rights reserved.
- 
+
  ***********************************************************/
 
 // A class used to manage the SIS Schemas defined by the /schemas api
@@ -23,7 +23,7 @@
 
     // Take in a mongoose that's already been initialized.
     var SchemaManager = function(mongoose) {
-        
+
         // A mongoose.model object for SIS Schemas
         var SisSchemaModel = null;
         // this..
@@ -92,7 +92,7 @@
                 }
                 var testSchema = mongoose.Schema(modelObj.definition);
                 if (!testSchema) {
-                    return "Schema is invalid";    
+                    return "Schema is invalid";
                 }
             } catch (ex) {
                 return "Schema is invalid: " + ex;
@@ -114,10 +114,10 @@
             // TODO: need to cleanup the entity returned to callback
             entity.save(callback);
         }
-        
+
         // get a mongoose model back based on the sis schema
         // passed in.  sisSchema would be an object returned by
-        // calls like getByName 
+        // calls like getByName
         // the mongoose cached version is returned if available
         // Do not hang on to any of these objects
         this.getEntityModel = function(sisSchema) {
@@ -132,7 +132,7 @@
             // convert to mongoose
             try {
                 var schema = mongoose.Schema(sisSchema.definition);
-                return mongoose.model(name, schema);                
+                return mongoose.model(name, schema);
             } catch (ex) {
                 console.log("getEntityModel: Invalid schema " + JSON.stringify(sisSchema) + " w/ ex " + ex);
                 return null;
@@ -156,16 +156,16 @@
 
                 // now we have the persisted schema document.
                 // we will get the mongoose model to unset any fields
-                // then we will delete the mongoose cached versions and 
+                // then we will delete the mongoose cached versions and
                 // create a new schema/model using the updated one
                 // and finally save the document after it's been converted.
-                
+
                 var currentMongooseModel = self.getEntityModel(currentSchema);
                 var currentMongooseSchema = currentMongooseModel.schema;
                 var name = sisSchema.name;
 
                 var newDef = sisSchema.definition;
-                
+
                 // find all paths that need to be unset/deleted
                 var pathsToDelete = null;
                 currentMongooseSchema.eachPath(function(name, type) {
@@ -187,7 +187,7 @@
                     currentSchema.definition = newDef;
                     currentSchema.save(callback);
                 }
-                
+
                 if (pathsToDelete) {
                     // see http://bites.goodeggs.com/post/36553128854/how-to-remove-a-property-from-a-mongoosejs-schema/
                     currentMongooseModel.update({},{ $unset : pathsToDelete}, {multi: true, safe : true, strict: false},
@@ -224,24 +224,27 @@
                         callback(err, false);
                         return;
                     }
-                    // schema document is removed.. now delete the 
+                    // schema document is removed.. now delete the
                     // mongoose caches
                     // and documents for that schema
                     var model = self.getEntityModel(schema);
-                    model.collection.drop(function(err, reply) {
-                        // mongoose throws an error if the collection isn't found..
-                        if (err && err.message != 'ns not found') {
-                            // at this point we're in a bad state.. we deleted the instance
-                            // but still have documents
-                            // TODO: handle this
-                            callback(err, false);
-                        } else {
-                            delete mongoose.modelSchemas[name];
-                            delete mongoose.models[name];
-                            callback(null, schema);
-                        }
+                    var collection = model.collection;
+                    delete mongoose.modelSchemas[name];
+                    delete mongoose.models[name];
+                    model.collection.dropIndexes(function(err, reply) {
+                        model.collection.drop(function(err, reply) {
+                            // mongoose throws an error if the collection isn't found..
+                            if (err && err.message != 'ns not found') {
+                                // at this point we're in a bad state.. we deleted the instance
+                                // but still have documents
+                                // TODO: handle this
+                                callback(err, false);
+                            } else {
+
+                                callback(null, schema);
+                            }
+                        });
                     });
-                    
                 });
             });
         }
