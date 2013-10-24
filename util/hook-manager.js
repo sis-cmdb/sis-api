@@ -1,17 +1,17 @@
 /***********************************************************
- 
+
  The information in this document is proprietary
  to VeriSign and the VeriSign Product Development.
  It may not be used, reproduced or disclosed without
  the written approval of the General Manager of
  VeriSign Product Development.
- 
+
  PRIVILEGED AND CONFIDENTIAL
  VERISIGN PROPRIETARY INFORMATION
  REGISTRY SENSITIVE INFORMATION
- 
+
  Copyright (c) 2013 VeriSign, Inc.  All rights reserved.
- 
+
  ***********************************************************/
 
 // A class used to manage the SIS Hooks defined by the /hooks api
@@ -27,7 +27,7 @@ var request = require('request');
 
     // Take in a mongoose that's already been initialized.
     var HookManager = function(mongoose) {
-        
+
         // A mongoose.model object for SIS Schemas
         var SisHookModel = null;
         // this..
@@ -45,22 +45,22 @@ var request = require('request');
             // Get the model from the definition and name
             var schema_definition = {
                 "name" : {"type" : "String", "required" : true, match : /^[a-z0-9_]+$/, "unique" : true },
-                "target" : { 
-                        "type" : { 
+                "target" : {
+                        "type" : {
                             "url" : { "type" : "String", "required" : true },
                             "action" : {"type" : "String", "required" : true, enum : ["GET", "POST", "PUT"]}
-                        }, 
-                        "required" : true 
+                        },
+                        "required" : true
                 },
-                "events": { "type" : [{ "type" : "String", 
-                                        "required" : true, 
+                "events": { "type" : [{ "type" : "String",
+                                        "required" : true,
                                         "enum" : [self.EVENT_INSERT, self.EVENT_UPDATE, self.EVENT_DELETE]
                                        }], "required" : true},
                 "owner": "String",
                 "entity_type": "String"
             }
             var schema_name = schemaManager.SIS_HOOK_SCHEMA_NAME;
-            SisHookModel = schemaManager.getEntityModel({name : schema_name, definition : schema_definition, owner : "SIS"});            
+            SisHookModel = schemaManager.getEntityModel({name : schema_name, definition : schema_definition, owner : "SIS"});
         }
 
         // Get all the SIS Hooks in the system
@@ -123,7 +123,7 @@ var request = require('request');
             // TODO: need to cleanup the entity returned to callback
             entity.save(callback);
         }
-        
+
         // Update an object schema
         this.updateHook = function(sisHook, callback) {
             var err = validateHookObject(sisHook);
@@ -156,8 +156,8 @@ var request = require('request');
             };
             var options = {
                 "uri" : hook.target.url,
-                "method" : hook.target.action,                
-            };            
+                "method" : hook.target.action,
+            };
             if (options['method'] == 'GET') {
                 data['data'] = JSON.stringify(entity);
                 options['qs'] = data;
@@ -178,12 +178,12 @@ var request = require('request');
             }
             // find hooks that have the entity_type w/ the
             // event
-            var query = {"entity_type" : entity_type, "events" :  event };            
+            var query = {"entity_type" : entity_type, "events" :  event };
             SisHookModel.find(query, function(err, hooks) {
                 if (err) {
                     callback(err);
                 } else {
-                    async.map(hooks, function(hook, cb) {                        
+                    async.map(hooks, function(hook, cb) {
                         dispatchHook(hook, entity, event, cb);
                     }, callback);
                 }

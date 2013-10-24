@@ -1,17 +1,17 @@
 /***********************************************************
- 
+
  The information in this document is proprietary
  to VeriSign and the VeriSign Product Development.
  It may not be used, reproduced or disclosed without
  the written approval of the General Manager of
  VeriSign Product Development.
- 
+
  PRIVILEGED AND CONFIDENTIAL
  VERISIGN PROPRIETARY INFORMATION
  REGISTRY SENSITIVE INFORMATION
- 
+
  Copyright (c) 2013 VeriSign, Inc.  All rights reserved.
- 
+
  ***********************************************************/
 
 // API for schemas
@@ -45,7 +45,7 @@
             var hookName = req.params.id;
             hookManager.getByName(hookName, function(err, result) {
                 if (err || !result) {
-                    Common.sendError(res, 404, "Hook with name " + name + " not found.");
+                    Common.sendError(res, 404, "Hook with name " + hookName + " not found.");
                 } else {
                     Common.sendObject(res, 200, result);
                 }
@@ -56,7 +56,7 @@
             var hookName = req.params.id;
             hookManager.deleteHook(hookName, function(err, result) {
                 if (err) {
-                    Common.sendError(res, 404, "Unable to delete hook with name " + name + " : " + err);
+                    Common.sendError(res, 404, "Unable to delete hook with name " + hookName + " : " + err);
                 } else {
                     Common.sendObject(res, 200, true);
                 }
@@ -83,7 +83,7 @@
             });
 
         }
-    } 
+    }
 
     // all route controllers expose a setup method
     module.exports.setup = function(app, config) {
