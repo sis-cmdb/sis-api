@@ -1,17 +1,17 @@
 /***********************************************************
- 
+
  The information in this document is proprietary
  to VeriSign and the VeriSign Product Development.
  It may not be used, reproduced or disclosed without
  the written approval of the General Manager of
  VeriSign Product Development.
- 
+
  PRIVILEGED AND CONFIDENTIAL
  VERISIGN PROPRIETARY INFORMATION
  REGISTRY SENSITIVE INFORMATION
- 
+
  Copyright (c) 2013 VeriSign, Inc.  All rights reserved.
- 
+
  ***********************************************************/
 
 // API for entities that adhere to schemas created via
@@ -27,14 +27,14 @@
         var schemaManager = require('../util/schema-manager')(mongoose);
         var hookManager = require('../util/hook-manager')(mongoose);
 
-        // Helper to get a model for a particular type.  Async 
+        // Helper to get a model for a particular type.  Async
         // in case the behavior changes
         var getModelForType = function(type, callback) {
             schemaManager.getByName(type, function(err, result) {
-                if (err || !result) { 
-                    callback(err, null); 
+                if (err || !result) {
+                    callback(err, null);
                 } else {
-                    // convert the schema object from the model to a 
+                    // convert the schema object from the model to a
                     // mongoose model we can query directly
                     callback(null, schemaManager.getEntityModel(result));
                 }
@@ -142,16 +142,16 @@
             if (!type) {
                 Common.sendError(res, 400, "No type specified");
                 return;
-            }  
+            }
             var entity = req.body;
             var err = validateEntity(entity);
             if (err) {
                 Common.sendError(res, 400, "Entity is invalid: " + err);
                 return;
-            }          
+            }
 
             // Ensure the schema exists
-            getModelForType(type, function(err, EntityModel) {                
+            getModelForType(type, function(err, EntityModel) {
                 if (err || !EntityModel) {
                     Common.sendError(res, 400, "Unknown type specified: ", type);
                 } else {
@@ -172,11 +172,7 @@
 
         this.update = function(req, res) {
             var entity = req.body;
-            var err = validateEntity(entity);
-            if (err) {
-                Common.sendError(res, 400, "Entity is invalid: " + err);
-                return;
-            }
+
             // Get the entity by id
             var type = getTypeFromRequest(req);
             // Get the id and type - wouldn't be routed here without it
@@ -203,7 +199,7 @@
                 }
             });
         }
-    } 
+    }
 
     // all route controllers expose a setup method
     module.exports.setup = function(app, config) {
