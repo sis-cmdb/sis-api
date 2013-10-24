@@ -231,6 +231,10 @@
                     var collection = model.collection;
                     delete mongoose.modelSchemas[name];
                     delete mongoose.models[name];
+                    // seems very hacky - this is for a race condition
+                    // exposed by very quick tests that create a collection
+                    // requiring an index and then drop it shortly after.
+                    // TODO: needs verification / less hackiness
                     model.collection.dropIndexes(function(err, reply) {
                         model.collection.drop(function(err, reply) {
                             // mongoose throws an error if the collection isn't found..
