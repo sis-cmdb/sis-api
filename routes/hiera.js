@@ -1,17 +1,17 @@
 /***********************************************************
- 
+
  The information in this document is proprietary
  to VeriSign and the VeriSign Product Development.
  It may not be used, reproduced or disclosed without
  the written approval of the General Manager of
  VeriSign Product Development.
- 
+
  PRIVILEGED AND CONFIDENTIAL
  VERISIGN PROPRIETARY INFORMATION
  REGISTRY SENSITIVE INFORMATION
- 
+
  Copyright (c) 2013 VeriSign, Inc.  All rights reserved.
- 
+
  ***********************************************************/
 
 // API for schemas
@@ -69,7 +69,7 @@
             HieraSchemaModel.findOne({"name" : hieraName}, function(err, result) {
                 if (err || !result) {
                     Common.sendError(res, 404, "HieraData for " + hieraName + " not found.");
-                } else {                    
+                } else {
                     Common.sendObject(res, 200, result['hieradata']);
                 }
             });
@@ -102,7 +102,9 @@
             var hieradata = entry.hieradata;
             try {
                 // validate it's an object
-                Object.keys(entry.hieradata);
+                if (Object.keys(entry.hieradata).length == 0) {
+                    return "hieradata cannot be empty";
+                }
             } catch (ex) {
                 return "hieradata is not a valid object";
             }
@@ -158,7 +160,7 @@
         }
 
         init();
-    } 
+    }
 
     // all route controllers expose a setup method
     module.exports.setup = function(app, config) {
