@@ -1,17 +1,17 @@
 /***********************************************************
- 
+
  The information in this document is proprietary
  to VeriSign and the VeriSign Product Development.
  It may not be used, reproduced or disclosed without
  the written approval of the General Manager of
  VeriSign Product Development.
- 
+
  PRIVILEGED AND CONFIDENTIAL
  VERISIGN PROPRIETARY INFORMATION
  REGISTRY SENSITIVE INFORMATION
- 
+
  Copyright (c) 2013 VeriSign, Inc.  All rights reserved.
- 
+
  ***********************************************************/
 
 // API for schemas
@@ -30,8 +30,8 @@
             var query = req.query.q || {};
             // try parsing..
             try {
-                query = JSON.parse(query);                
-            } catch (ex) {                
+                query = JSON.parse(query);
+            } catch (ex) {
                 query = {};
             }
             var limit = parseInt(req.query.limit) || Common.MAX_RESULTS;
@@ -46,7 +46,7 @@
             var schemaName = req.params.id;
             schemaManager.getByName(schemaName, function(err, result) {
                 if (err || !result) {
-                    Common.sendError(res, 404, "Schema with name " + name + " not found.");
+                    Common.sendError(res, 404, "Schema with name " + schemaName + " not found.");
                 } else {
                     Common.sendObject(res, 200, result);
                 }
@@ -92,7 +92,7 @@
                 }
             });
         }
-    } 
+    }
 
     // all route controllers expose a setup method
     module.exports.setup = function(app, config) {
