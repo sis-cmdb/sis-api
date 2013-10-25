@@ -18,7 +18,7 @@
     module.exports.attachController = function(app, controller, prefix) {
         app.get(prefix, controller.getAll);
         app.get(prefix + "/:id", controller.get);
-        if (!app.get("edgesite")) {
+        if (!app.get("readonly")) {
             app.put(prefix + "/:id", controller.update);
             app.post(prefix, controller.add);
             app.delete(prefix + "/:id", controller.delete);

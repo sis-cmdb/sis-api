@@ -40,9 +40,9 @@ describe('API at the Edge ', function() {
         }
     };
 
-    before(function(done) {        
+    before(function(done) {
         config.app = config.app || { };
-        config.app['edgesite'] = true;
+        config.app['readonly'] = true;
         server.startServer(config, function(expressApp, httpSrv) {
             mongoose = server.mongoose;
             schemaManager = require('../util/schema-manager')(mongoose);
@@ -54,17 +54,17 @@ describe('API at the Edge ', function() {
     });
 
     after(function(done) {
-        delete config.app['edgesite'];
+        delete config.app['readonly'];
         server.stopServer(httpServer, function() {
             mongoose.connection.db.dropDatabase();
             mongoose.connection.close();
-            done();    
+            done();
         });
     });
 
-    it("should have edgesite set in the app", function() {
-        should.exist(app.get("edgesite"));
-        app.get("edgesite").should.eql(true);
+    it("should have readonly set in the app", function() {
+        should.exist(app.get("readonly"));
+        app.get("readonly").should.eql(true);
     });
 
     var paths = [
