@@ -26,7 +26,7 @@ var httpServer = null;
 describe('Hiera API', function() {
     before(function(done) {
         server.startServer(config, function(expressApp, httpSrv) {
-            mongoose = server.mongoose;            
+            mongoose = server.mongoose;
             app = expressApp;
             httpServer = httpSrv;
             done();
@@ -37,7 +37,13 @@ describe('Hiera API', function() {
         server.stopServer(httpServer, function() {
             mongoose.connection.db.dropDatabase();
             mongoose.connection.close();
-            done();    
+            done();
+        });
+    });
+
+    describe("Hiera failure cases", function() {
+        it("Should error retrieving an unknown entry", function(done) {
+            request(app).get("/api/v1/hiera/dne").expect(404, done);
         });
     });
 
@@ -65,6 +71,26 @@ describe('Hiera API', function() {
                     should.exist(res.body.port);
                     done();
                 });
+        });
+        it("Should remove the port key and add a name key", function(done) {
+            request(app)
+                .put("/api/v1/hiera/host.name.here")
+                .set("Content-Type", "application/json")
+                .send({"name" : "host.name.here", "hieradata" : {"port" : null, "name" : "some_name"}})
+                .expect(200)
+                .end(function(err, res) {
+                    should.not.exist(err);
+                    var hieradata = res.body.hieradata;
+                    should.exist(hieradata);
+                    should.exist(hieradata.servers);
+                    should.not.exist(hieradata.port);
+                    should.exist(hieradata.name);
+                    done();
+                });
+        });
+        it("Should delete the hiera entry", function(done) {
+            request(app).del("/api/v1/hiera/host.name.here")
+                .expect(200, done);
         });
     });
 });

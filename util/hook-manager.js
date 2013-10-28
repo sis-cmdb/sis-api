@@ -131,9 +131,7 @@ var request = require('request');
                 callback(err, null);
                 return;
             }
-            var updatedHook = SisHookModel.findOneAndUpdate({name: sisHook.name},{ $set: sisHook },callback);
-            return updatedHook;
-
+            SisHookModel.findOneAndUpdate({name: sisHook.name}, { $set: sisHook }, callback);
         }
 
         // Delete a hook by name.

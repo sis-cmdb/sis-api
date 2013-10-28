@@ -50,25 +50,41 @@ describe('Hook API', function() {
         });
     });
 
-    describe("POST hooks", function() {
+    describe("CRUD hooks", function() {
+        var hook = {
+            "name" : "test_hook",
+            "owner" : "Test",
+            "entity_type" : "Schema",
+            "target" : {
+                "action" : "POST",
+                "url" : "http://foo.bar.com/foo"
+            },
+            "events": ['insert','update']
+        };
         it("Should create new hook", function(done) {
-            var hook = { 
-                "name" : "test_hook", 
-                "owner" : "Test",
-                "entity_type" : "Schema",
-                "target" : {
-                    "action" : "POST",
-                    "url" : "http://foo.bar.com/foo"
-                },
-                "events": ['insert','update']
-            };
             request(app).post("/api/v1/hooks")
                 .set('Content-Encoding', 'application/json')
                 .send(hook)
                 .expect(201, done);
         });
-        after(function(done) {
-            hookManager.deleteHook("test_hook", done);
+        it("Should update the hook", function(done) {
+            hook['events'] = ['insert'];
+            request(app).put("/api/v1/hooks/test_hook")
+                .set("Content-Type", "application/json")
+                .send(hook)
+                .expect(200)
+                .end(function(err, result) {
+                    should.not.exist(err);
+                    should.exist(result);
+                    should.exist(result.body);
+                    should.exist(result.body.events);
+                    result.body.events.length.should.eql(1);
+                    done();
+                });
+        });
+        it ("Should delete the hook", function(done) {
+            request(app).del("/api/v1/hooks/test_hook")
+                .expect(200, done);
         });
     });
 
@@ -76,7 +92,7 @@ describe('Hook API', function() {
         before(function(done) {
             // insert three hooks
             var hooks = [
-                { 
+                {
                     "name" : "test_hook1",
                     "owner" : "Test",
                     "entity_type" : "Schema",
@@ -86,7 +102,7 @@ describe('Hook API', function() {
                     },
                     "events": ['insert','update']
                 },
-                { 
+                {
                     "name" : "test_hook2",
                     "owner" : "Test",
                     "entity_type" : "Schema",
@@ -96,7 +112,7 @@ describe('Hook API', function() {
                     },
                     "events": ['insert','update']
                 },
-                { 
+                {
                     "name" : "test_hook3",
                     "owner" : "Test",
                     "entity_type" : "Schema",

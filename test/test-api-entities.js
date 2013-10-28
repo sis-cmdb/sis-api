@@ -38,7 +38,7 @@ describe('Entity API', function() {
         server.stopServer(httpServer, function() {
             mongoose.connection.db.dropDatabase();
             mongoose.connection.close();
-            done();    
+            done();
         });
     });
 
@@ -49,6 +49,16 @@ describe('Entity API', function() {
         });
         it("Should fail if type does not exist ", function(done) {
             request(app).get("/v1/api/entities/dne").expect(404, done);
+        });
+        it("Should fail to add an entity for a dne schema", function(done) {
+            request(app).post("/v1/api/entities/dne")
+                .set("Content-Type", "application/json")
+                .send({"this" : "should", "not" : "work"})
+                .expect(404, done);
+        });
+        it("Should fail to get an entity by id of a particular type that does not exist", function(done) {
+            request(app).get("/v1/api/entities/dne/some_id")
+                .expect(404, done);
         });
     });
 
@@ -107,6 +117,13 @@ describe('Entity API', function() {
                 .expect(201)
                 .end(createEndCallback(done));
         });
+
+        it("Should retrieve the added entity ", function(done) {
+            request(app).get("/api/v1/entities/" + schema.name + "/" + entityId)
+                .set('Content-Encoding', 'application/json')
+                .expect(200, createEndCallback(done))
+        });
+
         it("Should update the str to foobar ", function(done) {
             expectedEntity["str"] = "foobar";
             request(app).put("/api/v1/entities/" + schema.name + "/" + entityId)
@@ -128,6 +145,10 @@ describe('Entity API', function() {
                 .send(invalid)
                 .expect(400);
                 done();
+        });
+        it("Should delete the added entity", function(done) {
+            request(app).del("/api/v1/entities/" + schema.name + "/" + entityId)
+                .expect(200, done);
         });
     });
 

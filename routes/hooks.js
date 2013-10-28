@@ -78,7 +78,7 @@
                 if (err) {
                     Common.sendError(res, 400, "Unable to update hook: " + err);
                 } else {
-                    res.send(201, entity);
+                    res.send(200, entity);
                 }
             });
 

@@ -64,7 +64,7 @@
             var type = getTypeFromRequest(req);
             getModelForType(type, function(err, EntityModel) {
                 if (err || !EntityModel) {
-                    Common.sendError(res, 404, "Unknown type specified: ", type);
+                    Common.sendError(res, 404, "Unknown type specified: " + type);
                 } else {
                     var query = req.query.q || {};
                     // try parsing..
@@ -137,12 +137,8 @@
 
         // Handler for POST /
         this.add = function(req, res) {
-            // Make sure type is specified
+            // Get the type - this method would not be called without it
             var type = getTypeFromRequest(req);
-            if (!type) {
-                Common.sendError(res, 400, "No type specified");
-                return;
-            }
             var entity = req.body;
             var err = validateEntity(entity);
             if (err) {

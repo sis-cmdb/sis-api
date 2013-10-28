@@ -142,11 +142,19 @@
                 return;
             }
             // find it and update
-            HieraSchemaModel.find({"name" : entry.name}, function(err, result) {
+            HieraSchemaModel.findOne({"name" : entry.name}, function(err, result) {
                 if (err || !result) {
                     Common.sendError(res, 404, "HieraData for " + name + " not found.");
                 } else {
-                    result['hieradata'] = entry.hieradata;
+                    /* allow partial update */
+                    var hieradata = result.hieradata;
+                    for (var k in entry.hieradata) {
+                        if (entry.hieradata[k] == null) {
+                            delete hieradata[k];
+                        } else {
+                            hieradata[k] = entry.hieradata[k];
+                        }
+                    }
                     result.save(function(err, result) {
                         if (err) {
                             Common.sendError(res, 500, "Unable to save hieradata: " + err);
