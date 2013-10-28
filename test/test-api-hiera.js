@@ -45,6 +45,33 @@ describe('Hiera API', function() {
         it("Should error retrieving an unknown entry", function(done) {
             request(app).get("/api/v1/hiera/dne").expect(404, done);
         });
+        it("Should error deleting an unknown entry", function(done) {
+            request(app).del("/api/v1/hiera/dne").expect(404, done);
+        });
+        it("Should fail to add an entry missing 'name'", function(done) {
+            request(app).post("/api/v1/hiera")
+                .set("Content-Type", "application/json")
+                .send({"hieradata" : {"this" : "should", "not" : "work"}})
+                .expect(400, done);
+        });
+        it("Should fail to add an entry missing 'hieradata'", function(done) {
+            request(app).post("/api/v1/hiera")
+                .set("Content-Type", "application/json")
+                .send({"name" : "whatever"})
+                .expect(400, done);
+        });
+        it("Should fail to add a non object hieradata", function(done) {
+            request(app).post("/api/v1/hiera")
+                .set("Content-Type", "application/json")
+                .send({"name" : "name", "hieradata" : "string"})
+                .expect(400, done);
+        });
+        it("Should fail to update an entry that doesn't exist", function(done) {
+            request(app).put("/api/v1/hiera/dne")
+                .set("Content-Type", "application/json")
+                .send({"name" : "dne", "hieradata" : {"key1" : "v1"}})
+                .expect(404, done);
+        });
     });
 
     describe("Hiera success cases", function() {
@@ -87,6 +114,12 @@ describe('Hiera API', function() {
                     should.exist(hieradata.name);
                     done();
                 });
+        });
+        it("Should fail to update an entry with invalid data", function(done) {
+            request(app).put("/api/v1/hiera/host.name.here")
+                .set("Content-Type", "application/json")
+                .send({"hieradata" : {"key1" : "v1"}})
+                .expect(400, done);
         });
         it("Should delete the hiera entry", function(done) {
             request(app).del("/api/v1/hiera/host.name.here")

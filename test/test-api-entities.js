@@ -45,19 +45,23 @@ describe('Entity API', function() {
     describe("GET Failure cases", function() {
         // no schemas..
         it("Should fail if type is not specified ", function(done) {
-            request(app).get("/v1/api/entities").expect(404, done);
+            request(app).get("/api/v1/entities").expect(404, done);
         });
         it("Should fail if type does not exist ", function(done) {
-            request(app).get("/v1/api/entities/dne").expect(404, done);
+            request(app).get("/api/v1/entities/dne").expect(404, done);
         });
         it("Should fail to add an entity for a dne schema", function(done) {
-            request(app).post("/v1/api/entities/dne")
+            request(app).post("/api/v1/entities/dne")
                 .set("Content-Type", "application/json")
                 .send({"this" : "should", "not" : "work"})
                 .expect(404, done);
         });
         it("Should fail to get an entity by id of a particular type that does not exist", function(done) {
-            request(app).get("/v1/api/entities/dne/some_id")
+            request(app).get("/api/v1/entities/dne/some_id")
+                .expect(404, done);
+        });
+        it("Should fail to delete an entity for dne schema", function(done) {
+            request(app).del("/api/v1/entities/dne/some_id")
                 .expect(404, done);
         });
     });
@@ -149,6 +153,24 @@ describe('Entity API', function() {
         it("Should delete the added entity", function(done) {
             request(app).del("/api/v1/entities/" + schema.name + "/" + entityId)
                 .expect(200, done);
+        });
+        it("Should fail to add an entity with _id", function(done) {
+            expectedEntity['_id'] = 'foobar';
+            request(app).post("/api/v1/entities/" + schema.name)
+                .set("Content-Type", "application/json")
+                .send(expectedEntity)
+                .expect(400, done);
+        });
+        it("Should fail to update an entity that doesn't exist", function(done) {
+            delete expectedEntity['_id'];
+            request(app).put("/api/v1/entities/" + schema.name + "/foobar")
+                .set("Content-Type", "application/json")
+                .send(expectedEntity)
+                .expect(404, done);
+        });
+        it("Should fail to delete entity that doesn't exist", function(done) {
+            request(app).del("/api/v1/entities/" + schema.name + "/some_id")
+                .expect(404, done);
         });
     });
 

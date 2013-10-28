@@ -144,7 +144,7 @@
             // find it and update
             HieraSchemaModel.findOne({"name" : entry.name}, function(err, result) {
                 if (err || !result) {
-                    Common.sendError(res, 404, "HieraData for " + name + " not found.");
+                    Common.sendError(res, 404, "HieraData for " + id + " not found.");
                 } else {
                     /* allow partial update */
                     var hieradata = result.hieradata;

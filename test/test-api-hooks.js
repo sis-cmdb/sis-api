@@ -43,10 +43,14 @@ describe('Hook API', function() {
         done();
     });
 
-    describe("GET failure cases", function() {
+    describe("Hooks failure cases", function() {
         // no hooks.
-        it("Should fail if type does not exist ", function(done) {
-            request(app).get("/v1/api/hooks/DNE").expect(404, done);
+        it("Should fail if name does not exist ", function(done) {
+            request(app).get("/api/v1/hooks/DNE").expect(404, done);
+        });
+        it("Should fail to delete non existent hook", function(done) {
+            request(app).del("/api/v1/hooks/DNE")
+                .expect(404, done);
         });
     });
 
@@ -66,6 +70,17 @@ describe('Hook API', function() {
                 .set('Content-Encoding', 'application/json')
                 .send(hook)
                 .expect(201, done);
+        });
+        it("Should retrieve the hook", function(done) {
+            request(app).get("/api/v1/hooks/test_hook")
+                .expect(200, function(err, res) {
+                    should.not.exist(err);
+                    should.exist(res.body);
+                    for (var k in hook) {
+                        hook[k].should.eql(res.body[k]);
+                    }
+                    done();
+                });
         });
         it("Should update the hook", function(done) {
             hook['events'] = ['insert'];

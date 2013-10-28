@@ -68,7 +68,7 @@
                 if (err) {
                     Common.sendError(res, 400, "Unable to save hook: " + err);
                 } else {
-                    res.send(201, entity);
+                    Common.sendObject(res, 201, entity);
                 }
             });
         }
@@ -77,8 +77,10 @@
             hookManager.updateHook(req.body, function(err, entity) {
                 if (err) {
                     Common.sendError(res, 400, "Unable to update hook: " + err);
+                } else if (!entity) {
+                    Common.sendError(res, 404, "Hook not found");
                 } else {
-                    res.send(200, entity);
+                    Common.sendObject(res, 200, entity);
                 }
             });
 

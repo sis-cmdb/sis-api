@@ -48,8 +48,8 @@
 
         var findSingle = function(type, condition, callback) {
             getModelForType(type, function(err, EntityModel) {
-                if (err) {
-                    callback(err, null);
+                if (err || !EntityModel) {
+                    callback(err || "Unknown type specified " + type, null);
                     return;
                 }
                 EntityModel.findOne(condition, function(err, result) {
@@ -149,7 +149,7 @@
             // Ensure the schema exists
             getModelForType(type, function(err, EntityModel) {
                 if (err || !EntityModel) {
-                    Common.sendError(res, 400, "Unknown type specified: ", type);
+                    Common.sendError(res, 404, "Unknown type specified: ", type);
                 } else {
                     // EntityModel is a mongoose model
                     var mongooseEntity = new EntityModel(entity);

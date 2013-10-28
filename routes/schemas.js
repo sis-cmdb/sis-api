@@ -86,6 +86,8 @@
             schemaManager.updateSchema(sisSchema, function(err, entity) {
                 if (err) {
                     Common.sendError(res, 400, "Unable to update schema " + err);
+                } else if (!entity) {
+                    Common.sendError(res, 404, "Schema not found");
                 } else {
                     Common.sendObject(res, 200, entity);
                     hookManager.dispatchHooks(entity, schemaManager.SIS_SCHEMA_NAME, hookManager.EVENT_UPDATE);
