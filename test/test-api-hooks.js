@@ -52,6 +52,28 @@ describe('Hook API', function() {
             request(app).del("/api/v1/hooks/DNE")
                 .expect(404, done);
         });
+        it("Should fail to create an invalid hook", function(done) {
+            request(app).post("/api/v1/hooks")
+                .set("Content-Type", "application/json")
+                .send({"invalid" : "hook"})
+                .expect(400, done);
+        });
+        it("Should fail to update a hook that doens't exist", function(done) {
+            var hook = {
+                "name" : "DNE",
+                "owner" : "Test",
+                "entity_type" : "Schema",
+                "target" : {
+                    "action" : "POST",
+                    "url" : "http://foo.bar.com/foo"
+                },
+                "events": ['insert','update']
+            };
+            request(app).put("/api/v1/hooks/DNE")
+                .set("Content-Type", "application/json")
+                .send(hook)
+                .expect(404, done);
+        });
     });
 
     describe("CRUD hooks", function() {
@@ -96,6 +118,13 @@ describe('Hook API', function() {
                     result.body.events.length.should.eql(1);
                     done();
                 });
+        });
+        it("Should fail to update the hook w/ invalid data", function(done) {
+            delete hook['events'];
+            request(app).put("/api/v1/hooks/test_hook")
+                .set("Content-Type", "application/json")
+                .send(hook)
+                .expect(400, done);
         });
         it ("Should delete the hook", function(done) {
             request(app).del("/api/v1/hooks/test_hook")

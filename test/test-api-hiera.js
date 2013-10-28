@@ -72,6 +72,12 @@ describe('Hiera API', function() {
                 .send({"name" : "dne", "hieradata" : {"key1" : "v1"}})
                 .expect(404, done);
         });
+        it("Should fail to add an empty entry", function(done) {
+            request(app).post("/api/v1/hiera")
+                .set("Content-Type", "application/json")
+                .send({"name": "entry", "hieradata" : {}})
+                .expect(400, done);
+        });
     });
 
     describe("Hiera success cases", function() {
@@ -119,6 +125,13 @@ describe('Hiera API', function() {
             request(app).put("/api/v1/hiera/host.name.here")
                 .set("Content-Type", "application/json")
                 .send({"hieradata" : {"key1" : "v1"}})
+                .expect(400, done);
+        });
+        it("Should fail to update entry with mismatched name and path", function(done) {
+            request(app)
+                .put("/api/v1/hiera/host.name.here")
+                .set("Content-Type", "application/json")
+                .send({"name" : "does.not.match", "hieradata" : {"should" : "fail"}})
                 .expect(400, done);
         });
         it("Should delete the hiera entry", function(done) {

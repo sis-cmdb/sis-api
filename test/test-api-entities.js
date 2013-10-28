@@ -42,7 +42,7 @@ describe('Entity API', function() {
         });
     });
 
-    describe("GET Failure cases", function() {
+    describe("Entity Failure cases", function() {
         // no schemas..
         it("Should fail if type is not specified ", function(done) {
             request(app).get("/api/v1/entities").expect(404, done);
@@ -171,6 +171,12 @@ describe('Entity API', function() {
         it("Should fail to delete entity that doesn't exist", function(done) {
             request(app).del("/api/v1/entities/" + schema.name + "/some_id")
                 .expect(404, done);
+        });
+        it("Should fail to add an empty entity", function(done) {
+            request(app).post("/api/v1/entities/" + schema.name)
+                .set("Content-Type", "application/json")
+                .send({})
+                .expect(400, done);
         });
     });
 

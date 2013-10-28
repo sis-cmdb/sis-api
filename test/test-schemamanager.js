@@ -1,17 +1,17 @@
 /***********************************************************
- 
+
  The information in this document is proprietary
  to VeriSign and the VeriSign Product Development.
  It may not be used, reproduced or disclosed without
  the written approval of the General Manager of
  VeriSign Product Development.
- 
+
  PRIVILEGED AND CONFIDENTIAL
  VERISIGN PROPRIETARY INFORMATION
  REGISTRY SENSITIVE INFORMATION
- 
+
  Copyright (c) 2013 VeriSign, Inc.  All rights reserved.
- 
+
  ***********************************************************/
 
 var config = require('./test-config');
@@ -81,7 +81,7 @@ describe('SchemaManager', function() {
     });
   });
 
-  describe('add-valid-schema', function() {
+  describe('add-schema', function() {
     it("should add a valid json schema object", function(done) {
       var name = "network_element";
       var schema = {
@@ -105,6 +105,83 @@ describe('SchemaManager', function() {
         done();
       });
     });
+
+    ['sis_hiera', 'sis_schemas', 'sis_hooks'].map(function(name) {
+        it("should fail to add a schema with name" + name, function(done) {
+            var schema = {
+              "name" : name,
+              "owner" : "test",
+              "definition" : {
+                ne_type: "String",
+              }
+            };
+            schemaManager.addSchema(schema, function(err, entity) {
+                should.exist(err);
+                should.not.exist(entity);
+                done();
+            });
+        });
+    });
+    it("Should fail to add an empty schema", function(done) {
+        var schema = {
+          "name" : "name",
+          "owner" : "test",
+          "definition" : { }
+        };
+        schemaManager.addSchema(schema, function(err, entity) {
+            should.exist(err);
+            should.not.exist(entity);
+            done();
+        });
+    });
+
+    ['_id', '__v'].map(function(field) {
+        it("Should fail to add a schema w/ field " + field, function(done) {
+            var schema = {
+                "name" : "schema1",
+                "owner" : "test",
+                "definition" : {
+                    "name" : "String"
+                }
+            }
+            schema['definition'][field] = 'String';
+            schemaManager.addSchema(schema, function(err, entity) {
+                should.exist(err);
+                should.not.exist(entity);
+                done();
+            });
+        });
+    });
+    it("Should fail to add a schema with a bad definition", function(done) {
+        var schema = {
+            "name" : "schema1",
+            "owner" : "test",
+            "definition" : "Bogus"
+        }
+        schemaManager.addSchema(schema, function(err, entity) {
+            should.exist(err);
+            should.not.exist(entity);
+            done();
+        });
+    });
+    it("Should fail to add a schema with an invalid schema def", function(done) {
+        var schema = {
+            "name" : "schema1",
+            "owner" : "test",
+            "definition" : {
+                "name" : "UnknownType"
+            }
+        }
+        schemaManager.addSchema(schema, function(err, entity) {
+            should.exist(err);
+            should.not.exist(entity);
+            done();
+        });
+    });
+  });
+
+  describe("getEntityModel failures", function() {
+
   });
 
   describe('delete-schema', function() {
@@ -137,7 +214,7 @@ describe('SchemaManager', function() {
           // assert there is an item
           EntityType.count({}, function(err, result) {
             result.should.eql(1);
-            done(err); 
+            done(err);
           });
         });
       });
@@ -176,7 +253,7 @@ describe('SchemaManager', function() {
         var EntityType = schemaManager.getEntityModel(entity);
         EntityType.count({}, function(err, result) {
           result.should.eql(0);
-          done(err); 
+          done(err);
         });
       });
     });

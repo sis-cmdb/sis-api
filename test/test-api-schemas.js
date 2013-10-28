@@ -47,13 +47,24 @@ describe('Schema API', function() {
         });
     });
 
-    describe("GET failure cases", function() {
-        // no schemas..
-        it("Should fail if type is not specified ", function(done) {
-            request(app).get("/v1/api/schemas").expect(404, done);
-        });
+    describe("Schema failure cases", function() {
         it("Should fail if type does not exist ", function(done) {
-            request(app).get("/v1/api/schemas/dne").expect(404, done);
+            request(app).get("/api/v1/schemas/dne").expect(404, done);
+        });
+        it("Should fail to delete type if it doesn't exist", function(done) {
+            request(app).del("/api/v1/schemas/dne").expect(404, done);
+        });
+        it("Should fail to add an invalid schema", function(done) {
+            request(app).post("/api/v1/schemas")
+                .set("Content-type", "application/json")
+                .send({"name" : "no_owner_or_def"})
+                .expect(400, done);
+        });
+        it("Should fail to update a schema that DNE", function(done) {
+            request(app).put("/api/v1/schemas/DNE")
+                .set("Content-type", "application/json")
+                .send({"name" : "DNE", "owner" : "DNE", "definition" : {"k" : "String"}})
+                .expect(404, done);
         });
     });
 
@@ -106,6 +117,13 @@ describe('Schema API', function() {
                     }
                     done();
                 });
+        });
+        it("Should fail to change the schema name", function(done) {
+            jsData['name'] = "whatever";
+            request(app).put("/api/v1/schemas/network_element")
+                .set("Content-type", "application/json")
+                .send(jsData)
+                .expect(400, done);
         });
         it("Should delete the schema", function(done) {
             request(app).del("/api/v1/schemas/network_element")

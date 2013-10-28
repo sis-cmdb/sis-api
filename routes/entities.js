@@ -124,6 +124,9 @@
         var validateEntity = function(entity) {
             try {
                 var keys = Object.keys(entity);
+                if (keys.length == 0) {
+                    return "entity cannot be empty";
+                }
                 for (var i = 0; i < keys.length; ++i) {
                     if (keys[i] in schemaManager.reservedFields) {
                         return keys[i] + " is a reserved field";

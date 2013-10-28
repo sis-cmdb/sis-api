@@ -43,7 +43,7 @@ var startServer = function(config, callback) {
     nconf.defaults(config);
 
     var app = express();
-    app.use(express.bodyParser());
+    app.use(express.json());
     app.use(allowCrossDomain);
 
     // Setup global options

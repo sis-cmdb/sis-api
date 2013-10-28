@@ -149,7 +149,6 @@
             // get the existing schema document
             this.getByName(sisSchema.name, function(err, currentSchema) {
                 if (err || !currentSchema) {
-                    err = err || "Schema does not exist";
                     callback(err, null);
                     return;
                 }
