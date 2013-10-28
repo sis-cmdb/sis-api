@@ -158,7 +158,7 @@ var request = require('request');
             };
             if (options['method'] == 'GET') {
                 data['data'] = JSON.stringify(entity);
-                options['qs'] = data;
+                options['qs'] = {'data' : data};
             } else {
                 options['json'] = data;
             }

@@ -181,7 +181,16 @@ describe('SchemaManager', function() {
   });
 
   describe("getEntityModel failures", function() {
-
+    it("Should fail to get an EntityModel for a schema with no name", function(done) {
+        var model = schemaManager.getEntityModel({'definition' : {'name' : 'String'}});
+        should.not.exist(model);
+        done();
+    });
+    it("Should fail to get an EntityModel for an invalid schema def", function(done) {
+        var model = schemaManager.getEntityModel({'name' : 'invalid', 'owner' : 'invalid', 'definition' : {'bogus' : 'Unknown'}});
+        should.not.exist(model);
+        done();
+    });
   });
 
   describe('delete-schema', function() {

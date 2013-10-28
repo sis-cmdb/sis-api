@@ -125,6 +125,14 @@ describe('Schema API', function() {
                 .send(jsData)
                 .expect(400, done);
         });
+        it("Should fail to update the schema with an invalid body", function(done) {
+            delete jsData['owner'];
+            jsData['name'] = 'network_element';
+            request(app).put("/api/v1/schemas/network_element")
+                .set("Content-type", "application/json")
+                .send(jsData)
+                .expect(400, done);
+        });
         it("Should delete the schema", function(done) {
             request(app).del("/api/v1/schemas/network_element")
                 .expect(200, done);

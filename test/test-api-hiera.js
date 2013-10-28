@@ -139,5 +139,77 @@ describe('Hiera API', function() {
                 .expect(200, done);
         });
     });
+
+    describe("test-get-hook-dispatch", function() {
+        // the done callback that our listening server will callback on
+        var doneCallback = null;
+        // hook server - receives the hook events
+        var hookServer = null;
+        var hookHttpServer = null;
+        var hookName = "test_hook_get";
+        var hook = null;
+        var hookManager = null;
+
+        before(function(done) {
+            var express = require('express');
+            hookServer = express();
+            hookServer.use(express.bodyParser());
+            hookManager = require('../util/hook-manager')(mongoose);
+            hookServer.get('/hook', function(req, res) {
+                should.exist(req.query.data);
+                var data = req.query.data;
+                data.entity_type.should.eql("sis_hiera");
+                data.hook.should.eql(hookName);
+                data.event.should.eql(hookManager.EVENT_INSERT);
+                if (doneCallback) {
+                    doneCallback();
+                }
+            });
+
+            hook = {
+                "name" : hookName,
+                "owner" : "Test",
+                "entity_type" : "sis_hiera",
+                "target" : {
+                    "action" : "GET",
+                    "url" : "http://localhost:3335/hook"
+                },
+                "events": [ hookManager.EVENT_INSERT ]
+            };
+
+            hookHttpServer = hookServer.listen(3335, function(err) {
+                if (err) {
+                    done(err);
+                }
+                hookManager.addHook(hook, function(err, result) {
+                    done();
+                });
+            });
+        });
+
+        after(function(done) {
+            hookHttpServer.close();
+            hookManager.deleteHook(hookName, function() {
+                done();
+            });
+        });
+
+        var hiera_data = {
+            "name" : "hiera_key",
+            "hieradata" : {
+                "field" : "String",
+                "field2" : "Number"
+            }
+        };
+
+        it("Should dispatch the hiera hook", function(doneCb) {
+            doneCallback = doneCb;
+            request(app).post("/api/v1/hiera")
+                .set('Content-Encoding', 'application/json')
+                .send(hiera_data)
+                .end(function(err, res) { });
+        });
+    });
+
 });
 

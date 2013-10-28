@@ -90,10 +90,7 @@
                         return fields[i] + " is a reserved field";
                     }
                 }
-                var testSchema = mongoose.Schema(modelObj.definition);
-                if (!testSchema) {
-                    return "Schema is invalid";
-                }
+                mongoose.Schema(modelObj.definition);
             } catch (ex) {
                 return "Schema is invalid: " + ex;
             }
