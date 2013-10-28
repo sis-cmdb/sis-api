@@ -57,27 +57,59 @@ describe('Schema API', function() {
         });
     });
 
-    describe("POST schema", function() {
+    describe("CRUD schema", function() {
+        var jsData = {
+            "name":"network_element",
+            "owner" : "ResOps",
+            "definition": {
+                "ne_type": "String",
+                "cid":     "String",
+                "ip":      "String",
+                "ip6":     "String",
+                "bgpip":   "String",
+                "bgpip6":  "String"
+            }
+        };
         it("Should create new schemas", function(done) {
-            var jsData = {
-                "name":"network_element",
-                "owner" : "ResOps",
-                "definition": {
-                    "ne_type": "String",
-                    "cid":     "String",
-                    "ip":      "String",
-                    "ip6":     "String",
-                    "bgpip":   "String",
-                    "bgpip6":  "String"
-                }
-            };
+
             request(app).post("/api/v1/schemas")
                 .set('Content-Encoding', 'application/json')
                 .send(jsData)
                 .expect(201, done);
         });
-        after(function(done) {
-            schemaManager.deleteSchema("network_element", done);
+        it("Should get the schema", function(done) {
+            request(app).get("/api/v1/schemas/network_element")
+                .expect(200)
+                .end(function(err, res) {
+                    var data = res.body;
+                    should.not.exist(err);
+                    should.exist(data);
+                    for (var k in jsData) {
+                        jsData[k].should.eql(data[k]);
+                    }
+                    done();
+                });
+        });
+        it("Should update the schema", function(done) {
+            // update jsdata
+            jsData["definition"]['cid'] = "Number";
+            request(app).put("/api/v1/schemas/network_element")
+                .set("Content-type", "application/json")
+                .send(jsData)
+                .expect(200)
+                .end(function(err, res) {
+                    var data = res.body;
+                    should.not.exist(err);
+                    should.exist(data);
+                    for (var k in jsData) {
+                        jsData[k].should.eql(data[k]);
+                    }
+                    done();
+                });
+        });
+        it("Should delete the schema", function(done) {
+            request(app).del("/api/v1/schemas/network_element")
+                .expect(200, done);
         });
     });
 
