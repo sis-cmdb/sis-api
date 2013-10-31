@@ -14,6 +14,8 @@
 
  ***********************************************************/
 
+'use strict';
+
 // API for entities that adhere to schemas created via
 // the schemas API
 (function() {
@@ -188,7 +190,11 @@
                     var schema = result.schema;
                     for (var k in entity) {
                         if (schema.path(k)) {
-                            result[k] = entity[k];
+                            if (entity[k] != null) {
+                                result[k] = Common.merge(result[k], entity[k]);
+                            } else {
+                                delete result[k];
+                            }
                         }
                     }
                     result.save(function(err, updated) {

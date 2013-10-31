@@ -14,6 +14,7 @@
 
  ***********************************************************/
 
+'use strict';
 // API for schemas
 (function() {
 
@@ -147,14 +148,7 @@
                     Common.sendError(res, 404, "HieraData for " + id + " not found.");
                 } else {
                     /* allow partial update */
-                    var hieradata = result.hieradata;
-                    for (var k in entry.hieradata) {
-                        if (entry.hieradata[k] == null) {
-                            delete hieradata[k];
-                        } else {
-                            hieradata[k] = entry.hieradata[k];
-                        }
-                    }
+                    result.hieradata = Common.merge(result.hieradata, entry.hieradata);
                     result.save(function(err, result) {
                         if (err) {
                             Common.sendError(res, 500, "Unable to save hieradata: " + err);

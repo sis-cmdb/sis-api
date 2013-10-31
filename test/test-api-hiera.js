@@ -85,7 +85,11 @@ describe('Hiera API', function() {
             "name" : "host.name.here",
             "hieradata" : {
                 "servers" : ["10.0.0.1", "10.0.0.2"],
-                "port" : 80
+                "port" : 80,
+                "obj" : {
+                    "k" : "k",
+                    "j" : "j"
+                }
             }
         };
         it("Should add the hiera entry", function(done) {
@@ -119,6 +123,21 @@ describe('Hiera API', function() {
                     should.not.exist(hieradata.port);
                     should.exist(hieradata.name);
                     done();
+                });
+        });
+        it("Should remove the k field from obj and add the l field", function(done) {
+            request(app).put("/api/v1/hiera/host.name.here")
+                .set("Content-Type", "application/json")
+                .send({"name" : "host.name.here", "hieradata" : { "obj" : { "k" : null, "l" : "l"} } })
+                .expect(200, function(err, res) {
+                    should.not.exist(err);
+                    var hieradata = res.body.hieradata;
+                    should.exist(hieradata);
+                    should.exist(hieradata.servers);
+                    should.exist(hieradata.obj.j);
+                    should.not.exist(hieradata.obj.k);
+                    should.exist(hieradata.obj.l);
+                    done(err, hieradata);
                 });
         });
         it("Should fail to update an entry with invalid data", function(done) {

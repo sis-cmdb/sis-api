@@ -180,5 +180,83 @@ describe('Entity API', function() {
         });
     });
 
+    describe("Partial entity updates", function() {
+        var schema = {
+            "name":"test_nested_entity",
+            "owner" : "test",
+            "definition": {
+                "str":   "String",
+                "num":   "Number",
+                "nested_obj" : {
+                    "str" : "String",
+                    "obj2" : {
+                        "name" : "String",
+                        "other_field" : "String"
+                    }
+                },
+                "mixed_obj" : "Mixed"
+            }
+        };
+        var entity = {
+            "str" : "foo",
+            "num" : 20,
+            "nested_obj" : {
+                "str" : "bar",
+                "obj2" : {
+                    "name" : "baz",
+                    "other_field" : "werd"
+                }
+            },
+            "mixed_obj" : {
+                "crazy" : "stuff",
+                "goes" : "here"
+            }
+        };
+        before(function(done) {
+            schemaManager.addSchema(schema, function(err, result) {
+                if (err) { return done(err, result) }
+                request(app).post("/api/v1/entities/test_nested_entity")
+                    .set("Content-Type", "application/json")
+                    .send(entity)
+                    .expect(201, function(err, res) {
+                        entity = res.body;
+                        should.exist(entity);
+                        should.exist(entity.nested_obj);
+                        should.exist(entity.nested_obj.obj2);
+                        should.exist(entity.nested_obj.obj2.name);
+                        done(err, result);
+                    })
+            });
+        });
+        after(function(done) {
+            schemaManager.deleteSchema(schema.name, done);
+        });
+        it("Should update nested_obj.obj2.name only", function(done) {
+            entity['nested_obj']['obj2']['name'] == "hello";
+            delete entity['__v'];
+            request(app).put("/api/v1/entities/test_nested_entity/" + entity['_id'])
+                .set("Content-Type", "application/json")
+                .send({"nested_obj" : { "obj2" : { "name" : "hello" } } })
+                .expect(200, function(err, result) {
+                    result = result.body;
+                    delete result['__v'];
+                    result.should.eql(entity);
+                    done(err, result);
+                });
+        });
+        it("Should update delete 'crazy' from mixed_obj and add 'awesome'", function(done) {
+            delete entity['mixed_obj']['crazy'];
+            entity['mixed_obj']['awesome'] = 'here';
+            request(app).put("/api/v1/entities/test_nested_entity/" + entity['_id'])
+                .set("Content-Type", "application/json")
+                .send({"mixed_obj" : {"crazy" : null, "awesome" : "here"}})
+                .expect(200, function(err, result) {
+                    result = result.body;
+                    delete result['__v'];
+                    result.should.eql(entity);
+                    done(err, result);
+                });
+        });
+    });
 
 });

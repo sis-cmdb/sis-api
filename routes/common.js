@@ -14,6 +14,8 @@
 
  ***********************************************************/
 
+'use strict';
+
 (function() {
     module.exports.attachController = function(app, controller, prefix) {
         app.get(prefix, controller.getAll);
@@ -35,6 +37,25 @@
     }
 
     module.exports.MAX_RESULTS = 200;
+
+    function mergeHelper(full, partial) {
+        if (typeof partial !== 'object' || partial instanceof Array) {
+            return partial;
+        } else {
+            // merge the object
+            var result = full;
+            for (var k in partial) {
+                if (partial[k] != null) {
+                    result[k] = mergeHelper(full[k], partial[k]);
+                } else {
+                    delete result[k];
+                }
+            }
+            return result;
+        }
+    }
+
+    module.exports.merge = mergeHelper;
 
 })();
 

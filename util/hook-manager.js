@@ -14,6 +14,7 @@
 
  ***********************************************************/
 
+'use strict';
 // A class used to manage the SIS Hooks defined by the /hooks api
 // imports..
 // node http lib

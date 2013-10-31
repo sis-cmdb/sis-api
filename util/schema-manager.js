@@ -14,6 +14,7 @@
 
  ***********************************************************/
 
+'use strict';
 // A class used to manage the SIS Schemas defined by the /schemas api
 // and also help out the /entities apis
 
@@ -119,7 +120,7 @@
         // Do not hang on to any of these objects
         this.getEntityModel = function(sisSchema) {
             if (!sisSchema || !sisSchema.name || !sisSchema.definition) {
-                console.log("getEntityModel: Invalid schema " + JSON.stringify(sisSchema));
+                //console.log("getEntityModel: Invalid schema " + JSON.stringify(sisSchema));
                 return null;
             }
             var name = sisSchema.name;
@@ -131,7 +132,7 @@
                 var schema = mongoose.Schema(sisSchema.definition);
                 return mongoose.model(name, schema);
             } catch (ex) {
-                console.log("getEntityModel: Invalid schema " + JSON.stringify(sisSchema) + " w/ ex " + ex);
+                //console.log("getEntityModel: Invalid schema " + JSON.stringify(sisSchema) + " w/ ex " + ex);
                 return null;
             }
         }
