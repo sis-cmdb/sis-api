@@ -30,7 +30,9 @@
             var query = req.query.q || {};
             // try parsing..
             try {
-                query = JSON.parse(query);
+                if (typeof query === 'string') {
+                    query = JSON.parse(query);
+                }
             } catch (ex) {
                 query = {};
             }

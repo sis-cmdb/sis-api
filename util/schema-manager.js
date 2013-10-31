@@ -71,7 +71,7 @@
 
         var validateSchemaObject = function(modelObj) {
             if (!modelObj || !modelObj.name || typeof modelObj.name != 'string') {
-                return "Schema has an invalid name.";
+                return "Schema has an invalid name: " + modelObj.name;
             }
             if (typeof modelObj.owner != 'string') {
                 return "Schema has an invalid owner.";
@@ -102,6 +102,7 @@
         // - "name" : "Schema Name" - cannot be empty
         // - "definition" : <json_object> that is a mongoose schema
         this.addSchema = function(modelObj, callback) {
+            console.log(JSON.stringify(modelObj));
             var err = validateSchemaObject(modelObj);
             if (err) {
                 callback(err, null);
