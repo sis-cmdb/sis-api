@@ -57,6 +57,7 @@
             var name = self.SIS_SCHEMA_NAME;
             // Get the model from the definition and name
             SisSchemaModel = self.getEntityModel({name : name, definition : definition});
+            self.model = SisSchemaModel;
         }
 
         // Get all the SIS Schemas in the system
@@ -102,7 +103,6 @@
         // - "name" : "Schema Name" - cannot be empty
         // - "definition" : <json_object> that is a mongoose schema
         this.addSchema = function(modelObj, callback) {
-            console.log(JSON.stringify(modelObj));
             var err = validateSchemaObject(modelObj);
             if (err) {
                 callback(err, null);

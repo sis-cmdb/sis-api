@@ -50,21 +50,7 @@
         }
 
         this.getAll = function(req, res) {
-            var query = req.query.q || {};
-            // try parsing..
-            try {
-                if (typeof query === 'string') {
-                    query = JSON.parse(query);
-                }
-            } catch (ex) {
-                query = {};
-            }
-            var limit = parseInt(req.query.limit) || Common.MAX_RESULTS;
-            if (limit > Common.MAX_RESULTS) { limit = Common.MAX_RESULTS };
-            var offset = parseInt(req.query.offset) || 0;
-            HieraSchemaModel.find(query, null, { skip : offset, limit: limit}, function(err, entities) {
-                Common.sendObject(res, 200, entities);
-            });
+            Common.getAll(req, res, HieraSchemaModel);
         }
 
         this.get = function(req, res) {

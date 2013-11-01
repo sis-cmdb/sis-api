@@ -62,6 +62,7 @@ var request = require('request');
             }
             var schema_name = schemaManager.SIS_HOOK_SCHEMA_NAME;
             SisHookModel = schemaManager.getEntityModel({name : schema_name, definition : schema_definition, owner : "SIS"});
+            self.model = SisHookModel;
         }
 
         // Get all the SIS Hooks in the system

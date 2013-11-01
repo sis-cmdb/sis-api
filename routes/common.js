@@ -57,5 +57,32 @@
 
     module.exports.merge = mergeHelper;
 
+    var Common = module.exports;
+
+    module.exports.getAll = function(req, res, mongooseModel) {
+        var query = req.query.q || {};
+        // try parsing..
+        try {
+            if (typeof query === 'string') {
+                query = JSON.parse(query);
+            }
+        } catch (ex) {
+            query = {};
+        }
+        var limit = parseInt(req.query.limit) || Common.MAX_RESULTS;
+        if (limit > Common.MAX_RESULTS) { limit = Common.MAX_RESULTS };
+        var offset = parseInt(req.query.offset) || 0;
+        mongooseModel.count(query, function(err, c) {
+            if (err || !c) {
+                res.setHeader("x-total-count", 0);
+                return Common.sendObject(res, 200, []);
+            }
+            mongooseModel.find(query, null, { skip : offset, limit: limit}, function(err, entities) {
+                res.setHeader("x-total-count", c);
+                Common.sendObject(res, 200, entities);
+            });
+        });
+    }
+
 })();
 
