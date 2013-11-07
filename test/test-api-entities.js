@@ -18,6 +18,7 @@ var config = require('./test-config');
 var server = require("../server")
 var should = require('should');
 var request = require('supertest');
+var async = require('async');
 var mongoose = null;
 var schemaManager = null;
 var app = null;

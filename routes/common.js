@@ -77,11 +77,43 @@
                 res.setHeader("x-total-count", 0);
                 return Common.sendObject(res, 200, []);
             }
-            mongooseModel.find(query, null, { skip : offset, limit: limit}, function(err, entities) {
+            var mgQuery = mongooseModel.find(query, null, { skip : offset, limit: limit});
+            if (Common.parsePopulate(req)) {
+                var populate = Common.buildPopulate(mongooseModel.schema);
+                if (populate) {
+                    mgQuery = mgQuery.populate(populate);
+                }
+            }
+            mgQuery.exec(function(err, entities) {
                 res.setHeader("x-total-count", c);
                 Common.sendObject(res, 200, entities);
             });
         });
+    }
+
+    module.exports.parsePopulate = function(req) {
+        if (typeof req.query.populate == 'string') {
+            try {
+                return JSON.parse(req.query.populate);
+            } catch(ex) {
+                return false;
+            }
+        } else {
+            return req.query.populate || false;
+        }
+    }
+
+    module.exports.buildPopulate = function(schema) {
+        var paths = [];
+        schema.eachPath(function(pathName, schemaType) {
+            if (schemaType.instance == "ObjectID" && pathName != "_id") {
+                paths.push(pathName);
+            }
+        });
+        if (paths.length) {
+            return paths.join(" ");
+        }
+        return null;
     }
 
 })();

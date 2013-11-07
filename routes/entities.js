@@ -68,6 +68,10 @@
                 if (err || !EntityModel) {
                     Common.sendError(res, 404, "Unknown type specified: " + type);
                 } else {
+                    // default is to populate entities
+                    if (!('populate' in req.query)) {
+                        req.query['populate'] = true;
+                    }
                     Common.getAll(req, res, EntityModel);
                 }
             });
@@ -82,7 +86,25 @@
                 if (err || !result) {
                     Common.sendError(res, 404, "Unable to find entity of type " + type + " with id " + id);
                 } else {
-                    Common.sendObject(res, 200, result);
+                    if (!('populate' in req.query)) {
+                        req.query['populate'] = true;
+                    }
+                    if (Common.parsePopulate(req)) {
+                        var populate = Common.buildPopulate(result.schema);
+                        if (populate) {
+                            result.populate(populate, function(err, populated) {
+                                if (err || !populated) {
+                                    Common.sendError(res, 500, "Failed to populate object.");
+                                } else {
+                                    Common.sendObject(res, 200, populated);
+                                }
+                            });
+                        } else {
+                            Common.sendObject(res, 200, result);
+                        }
+                    } else {
+                        Common.sendObject(res, 200, result);
+                    }
                 }
             });
         }
