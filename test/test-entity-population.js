@@ -96,6 +96,7 @@ describe('Entity Population API', function() {
                     }
                     request(app).post("/api/v1/entities/" + entities[i][0])
                         .set("Content-Type", "application/json")
+                        .query("populate=false")
                         .send(entities[i][1])
                         .expect(201, function(err, result) {
                             if (err) { return done(err, result); }
