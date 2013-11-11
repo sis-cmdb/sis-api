@@ -23,9 +23,8 @@
     var HieraController = function(config) {
 
         var self = this;
-        var mongoose = config['mongoose'];
-        var schemaManager = require('../util/schema-manager')(mongoose);
-        var hookManager = require('../util/hook-manager')(mongoose);
+        var schemaManager = config['schemaManager'];
+        var hookManager = require('../util/hook-manager')(schemaManager);
 
         // A mongoose.model object for HieraData
         var HieraSchemaModel = null;
@@ -44,7 +43,7 @@
                 "name" : { "type" : "String", "required" : true, "unique" : true },
                 "hieradata" : { "type" : {}, "required" : true }
             };
-            var name = schemaManager.HIERA_SCHEMA_NAME;
+            var name = schemaManager.SIS_HIERA_SCHEMA_NAME;
             // Get the model from the definition and name
             HieraSchemaModel = schemaManager.getEntityModel({name : name, definition : definition, owner : "SIS"});
         }
@@ -71,12 +70,12 @@
                     Common.sendError(res, 404, "HieraData for " + hieraName + " not found.");
                 } else {
                     // delete the hiera entry by the id
-                    HieraSchemaModel.remove({"name" : hieraName }, function(err) {
+                    result.remove(function(err) {
                         if (err) {
                             Common.sendError(res, 500, "Could not delete hieradata for " + id + ": " + err);
                         } else {
                             Common.sendObject(res, 200, true);
-                            hookManager.dispatchHooks(result, schemaManager.HIERA_SCHEMA_NAME, hookManager.EVENT_DELETE);
+                            hookManager.dispatchHooks(result, schemaManager.SIS_HIERA_SCHEMA_NAME, hookManager.EVENT_DELETE);
                         }
                     });
                 }
@@ -113,7 +112,7 @@
                     Common.sendError(res, 500, "Unable to add hieradata: " + err);
                 } else {
                     Common.sendObject(res, 201, result);
-                    hookManager.dispatchHooks(result, schemaManager.HIERA_SCHEMA_NAME, hookManager.EVENT_INSERT);
+                    hookManager.dispatchHooks(result, schemaManager.SIS_HIERA_SCHEMA_NAME, hookManager.EVENT_INSERT);
                 }
             });
         }
@@ -137,12 +136,12 @@
                 } else {
                     /* allow partial update */
                     result.hieradata = Common.merge(result.hieradata, entry.hieradata);
-                    result.save(function(err, result) {
+                    result.save(function(err, updated) {
                         if (err) {
                             Common.sendError(res, 500, "Unable to save hieradata: " + err);
                         } else {
-                            Common.sendObject(res, 200, result);
-                            hookManager.dispatchHooks(result, schemaManager.HIERA_SCHEMA_NAME, hookManager.EVENT_UPDATE);
+                            Common.sendObject(res, 200, updated);
+                            hookManager.dispatchHooks(updated, schemaManager.SIS_HIERA_SCHEMA_NAME, hookManager.EVENT_UPDATE);
                         }
                     });
                 }

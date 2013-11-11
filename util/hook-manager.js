@@ -26,15 +26,13 @@ var request = require('request');
 
 (function() {
 
-    // Take in a mongoose that's already been initialized.
-    var HookManager = function(mongoose) {
+    // Take in a schemaManager that's already been initialized.
+    var HookManager = function(schemaManager) {
 
         // A mongoose.model object for SIS Schemas
         var SisHookModel = null;
         // this..
         var self = this;
-
-        var schemaManager = require('./schema-manager')(mongoose);
 
         this.EVENT_INSERT = "insert";
         this.EVENT_UPDATE = "update";
@@ -133,16 +131,25 @@ var request = require('request');
                 callback(err, null);
                 return;
             }
-            SisHookModel.findOneAndUpdate({name: sisHook.name}, { $set: sisHook }, callback);
+            SisHookModel.findOne({name : sisHook.name}, function(err, hookDoc) {
+                if (err || !hookDoc) {
+                    return callback(err, hookDoc);
+                }
+                hookDoc.set(sisHook);
+                hookDoc.save(callback);
+            });
         }
 
         // Delete a hook by name.
         this.deleteHook = function(name, callback) {
-            SisHookModel.findOneAndRemove({"name": name}, function(err, result) {
+            SisHookModel.findOne({"name": name}, function(err, result) {
                 if (!result) {
-                    callback("Entity does not exist.", false);
+                    callback("Hook does not exist.", false);
                 } else {
-                    callback(null, true);
+                    result.remove(function(err) {
+                        if (err) { return callback(err, null) }
+                        callback(null, true);
+                    });
                 }
             });
         }
@@ -193,8 +200,8 @@ var request = require('request');
         init();
     }
 
-    module.exports = function(mongoose) {
-        return new HookManager(mongoose);
+    module.exports = function(schemaManager) {
+        return new HookManager(schemaManager);
     }
 
 })();

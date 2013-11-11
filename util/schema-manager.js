@@ -30,21 +30,19 @@
         // this..
         var self = this;
 
+        this.ENTITY_ID_FIELD = "_id";
+        this.ENTITY_VERS_FIELD = "__v";
+
         this.reservedFields = {
             "_id" : true,
             "__v" : true
         };
 
         // reserved schemas
-        this.HIERA_SCHEMA_NAME = "sis_hiera";
+        this.SIS_HIERA_SCHEMA_NAME = "sis_hiera";
         this.SIS_SCHEMA_NAME = "sis_schemas";
         this.SIS_HOOK_SCHEMA_NAME = "sis_hooks";
-
-        this.reservedSchemas = {
-            "sis_hiera" : true,
-            "sis_schemas" : true,
-            "sis_hooks" : true
-        };
+        this.SIS_HISTORY_SCHEMA_NAME = "sis_history";
 
         // initializer funct
         var init = function() {
@@ -58,6 +56,19 @@
             // Get the model from the definition and name
             SisSchemaModel = self.getEntityModel({name : name, definition : definition});
             self.model = SisSchemaModel;
+        }
+
+        // Bootstrap mongoose by setting up entity models
+        this.bootstrapEntitySchemas = function(callback) {
+            SisSchemaModel.find({}, function(err, schemas) {
+                if (err) { return callback(err); }
+                for (var i = 0; i < schemas.length; ++i) {
+                    if (!self.getEntityModel(schemas[i])) {
+                        return callback("Error building schema " + JSON.stringify(schemas[i]));
+                    }
+                }
+                callback(null);
+            });
         }
 
         // Get all the SIS Schemas in the system
@@ -78,7 +89,7 @@
                 return "Schema has an invalid owner.";
             }
 
-            if (modelObj.name in self.reservedSchemas) {
+            if (modelObj.name.indexOf("sis_") == 0) {
                 return "Schema name is reserved.";
             }
             try {
@@ -131,7 +142,8 @@
             // convert to mongoose
             try {
                 var schema = mongoose.Schema(sisSchema.definition);
-                return mongoose.model(name, schema);
+                var result = mongoose.model(name, schema);
+                return result;
             } catch (ex) {
                 //console.log("getEntityModel: Invalid schema " + JSON.stringify(sisSchema) + " w/ ex " + ex);
                 return null;
@@ -217,7 +229,7 @@
                     return;
                 }
                 // need to delete the schema document from mongo
-                SisSchemaModel.remove({ "name" : name }, function(err) {
+                schema.remove(function(err) {
                     if (err) {
                         callback(err, false);
                         return;

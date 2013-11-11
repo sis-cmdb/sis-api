@@ -23,8 +23,8 @@
     var HookController = function(config) {
 
         var self = this;
-        var mongoose = config['mongoose'];
-        var hookManager = require('../util/hook-manager')(mongoose);
+        var schemaManager = config['schemaManager'];
+        var hookManager = require('../util/hook-manager')(schemaManager);
 
         this.getAll = function(req, res) {
             Common.getAll(req, res, hookManager.model);

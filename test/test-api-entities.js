@@ -28,7 +28,7 @@ describe('Entity API', function() {
     before(function(done) {
         server.startServer(config, function(expressApp, httpSrv) {
             mongoose = server.mongoose;
-            schemaManager = require('../util/schema-manager')(mongoose);
+            schemaManager = expressApp.get("schemaManager");
             app = expressApp;
             httpServer = httpSrv;
             done();

@@ -69,19 +69,26 @@ var startServer = function(config, callback) {
                     app.set(k, appConfig[k]);
                 }
             }
-            var cfg = {
-                'mongoose' : mongoose
-            }
-            // setup the routes
-            routes.map(function(routeName) {
-                var route = require("./routes/" + routeName);
-                route.setup(app, cfg);
-            });
-            // listen
-            httpServer = app.listen(nconf.get('server').port, function(err) {
-                if (callback) {
-                    callback(app, httpServer);
+            var schemaManager = require('./util/schema-manager')(mongoose);
+            schemaManager.bootstrapEntitySchemas(function(err) {
+                if (err) {
+                    throw err;
                 }
+                var cfg = {
+                    'schemaManager' : schemaManager
+                }
+                app.set("schemaManager", schemaManager);
+                // setup the routes
+                routes.map(function(routeName) {
+                    var route = require("./routes/" + routeName);
+                    route.setup(app, cfg);
+                });
+                // listen
+                httpServer = app.listen(nconf.get('server').port, function(err) {
+                    if (callback) {
+                        callback(app, httpServer);
+                    }
+                });
             });
         });
     });
@@ -92,6 +99,7 @@ if (!module.parent) {
     var config = require('./config')
     startServer(config);
 }
+
 
 module.exports.mongoose = mongoose;
 module.exports.startServer = startServer;

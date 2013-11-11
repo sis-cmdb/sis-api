@@ -31,8 +31,8 @@ describe('Schema API', function() {
     before(function(done) {
         server.startServer(config, function(expressApp, httpSrv) {
             mongoose = server.mongoose;
-            schemaManager = require('../util/schema-manager')(mongoose);
-            hookManager = require("../util/hook-manager")(mongoose);
+            schemaManager = expressApp.get("schemaManager");
+            hookManager = require("../util/hook-manager")(schemaManager);
             app = expressApp;
             httpServer = httpSrv;
             done();

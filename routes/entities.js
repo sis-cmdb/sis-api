@@ -25,9 +25,8 @@
     var EntityController = function(config) {
 
         var self = this;
-        var mongoose = config['mongoose'];
-        var schemaManager = require('../util/schema-manager')(mongoose);
-        var hookManager = require('../util/hook-manager')(mongoose);
+        var schemaManager = config['schemaManager'];
+        var hookManager = require('../util/hook-manager')(schemaManager);
 
         // Helper to get a model for a particular type.  Async
         // in case the behavior changes
@@ -123,15 +122,13 @@
                     Common.sendError(res, 404, "Unable to find entity of type " + type + " with id " + id);
                 } else {
                     // delete the entity by the id
-                    getModelForType(type, function(err, EntityModel) {
-                        EntityModel.remove({"_id" : id}, function(err) {
-                            if (err) {
-                                Common.sendError(res, 500, "Could not delete entity " + id + ": " + err);
-                            } else {
-                                Common.sendObject(res, 200, true);
-                                hookManager.dispatchHooks(result, type, hookManager.EVENT_DELETE);
-                            }
-                        });
+                    result.remove(function(err, EntityModel) {
+                        if (err) {
+                            Common.sendError(res, 500, "Could not delete entity " + id + ": " + err);
+                        } else {
+                            Common.sendObject(res, 200, true);
+                            hookManager.dispatchHooks(result, type, hookManager.EVENT_DELETE);
+                        }
                     });
                 }
             });
@@ -215,7 +212,7 @@
                         if (err) {
                             Common.sendError(res, 500, "Unable to save entity of type " + type + " with id " + id + ": " + err);
                         } else {
-                            sendPopulatedResult(req, res, 200, result);
+                            sendPopulatedResult(req, res, 200, updated);
                             hookManager.dispatchHooks(updated, type, hookManager.EVENT_UPDATE);
                         }
                     });

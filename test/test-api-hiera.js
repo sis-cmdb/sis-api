@@ -173,7 +173,8 @@ describe('Hiera API', function() {
             var express = require('express');
             hookServer = express();
             hookServer.use(express.bodyParser());
-            hookManager = require('../util/hook-manager')(mongoose);
+            var schemaManager = app.get("schemaManager");
+            hookManager = require('../util/hook-manager')(schemaManager);
             hookServer.get('/hook', function(req, res) {
                 should.exist(req.query.data);
                 var data = req.query.data;
