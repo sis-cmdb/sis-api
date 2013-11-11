@@ -17,6 +17,73 @@
 'use strict';
 
 (function() {
+
+    var Common = module.exports;
+
+    var attachHistoryRoutes = function(app, controller, prefix) {
+        if (!controller.getSchemaFromRequest) {
+            var splits = prefix.split("/");
+            var type = "sis_" + splits[splits.length - 1];
+            controller.getSchemaFromRequest = function(req) {
+                return type;
+            }
+        }
+        // all history
+        app.get(prefix + "/:id/history", function(req, res) {
+            var type = this.getSchemaFromRequest(req);
+            var id = req.params.id;
+            var rq = Common.parseQuery(req);
+            var mongooseModel = this.historyManager.model;
+
+            // update the query for the right types
+            rq.query['entity_id'] = id;
+            rq.query['type'] = type;
+
+            mongooseModel.count(rq.query, function(err, c) {
+                if (err || !c) {
+                    res.setHeader("x-total-count", 0);
+                    return Common.sendObject(res, 200, []);
+                }
+                var opts = { skip : rq.offset, limit: rq.limit};
+                var mgQuery = mongooseModel.find(rq.query, null, opts);
+                mgQuery = mgQuery.sort({date_modified: -1});
+                mgQuery.exec(function(err, entities) {
+                    res.setHeader("x-total-count", c);
+                    Common.sendObject(res, 200, entities);
+                });
+            });
+        }.bind(controller));
+
+        // specific entry by history id
+        app.get(prefix + "/:id/history/:hid", function(req, res) {
+            var type = this.getSchemaFromRequest(req);
+            var id = req.params.id;
+            var hid = req.params.hid;
+            this.historyManager.getVersionById(type, id, hid, function(err, result) {
+                if (err || !result) {
+                    Common.sendError(res, 404, "History with id " + hid + " not found.");
+                } else {
+                    Common.sendObject(res, 200, result);
+                }
+            });
+        }.bind(controller));
+
+        app.get(prefix + "/:id/revision/:utc", function(req, res) {
+            var type = this.getSchemaFromRequest(req);
+            var id = req.params.id;
+            var utc = req.params.utc;
+            this.historyManager.getVersionByUtc(type, id, utc, function(err, result) {
+                if (err || !result) {
+                    Common.sendError(res, 404, "History at time " + utc + " not found.");
+                } else {
+                    Common.sendObject(res, 200, result);
+                }
+            });
+
+        }.bind(controller));
+
+    }
+
     module.exports.attachController = function(app, controller, prefix) {
         app.get(prefix, controller.getAll);
         app.get(prefix + "/:id", controller.get);
@@ -24,6 +91,7 @@
             app.put(prefix + "/:id", controller.update);
             app.post(prefix, controller.add);
             app.delete(prefix + "/:id", controller.delete);
+            attachHistoryRoutes(app, controller, prefix);
         }
     }
 
@@ -57,10 +125,8 @@
 
     module.exports.merge = mergeHelper;
 
-    var Common = module.exports;
-
-    module.exports.getAll = function(req, res, mongooseModel) {
-        var query = req.query.q || {};
+    module.exports.parseQuery = function(req) {
+        var query = req.query.q || { };
         // try parsing..
         try {
             if (typeof query === 'string') {
@@ -72,6 +138,15 @@
         var limit = parseInt(req.query.limit) || Common.MAX_RESULTS;
         if (limit > Common.MAX_RESULTS) { limit = Common.MAX_RESULTS };
         var offset = parseInt(req.query.offset) || 0;
+        return {'query' : query, 'limit' : limit, 'offset' : offset};
+    }
+
+    module.exports.getAll = function(req, res, mongooseModel) {
+        var rq = Common.parseQuery(req);
+        var query = rq.query;
+        var limit = rq.limit;
+        var offset = rq.offset;
+
         mongooseModel.count(query, function(err, c) {
             if (err || !c) {
                 res.setHeader("x-total-count", 0);

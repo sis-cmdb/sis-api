@@ -25,6 +25,8 @@
         var self = this;
         var schemaManager = config['schemaManager'];
         var hookManager = require('../util/hook-manager')(schemaManager);
+        var historyManager = require('../util/history-manager')(schemaManager);
+        this.historyManager = historyManager;
 
         this.getAll = function(req, res) {
             Common.getAll(req, res, hookManager.model);
@@ -47,7 +49,9 @@
                 if (err) {
                     Common.sendError(res, 404, "Unable to delete hook with name " + hookName + " : " + err);
                 } else {
-                    Common.sendObject(res, 200, true);
+                    historyManager.recordHistory(result, null, req, schemaManager.SIS_HOOK_SCHEMA_NAME, function(err, history) {
+                        Common.sendObject(res, 200, true);
+                    });
                 }
             })
         }
@@ -57,19 +61,23 @@
                 if (err) {
                     Common.sendError(res, 400, "Unable to save hook: " + err);
                 } else {
-                    Common.sendObject(res, 201, entity);
+                    historyManager.recordHistory(null, entity, req, schemaManager.SIS_HOOK_SCHEMA_NAME, function(err, history) {
+                        Common.sendObject(res, 201, entity);
+                    });
                 }
             });
         }
 
         this.update = function(req, res) {
-            hookManager.updateHook(req.body, function(err, entity) {
+            hookManager.updateHook(req.body, function(err, entity, oldValue) {
                 if (err) {
                     Common.sendError(res, 400, "Unable to update hook: " + err);
                 } else if (!entity) {
                     Common.sendError(res, 404, "Hook not found");
                 } else {
-                    Common.sendObject(res, 200, entity);
+                    historyManager.recordHistory(oldValue, entity, req, schemaManager.SIS_HOOK_SCHEMA_NAME, function(err, history) {
+                        Common.sendObject(res, 200, entity);
+                    })
                 }
             });
 

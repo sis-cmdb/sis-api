@@ -38,6 +38,8 @@ var request = require('request');
         this.EVENT_UPDATE = "update";
         this.EVENT_DELETE = "delete";
 
+        this.historyManager = require('./history-manager')(schemaManager);
+
         // initializer funct
         var init = function() {
             // Set up the mongoose.Hook for a SIS Hook
@@ -135,8 +137,11 @@ var request = require('request');
                 if (err || !hookDoc) {
                     return callback(err, hookDoc);
                 }
+                var oldHook = hookDoc.toObject();
                 hookDoc.set(sisHook);
-                hookDoc.save(callback);
+                hookDoc.save(function(err, result) {
+                    callback(err, result, oldHook);
+                });
             });
         }
 
@@ -148,7 +153,7 @@ var request = require('request');
                 } else {
                     result.remove(function(err) {
                         if (err) { return callback(err, null) }
-                        callback(null, true);
+                        callback(null, result);
                     });
                 }
             });

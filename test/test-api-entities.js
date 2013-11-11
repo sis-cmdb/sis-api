@@ -241,6 +241,8 @@ describe('Entity API', function() {
                 .expect(200, function(err, result) {
                     result = result.body;
                     delete result['__v'];
+                    delete entity['_updated_at'];
+                    delete result['_updated_at'];
                     result.should.eql(entity);
                     done(err, result);
                 });
@@ -254,6 +256,8 @@ describe('Entity API', function() {
                 .expect(200, function(err, result) {
                     result = result.body;
                     delete result['__v'];
+                    delete entity['_updated_at'];
+                    delete result['_updated_at'];
                     result.should.eql(entity);
                     done(err, result);
                 });

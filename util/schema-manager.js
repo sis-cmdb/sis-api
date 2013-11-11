@@ -32,6 +32,8 @@
 
         this.ENTITY_ID_FIELD = "_id";
         this.ENTITY_VERS_FIELD = "__v";
+        this.ENTITY_CREATED_AT_FIELD = "_created_at";
+        this.ENTITY_UPDATED_AT_FIELD = "_updated_at";
 
         this.reservedFields = {
             "_id" : true,
@@ -42,7 +44,7 @@
         this.SIS_HIERA_SCHEMA_NAME = "sis_hiera";
         this.SIS_SCHEMA_NAME = "sis_schemas";
         this.SIS_HOOK_SCHEMA_NAME = "sis_hooks";
-        this.SIS_HISTORY_SCHEMA_NAME = "sis_history";
+        this.SIS_HISTORY_SCHEMA_NAME = "sis_commits";
 
         // initializer funct
         var init = function() {
@@ -99,7 +101,7 @@
                     return "Cannot add an empty schema.";
                 }
                 for (var i = 0; i < fields.length; ++i) {
-                    if (fields[i] in self.reservedFields) {
+                    if (fields[i][0] == '_') {
                         return fields[i] + " is a reserved field";
                     }
                 }
@@ -141,11 +143,27 @@
             }
             // convert to mongoose
             try {
-                var schema = mongoose.Schema(sisSchema.definition);
+                // add our special fields..
+                var definition = {};
+                // only need shallow copy..
+                for (var k in sisSchema.definition) {
+                    definition[k] = sisSchema.definition[k];
+                }
+                definition[self.ENTITY_CREATED_AT_FIELD] = { "type" : "Number", "default" : function() { return Date.now(); } };
+                definition[self.ENTITY_UPDATED_AT_FIELD] = { "type" : "Number" };
+
+                var schema = mongoose.Schema(definition);
                 var result = mongoose.model(name, schema);
+
+                schema.pre('save', function(next) {
+                    this[self.ENTITY_UPDATED_AT_FIELD] = Date.now();
+                    next();
+                });
+
+                mongoose.models[name] = result;
                 return result;
             } catch (ex) {
-                //console.log("getEntityModel: Invalid schema " + JSON.stringify(sisSchema) + " w/ ex " + ex);
+                // console.log("getEntityModel: Invalid schema " + JSON.stringify(sisSchema) + " w/ ex " + ex);
                 return null;
             }
         }
@@ -185,17 +203,20 @@
                     }
                 });
 
+                var oldValue = currentSchema.toObject();
+
                 // delete the old mongoose models and create new ones
                 var deleteCachedAndSaveNew = function() {
                     delete mongoose.modelSchemas[name];
                     delete mongoose.models[name];
 
-                    var schema = mongoose.Schema(sisSchema.definition);
-                    mongoose.model(name, schema);
+                    self.getEntityModel(newDef);
 
                     // update the document
                     currentSchema.definition = newDef;
-                    currentSchema.save(callback);
+                    currentSchema.save(function(err, savedSchema) {
+                        callback(err, savedSchema, oldValue);
+                    });
                 }
 
                 if (pathsToDelete) {
@@ -254,7 +275,6 @@
                                 // TODO: handle this
                                 callback(err, false);
                             } else {
-
                                 callback(null, schema);
                             }
                         });

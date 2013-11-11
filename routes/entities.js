@@ -27,6 +27,9 @@
         var self = this;
         var schemaManager = config['schemaManager'];
         var hookManager = require('../util/hook-manager')(schemaManager);
+        var historyManager = require('../util/history-manager')(schemaManager);
+        historyManager.idField = '_id';
+        this.historyManager = historyManager;
 
         // Helper to get a model for a particular type.  Async
         // in case the behavior changes
@@ -46,6 +49,7 @@
         var getTypeFromRequest = function(req) {
             return req.params.schema;
         }
+        this.getSchemaFromRequest= getTypeFromRequest;
 
         var findSingle = function(type, condition, callback) {
             getModelForType(type, function(err, EntityModel) {
@@ -122,12 +126,14 @@
                     Common.sendError(res, 404, "Unable to find entity of type " + type + " with id " + id);
                 } else {
                     // delete the entity by the id
-                    result.remove(function(err, EntityModel) {
+                    result.remove(function(err, removed) {
                         if (err) {
                             Common.sendError(res, 500, "Could not delete entity " + id + ": " + err);
                         } else {
-                            Common.sendObject(res, 200, true);
-                            hookManager.dispatchHooks(result, type, hookManager.EVENT_DELETE);
+                            historyManager.recordHistory(result, null, req, type, function(err, history) {
+                                Common.sendObject(res, 200, true);
+                                hookManager.dispatchHooks(result, type, hookManager.EVENT_DELETE);
+                            });
                         }
                     });
                 }
@@ -174,8 +180,10 @@
                         if (err) {
                             Common.sendError(res, 500, "Unable to add entity: " + err);
                         } else {
-                            sendPopulatedResult(req, res, 201, result);
-                            hookManager.dispatchHooks(result, type, hookManager.EVENT_INSERT);
+                            historyManager.recordHistory(null, result, req, type, function(err, history) {
+                                sendPopulatedResult(req, res, 201, result);
+                                hookManager.dispatchHooks(result, type, hookManager.EVENT_INSERT);
+                            });
                         }
                     });
                 }
@@ -199,6 +207,7 @@
                 } else {
                     // update fields that have a path on the schema
                     var schema = result.schema;
+                    var oldObj = result.toObject();
                     for (var k in entity) {
                         if (schema.path(k)) {
                             if (entity[k] != null) {
@@ -212,8 +221,10 @@
                         if (err) {
                             Common.sendError(res, 500, "Unable to save entity of type " + type + " with id " + id + ": " + err);
                         } else {
-                            sendPopulatedResult(req, res, 200, updated);
-                            hookManager.dispatchHooks(updated, type, hookManager.EVENT_UPDATE);
+                            historyManager.recordHistory(oldObj, result, req, type, function(err, history) {
+                                sendPopulatedResult(req, res, 200, updated);
+                                hookManager.dispatchHooks(updated, type, hookManager.EVENT_UPDATE);
+                            });
                         }
                     });
                 }

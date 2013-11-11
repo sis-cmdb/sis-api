@@ -25,6 +25,8 @@
         var self = this;
         var schemaManager = config['schemaManager'];
         var hookManager = require('../util/hook-manager')(schemaManager);
+        var historyManager = require('../util/history-manager')(schemaManager);
+        this.historyManager = historyManager;
 
         this.getAll = function(req, res) {
             Common.getAll(req, res, schemaManager.model);
@@ -47,8 +49,10 @@
                 if (err) {
                     Common.sendError(res, 404, "Unable to delete schema with name " + schemaName + " : " + err);
                 } else {
-                    Common.sendObject(res, 200, true);
-                    hookManager.dispatchHooks(result, schemaManager.SIS_SCHEMA_NAME, hookManager.EVENT_DELETE);
+                    historyManager.recordHistory(result, null, req, schemaManager.SIS_SCHEMA_NAME, function(err, history) {
+                        Common.sendObject(res, 200, true);
+                        hookManager.dispatchHooks(result, schemaManager.SIS_SCHEMA_NAME, hookManager.EVENT_DELETE);
+                    });
                 }
             })
         }
@@ -58,8 +62,10 @@
                 if (err) {
                     Common.sendError(res, 400, "Unable to save schema " + err);
                 } else {
-                    Common.sendObject(res, 201, entity);
-                    hookManager.dispatchHooks(entity, schemaManager.SIS_SCHEMA_NAME, hookManager.EVENT_INSERT);
+                    historyManager.recordHistory(null, entity, req, schemaManager.SIS_SCHEMA_NAME, function(err, history) {
+                        Common.sendObject(res, 201, entity);
+                        hookManager.dispatchHooks(entity, schemaManager.SIS_SCHEMA_NAME, hookManager.EVENT_INSERT);
+                    });
                 }
             });
         }
@@ -71,14 +77,16 @@
                 Common.sendError(res, 400, "Schema name cannot be changed.");
                 return;
             }
-            schemaManager.updateSchema(sisSchema, function(err, entity) {
+            schemaManager.updateSchema(sisSchema, function(err, entity, oldValue) {
                 if (err) {
                     Common.sendError(res, 400, "Unable to update schema " + err);
                 } else if (!entity) {
                     Common.sendError(res, 404, "Schema not found");
                 } else {
-                    Common.sendObject(res, 200, entity);
-                    hookManager.dispatchHooks(entity, schemaManager.SIS_SCHEMA_NAME, hookManager.EVENT_UPDATE);
+                    historyManager.recordHistory(oldValue, entity, req, schemaManager.SIS_SCHEMA_NAME, function(err, history) {
+                        Common.sendObject(res, 200, entity);
+                        hookManager.dispatchHooks(entity, schemaManager.SIS_SCHEMA_NAME, hookManager.EVENT_UPDATE);
+                    });
                 }
             });
         }
