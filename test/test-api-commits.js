@@ -197,7 +197,7 @@ describe('History API', function() {
             var middleItemHid = null;
 
             it("should retrieve " + entries.length + " history records", function(done) {
-                request(app).get(prefix + "/" + items[0][idField] + "/history")
+                request(app).get(prefix + "/" + items[0][idField] + "/commits")
                     .expect(200, function(err, res) {
                         should.not.exist(err);
                         should.exist(res);
@@ -209,7 +209,7 @@ describe('History API', function() {
             });
 
             it("should retrieve the middle item by history id", function(done) {
-                var path = [prefix, items[middleIdx][idField], 'history', middleItemHid];
+                var path = [prefix, items[middleIdx][idField], 'commits', middleItemHid];
                 request(app).get(path.join("/"))
                     .expect(200, function(err, res) {
                         should.not.exist(err);

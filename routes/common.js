@@ -29,7 +29,7 @@
             }
         }
         // all history
-        app.get(prefix + "/:id/history", function(req, res) {
+        app.get(prefix + "/:id/commits", function(req, res) {
             var type = this.getSchemaFromRequest(req);
             var id = req.params.id;
             var rq = Common.parseQuery(req);
@@ -55,7 +55,7 @@
         }.bind(controller));
 
         // specific entry by history id
-        app.get(prefix + "/:id/history/:hid", function(req, res) {
+        app.get(prefix + "/:id/commits/:hid", function(req, res) {
             var type = this.getSchemaFromRequest(req);
             var id = req.params.id;
             var hid = req.params.hid;
