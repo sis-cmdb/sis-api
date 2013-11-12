@@ -157,7 +157,7 @@ describe('History API', function() {
         var idField = test['id_field'] || 'name';
         var entries = test['entries'];
         var items = [];
-        describe("Testing history for " + test['prefix'], function() {
+        describe("Testing commits for " + test['prefix'], function() {
             // insert the entries
             before(function(done) {
                 var insertItem = function(idx) {
@@ -196,7 +196,7 @@ describe('History API', function() {
             var middleIdx = parseInt(entries.length / 2);
             var middleItemHid = null;
 
-            it("should retrieve " + entries.length + " history records", function(done) {
+            it("should retrieve " + entries.length + " commit records", function(done) {
                 request(app).get(prefix + "/" + items[0][idField] + "/commits")
                     .expect(200, function(err, res) {
                         should.not.exist(err);
@@ -208,13 +208,15 @@ describe('History API', function() {
                     });
             });
 
-            it("should retrieve the middle item by history id", function(done) {
+            it("should retrieve the middle item by commit id", function(done) {
                 var path = [prefix, items[middleIdx][idField], 'commits', middleItemHid];
                 request(app).get(path.join("/"))
                     .expect(200, function(err, res) {
                         should.not.exist(err);
                         should.exist(res.body);
-                        res.body.should.eql(items[middleIdx]);
+                        should.exist(res.body.value_at);
+                        'update'.should.eql(res.body.action);
+                        res.body.value_at.should.eql(items[middleIdx]);
                         done();
                     });
             });

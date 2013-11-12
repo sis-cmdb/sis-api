@@ -112,7 +112,14 @@
                         id != result['entity_id']) {
                         callback("Entry does not exist.", null);
                     } else {
-                        self.applyDiff(result, callback);
+                        self.applyDiff(result, function(err, obj) {
+                            if (err) {
+                                return callback(err, null);
+                            }
+                            result = result.toObject();
+                            result['value_at'] = obj;
+                            callback(null, result);
+                        });
                     }
                 }
             });
