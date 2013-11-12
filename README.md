@@ -146,6 +146,8 @@ For example, a hook that listens for all events on the 'sample' entities above w
     "name" : "hook_name",
     "owner" : "hook_owner",
     "entity_type" : "sample",
+    "retry_count" : 5, // max number of times to retry sending the hook
+    "retry_delay" : 10, // delay in seconds between retries
     "target" : {
         "action" : "POST",
         "url" : "http://sample.service.com/endpoint"
@@ -154,7 +156,7 @@ For example, a hook that listens for all events on the 'sample' entities above w
 }
 ```
 
-All fields are required.
+The `retry_count` and `retry_delay` fields are optional, and default to 0 and 1, respectively.  All other fields are required.
 
 The `name` must contain only lowercase ascii characters, digits, or underscores.  It must be unique across all hooks.
 

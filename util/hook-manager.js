@@ -53,6 +53,8 @@ var request = require('request');
                         },
                         "required" : true
                 },
+                "retry_count" : { "type" : "Number", "min" : 0, "max" : 20, "default" : 0 },
+                "retry_delay" : { "type" : "Number", "min" : 1, "max" : 60, "default" : 1 },
                 "events": { "type" : [{ "type" : "String",
                                         "required" : true,
                                         "enum" : [self.EVENT_INSERT, self.EVENT_UPDATE, self.EVENT_DELETE]
@@ -159,7 +161,29 @@ var request = require('request');
             });
         }
 
+        var sendRequest = function(options, retry_count, delay, callback) {
+            request(options, function(err, res) {
+                if (err || !res || res.statusCode >= 300) {
+                    if (retry_count <= 0) {
+                        // done with error
+                        return callback(err, null);
+                    } else {
+                        // retry
+                        setTimeout(function() {
+                            sendRequest(options, retry_count - 1, delay, callback);
+                        }, delay * 1000)
+                    }
+                } else {
+                    // success!
+                    return callback(null, res.body);
+                }
+            });
+        }
+
         var dispatchHook = function(hook, entity, event, callback) {
+            if (typeof entity['toObject'] == 'function') {
+                entity = entity.toObject();
+            }
             var data = {
                 'hook' : hook.name,
                 'entity_type' : hook.entity_type,
@@ -176,7 +200,7 @@ var request = require('request');
             } else {
                 options['json'] = data;
             }
-            request(options, callback);
+            sendRequest(options, hook.retry_count || 0, hook.retry_delay || 1, callback);
         }
 
         // hook dispatching methods

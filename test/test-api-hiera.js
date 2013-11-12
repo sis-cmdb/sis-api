@@ -186,6 +186,21 @@ describe('Hiera API', function() {
                 }
             });
 
+
+            var postCount = 0;
+            hookServer.post('/hook_retry', function(req, res) {
+                should.exist(req.body);
+                if (postCount == 0) {
+                    postCount++;
+                    res.send(400, "Need to retry.");
+                } else {
+                    res.send(200, "ok");
+                    if (doneCallback) {
+                        doneCallback();
+                    }
+                }
+            });
+
             hook = {
                 "name" : hookName,
                 "owner" : "Test",
@@ -228,6 +243,23 @@ describe('Hiera API', function() {
                 .set('Content-Encoding', 'application/json')
                 .send(hiera_data)
                 .end(function(err, res) { });
+        });
+
+        it("Should dispatch the update hook and retry", function(doneCb) {
+            doneCallback = doneCb;
+            hook.target.action = "POST";
+            hook.target.url = "http://localhost:3335/hook_retry";
+            hook['retry_count'] = 5;
+            hook['retry_delay'] = 1;
+            hook.events.push(hookManager.EVENT_UPDATE);
+            hookManager.updateHook(hook, function(err, result) {
+                if (err) { return done(err); }
+                hiera_data.hieradata['field3'] = 'foo';
+                request(app).put("/api/v1/hiera/hiera_key")
+                    .set('Content-Encoding', 'application/json')
+                    .send(hiera_data)
+                    .end(function(err, res) { });
+            });
         });
     });
 
