@@ -19,7 +19,7 @@ Manage schemas of all entities in the system.  A sample schema object looks like
     // (i.e. "ResOps", "ProvOps", etc.)
     "owner" : "SIS",
     // A definition of what entities will look like
-    // leveraging mongoose syntax 
+    // leveraging mongoose syntax
     "definition" : {
         "requiredField" : { "type" : "String", "required" : true },
         "uniqueNumberField" : { "type" : "Number", "unique" : true },
@@ -34,16 +34,16 @@ Manage schemas of all entities in the system.  A sample schema object looks like
 }
 ```
 
-Reserved schema names include:
+SIS reserves all schema names that begin with "sis_".  Adding a schema that starts with "sis_" results in an error.
 
-* sis_hiera
-* sis_hooks
-* sis_schemas
+Fields in a definition cannot start with an _ and are considered reserved by SIS:
 
-Reserved definition fields include:
+Current fields used by SIS and added to entities:
 
-* _id
-* __v
+* _id - persistent ID of the object
+* __v - version of the object, primarily used by mongoose
+* _created_at - a UTC timestamp of when the object was created
+* _updated_at - a UTC timestamp of when the object was last updated
 
 Please consult the [mongoosejs schematypes doc](http://mongoosejs.com/docs/schematypes.html) for more information on what the definition object may look like.  Note that Date objects are currently not supported.
 
@@ -104,7 +104,7 @@ Manage the entities that adhere to a particular schema.  For example, an entity 
 * `GET /api/v1/entities/:schema_name/:id`
 
 Path parameters:
-- `schema_name` the `name` of the schema 
+- `schema_name` the `name` of the schema
 - `id` the `_id` field of the stored entity via PUT/POST methods.
 
 For example, to retrieve entities belonging to the example schema, a client would issue a GET request against `/api/v1/entities/sample`
@@ -142,8 +142,8 @@ Hooks allow users to receive notifications when objects are inserted, updated, a
 For example, a hook that listens for all events on the 'sample' entities above would look like:
 
 ```javascript
-{ 
-    "name" : "hook_name", 
+{
+    "name" : "hook_name",
     "owner" : "hook_owner",
     "entity_type" : "sample",
     "target" : {
@@ -244,7 +244,7 @@ A Hiera object in SIS looks like:
 * `GET /api/v1/hiera`
 * `GET /api/v1/hiera/:name`
 
-There is a subtle difference in the data returned.  The list method includes the full object, meaning it will return a JSON object with a `name` and `hieradata` fields.  However, the single retrieval method will return the `hieradata` JSON object of the entry with name `name`.  
+There is a subtle difference in the data returned.  The list method includes the full object, meaning it will return a JSON object with a `name` and `hieradata` fields.  However, the single retrieval method will return the `hieradata` JSON object of the entry with name `name`.
 
 This is to match what hiera-http expects and is modeled based on the information in this [blog post](http://www.craigdunn.org/2012/11/puppet-data-from-couchdb-using-hiera-http/).
 
@@ -291,6 +291,56 @@ Search / filtering is done by passing a URL encoded JSON object in the q paramet
 For instance:
 
 `/api/v1/schemas?q={"owner":"SIS"}` returns a list of schemas where the owner is "SIS"
+
+## Revisions and Commit Log support
+
+SIS tracks changes on all objects (schemas, entities, hooks, and hiera) and provides an API for viewing all commits on an object and what the state of an object looked like at a moment in time.
+
+A commit object looks like the following:
+
+```javascript
+{
+    "type" : "String", // The type of object
+    "entity_id" : "String", // The id of the object (depends on the type)
+    "action" : {"type" : "String", "required" : true, enum : ["update", "insert", "delete"]},
+    "diff" : "Mixed", // the diff object from [JsonDiffPatch](https://github.com/benjamine/JsonDiffPatch) if action is update, the new object if insert, null if delete
+    "old_value" : "Mixed", // old value if update, null if insert, old value if delete
+    "date_modified" : { "type" : "Number" }, // same as the _updated_at value of the entity that was saved
+    "modified_by" : "String" // username of the user who modified it
+}
+```
+
+The `type` field is either a schema name (added via the schemas API) or one of the following:
+
+* sis_schemas - an actual schema object
+* sis_hiera - a hiera object
+* sis_hooks - a hook object
+
+The `entity_id` field is the value of the `_id` field in entities, and the `name` field in all SIS objects.
+
+All commits also have an _id field used for retrieval purposes.
+
+### Retrieving the commits of an object
+
+All individual objects in SIS have a getter by id.  For instance, a hook is retrieved via: `/api/v1/hooks/:hook_name`.  To get the commits on an object, simply append `/commits` to the path.
+
+The commits API follows the same pagination rules and filtering abilities of all list retrieval APIs.
+
+As an example, to retrieve a list of commits on a hook with name "my_hook", issue a GET request against `/api/v1/hooks/my_hook/commits`.
+
+To retrieve a list of commits on an entity of type 'my_type' with `_id` 1234, issue a GET request against `/api/v1/entities/my_type/1234/commits`.
+
+### Retrieving an individual commit of an object
+
+To retrieve an individual commit, append the `_id` of the commit object to the commits URL.  The returned object is a commit object with an additional field - `value_at`.  The `value_at` field is the actual state of the object with `old_value` having the `diff` applied to it.
+
+### Retrieving an object at a particular time
+
+To retrieve an object's state at a particular time, append `/revisions/:utc_timestamp` to the getter path of that object.  This returns the object at that time.  Note that the timestamp is in millis.
+
+For example, to retrieve the `my_hook` object at 11/11/11 @ 11:11:11 (utc timestamp 1321009871000), issue the request `/api/v1/hooks/my_hook/revisions/1321009871000`
+
+Timestamps in the future will return the current object.  Timestamps in the past return 404.
 
 # Examples using resty
 
