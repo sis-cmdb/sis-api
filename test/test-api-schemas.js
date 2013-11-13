@@ -73,7 +73,7 @@ describe('Schema API', function() {
     describe("CRUD schema", function() {
         var jsData = {
             "name":"network_element",
-            "owner" : "ResOps",
+            "owner" : ["ResOps"],
             "definition": {
                 "ne_type": "String",
                 "cid":     "String",
@@ -165,13 +165,13 @@ describe('Schema API', function() {
         });
         it("Should return s1 and s2 ", function(done) {
             request(app).get("/api/v1/schemas")
-                .query({q : JSON.stringify({ "owner" : "ResOps" }) })
+                .query({q : JSON.stringify({ "owner" : ["ResOps"] }) })
                 .expect(200)
                 .end(function(err, res) {
                     should.exist(res.body);
                     res.body.length.should.eql(2);
                     for (var i = 0; i < 2; ++i) {
-                        res.body[i]['owner'].should.eql('ResOps');
+                        res.body[i]['owner'].should.eql(['ResOps']);
                     }
                     done();
                 });
@@ -203,7 +203,7 @@ describe('Schema API', function() {
 
             hook = {
                 "name" : hookName,
-                "owner" : "Test",
+                "owner" : [ "Test" ],
                 "entity_type" : SIS.SCHEMA_SCHEMAS,
                 "target" : {
                     "action" : "POST",

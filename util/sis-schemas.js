@@ -25,7 +25,7 @@ module.exports.schemas = [
         name : SIS.SCHEMA_SCHEMAS,
         definition : {
             name : { type : "String", required : true, unique : true, match : /^[a-z0-9_]+$/ },
-            owner : { type : "String", required : true },
+            owner : { type : ["String"], required : true },
             definition : { type : {}, required : true }
         }
     },
@@ -44,7 +44,7 @@ module.exports.schemas = [
             retry_count : { type : "Number", min : 0, max : 20, default : 0 },
             retry_delay : { type : "Number", min : 1, max : 60, default : 1 },
             events : { type : [{ type : "String", enum : SIS.EVENTS_ENUM }], required : true },
-            owner : "String",
+            owner : { type : ["String"] },
             entity_type : "String"
         }
     },
@@ -53,6 +53,7 @@ module.exports.schemas = [
         name : SIS.SCHEMA_HIERA,
         definition : {
             name : { type : "String", required : true, unique : true },
+            owner : { type : ["String"] },
             hieradata : { type : {}, required : true }
         }
     },

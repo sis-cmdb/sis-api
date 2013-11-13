@@ -72,8 +72,10 @@
             if (!modelObj || !modelObj.name || typeof modelObj.name != 'string') {
                 return "Schema has an invalid name: " + modelObj.name;
             }
-            if (typeof modelObj.owner != 'string') {
-                return "Schema has an invalid owner.";
+            if (!modelObj.owner ||
+                !(typeof modelObj.owner == 'string' ||
+                  (modelObj.owner instanceof Array && modelObj.owner.length > 0))) {
+                return "Schema owner is invalid.";
             }
 
             if (modelObj.name.indexOf("sis_") == 0) {

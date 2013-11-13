@@ -63,7 +63,7 @@ describe('HookManager', function() {
     it("should error adding a hook with no name ", function(done) {
       var hook = {
         "name" : "",
-        "owner" : "Test",
+        "owner" : [ "Test" ],
         "entity_type" : "Schema",
         "target" : {
             "action" : "POST",
@@ -96,7 +96,7 @@ describe('HookManager', function() {
     it("should error adding a hook with no entity_type ", function(done) {
       var hook = {
         "name" : "test_hook",
-        "owner" : "Test",
+        "owner" : [ "Test" ],
         "target" : {
             "action" : "POST",
             "url" : "http://foo.bar.com/foo"
@@ -193,7 +193,7 @@ describe('HookManager', function() {
     it("should add a valid hook object", function(done) {
       var hook = {
         "name" : hookName,
-        "owner" : "Test",
+        "owner" : [ "Test" ],
         "entity_type" : "Schema",
         "target" : {
             "action" : "POST",
@@ -205,7 +205,7 @@ describe('HookManager', function() {
         should.not.exist(err);
 
         entity.should.have.property('name', 'test_hook');
-        entity.should.have.property('owner', 'Test');
+        JSON.stringify(entity.owner).should.eql(JSON.stringify(["Test"]));
         entity.should.have.property('entity_type', 'Schema');
         entity['target'].should.eql(hook.target);
 
@@ -268,7 +268,7 @@ describe('HookManager', function() {
     var hookName = "update_test";
     var initialHook = {
       "name" : hookName,
-      "owner" : "Test",
+      "owner" : [ "Test" ],
       "entity_type" : "Schema",
       "target" : {
           "action" : "POST",
@@ -278,7 +278,7 @@ describe('HookManager', function() {
     };
     var updatedHook = {
       "name" : hookName,
-      "owner" : "Bob",
+      "owner" : [ "Bob" ],
       "entity_type" : "EntityA",
       "target" : {
           "action" : "GET",
@@ -302,7 +302,7 @@ describe('HookManager', function() {
       // delete the num field, change bool to string, add field
       hookManager.updateHook(updatedHook, function(err, updated) {
         should.not.exist(err);
-        updated.should.have.property('owner','Bob');
+        JSON.stringify(updated.owner).should.eql(JSON.stringify(["Bob"]));
         updated.should.have.property('entity_type','EntityA');
         updated['target'].should.eql(updatedHook.target);
         JSON.stringify(updated['events']).should.eql(JSON.stringify(updatedHook.events));

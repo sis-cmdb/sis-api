@@ -62,7 +62,7 @@ describe('Hook API', function() {
         it("Should fail to update a hook that doens't exist", function(done) {
             var hook = {
                 "name" : "DNE",
-                "owner" : "Test",
+                "owner" : [ "Test" ],
                 "entity_type" : "Schema",
                 "target" : {
                     "action" : "POST",
@@ -80,7 +80,7 @@ describe('Hook API', function() {
     describe("CRUD hooks", function() {
         var hook = {
             "name" : "test_hook",
-            "owner" : "Test",
+            "owner" : [ "Test" ],
             "entity_type" : "Schema",
             "target" : {
                 "action" : "POST",
