@@ -26,21 +26,19 @@ var request = require('request');
 
 (function() {
 
+    var SIS = require('./constants');
+
     // Take in a schemaManager that's already been initialized.
     var HookManager = function(schemaManager) {
 
         // this..
         var self = this;
 
-        this.EVENT_INSERT = "insert";
-        this.EVENT_UPDATE = "update";
-        this.EVENT_DELETE = "delete";
-
         this.historyManager = require('./history-manager')(schemaManager);
 
         // initializer funct
         var init = function() {
-            self.model = schemaManager.getSisModel(schemaManager.SIS_HOOK_SCHEMA_NAME);
+            self.model = schemaManager.getSisModel(SIS.SCHEMA_HOOKS);
         }
 
         // Get all the SIS Hooks in the system

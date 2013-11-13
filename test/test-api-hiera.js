@@ -23,6 +23,8 @@ var mongoose = null;
 var app = null;
 var httpServer = null;
 
+var SIS = require("../util/constants");
+
 describe('Hiera API', function() {
     before(function(done) {
         server.startServer(config, function(expressApp, httpSrv) {
@@ -180,7 +182,7 @@ describe('Hiera API', function() {
                 var data = req.query.data;
                 data.entity_type.should.eql("sis_hiera");
                 data.hook.should.eql(hookName);
-                data.event.should.eql(hookManager.EVENT_INSERT);
+                data.event.should.eql(SIS.EVENT_INSERT);
                 if (doneCallback) {
                     doneCallback();
                 }
@@ -209,7 +211,7 @@ describe('Hiera API', function() {
                     "action" : "GET",
                     "url" : "http://localhost:3335/hook"
                 },
-                "events": [ hookManager.EVENT_INSERT ]
+                "events": [ SIS.EVENT_INSERT ]
             };
 
             hookHttpServer = hookServer.listen(3335, function(err) {
@@ -251,7 +253,7 @@ describe('Hiera API', function() {
             hook.target.url = "http://localhost:3335/hook_retry";
             hook['retry_count'] = 5;
             hook['retry_delay'] = 1;
-            hook.events.push(hookManager.EVENT_UPDATE);
+            hook.events.push(SIS.EVENT_UPDATE);
             hookManager.updateHook(hook, function(err, result) {
                 if (err) { return done(err); }
                 hiera_data.hieradata['field3'] = 'foo';

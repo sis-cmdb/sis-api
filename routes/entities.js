@@ -21,15 +21,16 @@
 (function() {
 
     var Common = require("./common");
+    var SIS = require("../util/constants");
 
     var EntityController = function(config) {
 
         var self = this;
         var schemaManager = config['schemaManager'];
         var hookManager = require('../util/hook-manager')(schemaManager);
-        var historyManager = require('../util/history-manager')(schemaManager);
-        historyManager.idField = '_id';
-        this.historyManager = historyManager;
+
+        self.historyManager = require('../util/history-manager')(schemaManager);
+        self.historyManager.idField = SIS.FIELD_ID;
 
         // Helper to get a model for a particular type.  Async
         // in case the behavior changes
@@ -130,9 +131,9 @@
                         if (err) {
                             Common.sendError(res, 500, "Could not delete entity " + id + ": " + err);
                         } else {
-                            historyManager.recordHistory(result, null, req, type, function(err, history) {
+                            self.historyManager.recordHistory(result, null, req, type, function(err, history) {
                                 Common.sendObject(res, 200, true);
-                                hookManager.dispatchHooks(result, type, hookManager.EVENT_DELETE);
+                                hookManager.dispatchHooks(result, type, SIS.EVENT_DELETE);
                             });
                         }
                     });
@@ -180,9 +181,9 @@
                         if (err) {
                             Common.sendError(res, 500, "Unable to add entity: " + err);
                         } else {
-                            historyManager.recordHistory(null, result, req, type, function(err, history) {
+                            self.historyManager.recordHistory(null, result, req, type, function(err, history) {
                                 sendPopulatedResult(req, res, 201, result);
-                                hookManager.dispatchHooks(result, type, hookManager.EVENT_INSERT);
+                                hookManager.dispatchHooks(result, type, SIS.EVENT_INSERT);
                             });
                         }
                     });
@@ -224,9 +225,9 @@
                         if (err) {
                             Common.sendError(res, 500, "Unable to save entity of type " + type + " with id " + id + ": " + err);
                         } else {
-                            historyManager.recordHistory(oldObj, result, req, type, function(err, history) {
+                            self.historyManager.recordHistory(oldObj, result, req, type, function(err, history) {
                                 sendPopulatedResult(req, res, 200, updated);
-                                hookManager.dispatchHooks(updated, type, hookManager.EVENT_UPDATE);
+                                hookManager.dispatchHooks(updated, type, SIS.EVENT_UPDATE);
                             });
                         }
                     });

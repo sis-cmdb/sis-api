@@ -28,18 +28,7 @@
         // this..
         var self = this;
 
-        this.ENTITY_CREATED_AT_FIELD = "_created_at";
-        this.ENTITY_UPDATED_AT_FIELD = "_updated_at";
-
-
-        // reserved schemas
-        this.SIS_HIERA_SCHEMA_NAME = "sis_hiera";
-        this.SIS_SCHEMA_NAME = "sis_schemas";
-        this.SIS_HOOK_SCHEMA_NAME = "sis_hooks";
-        this.SIS_HISTORY_SCHEMA_NAME = "sis_commits";
-        this.SIS_USER_SCHEMA_NAME = "sis_users";
-        this.SIS_SERVICE_SCHEMA_NAME = "sis_services";
-        this.SIS_TOKEN_SCHEMA_NAME = "sis_tokens";
+        var SIS = require('./constants');
 
         // initializer funct
         var init = function() {
@@ -49,7 +38,7 @@
             }
 
             // Get the model from the definition and name
-            self.model = self.getSisModel(self.SIS_SCHEMA_NAME);
+            self.model = self.getSisModel(SIS.SCHEMA_SCHEMAS);
         }
 
         this.getSisModel = function(name) {
@@ -145,14 +134,14 @@
                 for (var k in sisSchema.definition) {
                     definition[k] = sisSchema.definition[k];
                 }
-                definition[self.ENTITY_CREATED_AT_FIELD] = { "type" : "Number", "default" : function() { return Date.now(); } };
-                definition[self.ENTITY_UPDATED_AT_FIELD] = { "type" : "Number" };
+                definition[SIS.FIELD_CREATED_AT] = { "type" : "Number", "default" : function() { return Date.now(); } };
+                definition[SIS.FIELD_UPDATED_AT] = { "type" : "Number" };
 
                 var schema = mongoose.Schema(definition);
                 var result = mongoose.model(name, schema);
 
                 schema.pre('save', function(next) {
-                    this[self.ENTITY_UPDATED_AT_FIELD] = Date.now();
+                    this[SIS.FIELD_UPDATED_AT] = Date.now();
                     next();
                 });
 

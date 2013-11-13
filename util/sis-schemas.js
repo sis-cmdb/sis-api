@@ -24,79 +24,84 @@ module.exports.schemas = [
     {
         name : SIS.SCHEMA_SCHEMAS,
         definition : {
-            "name" : {"type" : "String", "required" : true, "unique" : true, match : /^[a-z0-9_]+$/ },
-            "owner" : { "type" : "String", "required" : true },
-            "definition" : { "type" : {}, "required" : true }
+            name : { type : "String", required : true, unique : true, match : /^[a-z0-9_]+$/ },
+            owner : { type : "String", required : true },
+            definition : { type : {}, required : true }
         }
     },
     // sis_hooks
     {
         name : SIS.SCHEMA_HOOKS,
         definition : {
-            "name" : {"type" : "String", "required" : true, match : /^[a-z0-9_]+$/, "unique" : true },
-            "target" : {
-                    "type" : {
-                        "url" : { "type" : "String", "required" : true },
-                        "action" : {"type" : "String", "required" : true, enum : ["GET", "POST", "PUT"]}
+            name : { type : "String", required : true, unique : true, match : /^[a-z0-9_]+$/ },
+            target : {
+                    type : {
+                        url : { type : "String", required : true },
+                        action : { type : "String", required : true, enum : ["GET", "POST", "PUT"]}
                     },
-                    "required" : true
+                    required : true
             },
-            "retry_count" : { "type" : "Number", "min" : 0, "max" : 20, "default" : 0 },
-            "retry_delay" : { "type" : "Number", "min" : 1, "max" : 60, "default" : 1 },
-            "events": { "type" : [{ "type" : "String",
-                                    "required" : true,
-                                    "enum" : SIS.EVENTS_ENUM
-                                   }], "required" : true},
-            "owner": "String",
-            "entity_type": "String"
+            retry_count : { type : "Number", min : 0, max : 20, default : 0 },
+            retry_delay : { type : "Number", min : 1, max : 60, default : 1 },
+            events : { type : [{ type : "String", enum : SIS.EVENTS_ENUM }], required : true },
+            owner : "String",
+            entity_type : "String"
+        }
+    },
+    // sis_hiera
+    {
+        name : SIS.SCHEMA_HIERA,
+        definition : {
+            name : { type : "String", required : true, unique : true },
+            hieradata : { type : {}, required : true }
         }
     },
     // sis_commits
     {
-        "name" : SIS.SCHEMA_COMMITS,
-        "definition" : {
-            "type":"String",
-            "entity_id":"String",
-            "action" : {"type" : "String", "required" : true, enum : SIS.EVENTS_ENUM},
-            "diff":"Mixed",
-            "old_value" : "Mixed",
-            "date_modified":{ "type" : "Number", "index" : true },
-            "modified_by":"String"
+        name : SIS.SCHEMA_COMMITS,
+        definition : {
+            type : "String",
+            entity_id : "String",
+            action : { type : "String", required : true, enum : SIS.EVENTS_ENUM},
+            diff : "Mixed",
+            old_value : "Mixed",
+            date_modified : { type : "Number", "index" : true },
+            modified_by : "String"
         },
-        "indexes" : [
+        indexes : [
             { schema: 1, entity_id: 1 }
         ]
     },
     // sis_users
     {
-        "name" : SIS.SCHEMA_USERS,
-        "definition" : {
-            "name" : { type : "String", required : true,  unique : true, match :  /^[a-z0-9_]+$/ },
-            "email" : { type : "String", required : true,  match: /^([\w-\.]+@([\w-]+\.)+[\w-]{2,4})?$/ },
-            "verified" : { type : "Boolean", "default" : false },
-            "super_user" : { type : "Boolean", "default" : false },
-            "pw" : { type : "String", required : true },
-            "roles" : "Mixed"
+        name : SIS.SCHEMA_USERS,
+        definition : {
+            name : { type : "String", required : true,  unique : true, match :  /^[a-z0-9_]+$/ },
+            email : { type : "String", required : true,  match: /^([\w-\.]+@([\w-]+\.)+[\w-]{2,4})?$/ },
+            verified : { type : "Boolean", default : false },
+            super_user : { type : "Boolean", default : false },
+            pw : { type : "String", required : true },
+            roles : "Mixed"
         }
     },
     // sis_tokens
     {
-        "name" : SIS.SCHEMA_TOKENS,
-        "definition" : {
-            "token" : { type : "String", unique : true },
-            "expires" : { type : "Date", expires: 28800 },
-            "user" : { type : "ObjectId", "ref" : "sis_users" },
-            "svc" : { type : "ObjectId", "ref" : "sis_services" }
+        name : SIS.SCHEMA_TOKENS,
+        definition : {
+            token : { type : "String", unique : true },
+            expires : { type : "Date", expires : 28800 },
+            user : { type : "ObjectId", ref : SIS.SCHEMA_USERS },
+            svc : { type : "ObjectId", ref : SIS.SCHEMA_SERVICES }
         }
     },
     // sis_services
     {
-        "name" : SIS.SCHEMA_SERVICES,
-        "definition" : {
-            "name" : { type : "String", required : true,  unique : true, match :  /^[a-z0-9_]+$/ },
-            "creator" : { type : "ObjectId", "ref" : "sis_users" },
-            "token" : { type : "String", required : true, unique : true },
-            "roles" : "Mixed"
+        name : SIS.SCHEMA_SERVICES,
+        definition : {
+            name : { type : "String", required : true,  unique : true, match :  /^[a-z0-9_]+$/ },
+            creator : { type : "ObjectId", ref : SIS.SCHEMA_USERS },
+            token : { type : "String", required : true, unique : true },
+            roles : "Mixed"
         }
     }
 

@@ -19,14 +19,14 @@
 (function() {
 
     var Common = require("./common");
+    var SIS = require("../util/constants");
 
     var SchemaController = function(config) {
 
         var self = this;
         var schemaManager = config['schemaManager'];
         var hookManager = require('../util/hook-manager')(schemaManager);
-        var historyManager = require('../util/history-manager')(schemaManager);
-        this.historyManager = historyManager;
+        self.historyManager = require('../util/history-manager')(schemaManager);
 
         this.getAll = function(req, res) {
             Common.getAll(req, res, schemaManager.model);
@@ -49,9 +49,9 @@
                 if (err) {
                     Common.sendError(res, 404, "Unable to delete schema with name " + schemaName + " : " + err);
                 } else {
-                    historyManager.recordHistory(result, null, req, schemaManager.SIS_SCHEMA_NAME, function(err, history) {
+                    self.historyManager.recordHistory(result, null, req, SIS.SCHEMA_SCHEMAS, function(err, history) {
                         Common.sendObject(res, 200, true);
-                        hookManager.dispatchHooks(result, schemaManager.SIS_SCHEMA_NAME, hookManager.EVENT_DELETE);
+                        hookManager.dispatchHooks(result, SIS.SCHEMA_SCHEMAS, SIS.EVENT_DELETE);
                     });
                 }
             })
@@ -62,9 +62,9 @@
                 if (err) {
                     Common.sendError(res, 400, "Unable to save schema " + err);
                 } else {
-                    historyManager.recordHistory(null, entity, req, schemaManager.SIS_SCHEMA_NAME, function(err, history) {
+                    self.historyManager.recordHistory(null, entity, req, SIS.SCHEMA_SCHEMAS, function(err, history) {
                         Common.sendObject(res, 201, entity);
-                        hookManager.dispatchHooks(entity, schemaManager.SIS_SCHEMA_NAME, hookManager.EVENT_INSERT);
+                        hookManager.dispatchHooks(entity, SIS.SCHEMA_SCHEMAS, SIS.EVENT_INSERT);
                     });
                 }
             });
@@ -83,9 +83,9 @@
                 } else if (!entity) {
                     Common.sendError(res, 404, "Schema not found");
                 } else {
-                    historyManager.recordHistory(oldValue, entity, req, schemaManager.SIS_SCHEMA_NAME, function(err, history) {
+                    self.historyManager.recordHistory(oldValue, entity, req, SIS.SCHEMA_SCHEMAS, function(err, history) {
                         Common.sendObject(res, 200, entity);
-                        hookManager.dispatchHooks(entity, schemaManager.SIS_SCHEMA_NAME, hookManager.EVENT_UPDATE);
+                        hookManager.dispatchHooks(entity, SIS.SCHEMA_SCHEMAS, SIS.EVENT_UPDATE);
                     });
                 }
             });

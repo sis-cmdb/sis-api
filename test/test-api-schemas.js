@@ -26,6 +26,8 @@ var app = null;
 var httpServer = null;
 var hookManager = null;
 
+var SIS = require("../util/constants")
+
 describe('Schema API', function() {
 
     before(function(done) {
@@ -191,9 +193,9 @@ describe('Schema API', function() {
             hookServer.use(express.bodyParser());
             hookServer.post('/hook', function(req, res) {
                 should.exist(req.body);
-                req.body.entity_type.should.eql(schemaManager.SIS_SCHEMA_NAME);
+                req.body.entity_type.should.eql(SIS.SCHEMA_SCHEMAS);
                 req.body.hook.should.eql(hookName);
-                req.body.event.should.eql(hookManager.EVENT_INSERT);
+                req.body.event.should.eql(SIS.EVENT_INSERT);
                 if (doneCallback) {
                     doneCallback();
                 }
@@ -202,12 +204,12 @@ describe('Schema API', function() {
             hook = {
                 "name" : hookName,
                 "owner" : "Test",
-                "entity_type" : schemaManager.SIS_SCHEMA_NAME,
+                "entity_type" : SIS.SCHEMA_SCHEMAS,
                 "target" : {
                     "action" : "POST",
                     "url" : "http://localhost:3334/hook"
                 },
-                "events": [ hookManager.EVENT_INSERT, hookManager.EVENT_UPDATE ]
+                "events": [ SIS.EVENT_INSERT, SIS.EVENT_UPDATE ]
             };
 
             hookHttpServer = hookServer.listen(3334, function(err) {

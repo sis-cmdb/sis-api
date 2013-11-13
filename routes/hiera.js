@@ -19,44 +19,33 @@
 (function() {
 
     var Common = require("./common");
+    var SIS = require("../util/constants");
 
     var HieraController = function(config) {
 
         var self = this;
         var schemaManager = config['schemaManager'];
+
         var hookManager = require('../util/hook-manager')(schemaManager);
-        var historyManager = require("../util/history-manager")(schemaManager);
-        this.historyManager = historyManager;
-
-        // A mongoose.model object for HieraData
-        var HieraSchemaModel = null;
-        // this..
-        var self = this;
-
-        this.reservedFields = {
-            "_id" : true,
-            "__v" : true
-        };
+        self.historyManager = require("../util/history-manager")(schemaManager);
+        self.model = null;
 
         // initializer funct
         var init = function() {
-            // Set up the mongoose.Schema for a SIS Schema
-            var definition = {
-                "name" : { "type" : "String", "required" : true, "unique" : true },
-                "hieradata" : { "type" : {}, "required" : true }
-            };
-            var name = schemaManager.SIS_HIERA_SCHEMA_NAME;
             // Get the model from the definition and name
-            HieraSchemaModel = schemaManager.getEntityModel({name : name, definition : definition, owner : "SIS"});
+            self.model = schemaManager.getSisModel(SIS.SCHEMA_HIERA);
+            if (!self.model) {
+                throw "Model is null for " + SIS.SCHEMA_HIERA;
+            }
         }
 
         this.getAll = function(req, res) {
-            Common.getAll(req, res, HieraSchemaModel);
+            Common.getAll(req, res, self.model);
         }
 
         this.get = function(req, res) {
             var hieraName = req.params.id;
-            HieraSchemaModel.findOne({"name" : hieraName}, function(err, result) {
+            self.model.findOne({"name" : hieraName}, function(err, result) {
                 if (err || !result) {
                     Common.sendError(res, 404, "HieraData for " + hieraName + " not found.");
                 } else {
@@ -67,7 +56,7 @@
 
         this.delete = function(req, res) {
             var hieraName = req.params.id;
-            HieraSchemaModel.findOne({"name" : hieraName}, function(err, result) {
+            self.model.findOne({"name" : hieraName}, function(err, result) {
                 if (err || !result) {
                     Common.sendError(res, 404, "HieraData for " + hieraName + " not found.");
                 } else {
@@ -76,9 +65,9 @@
                         if (err) {
                             Common.sendError(res, 500, "Could not delete hieradata for " + id + ": " + err);
                         } else {
-                            historyManager.recordHistory(result, null, req, schemaManager.SIS_HIERA_SCHEMA_NAME, function(err, history) {
+                            self.historyManager.recordHistory(result, null, req, SIS.SCHEMA_HIERA, function(err, history) {
                                 Common.sendObject(res, 200, true);
-                                hookManager.dispatchHooks(result, schemaManager.SIS_HIERA_SCHEMA_NAME, hookManager.EVENT_DELETE);
+                                hookManager.dispatchHooks(result, SIS.SCHEMA_HIERA, SIS.EVENT_DELETE);
                             });
                         }
                     });
@@ -110,14 +99,14 @@
                 Common.sendError(res, 400, err);
                 return;
             }
-            entry = new HieraSchemaModel(entry);
+            entry = new self.model(entry);
             entry.save(function(err, result) {
                 if (err) {
                     Common.sendError(res, 500, "Unable to add hieradata: " + err);
                 } else {
-                    historyManager.recordHistory(null, result, req, schemaManager.SIS_HIERA_SCHEMA_NAME, function(err, history) {
+                    self.historyManager.recordHistory(null, result, req, SIS.SCHEMA_HIERA, function(err, history) {
                         Common.sendObject(res, 201, result);
-                        hookManager.dispatchHooks(result, schemaManager.SIS_HIERA_SCHEMA_NAME, hookManager.EVENT_INSERT);
+                        hookManager.dispatchHooks(result, SIS.SCHEMA_HIERA, SIS.EVENT_INSERT);
                     });
                 }
             });
@@ -136,7 +125,7 @@
                 return;
             }
             // find it and update
-            HieraSchemaModel.findOne({"name" : entry.name}, function(err, result) {
+            self.model.findOne({"name" : entry.name}, function(err, result) {
                 if (err || !result) {
                     Common.sendError(res, 404, "HieraData for " + id + " not found.");
                 } else {
@@ -147,9 +136,9 @@
                         if (err) {
                             Common.sendError(res, 500, "Unable to save hieradata: " + err);
                         } else {
-                            historyManager.recordHistory(oldObj, updated, req, schemaManager.SIS_HIERA_SCHEMA_NAME, function(err, history) {
+                            self.historyManager.recordHistory(oldObj, updated, req, SIS.SCHEMA_HIERA, function(err, history) {
                                 Common.sendObject(res, 200, updated);
-                                hookManager.dispatchHooks(updated, schemaManager.SIS_HIERA_SCHEMA_NAME, hookManager.EVENT_UPDATE);
+                                hookManager.dispatchHooks(updated, SIS.SCHEMA_HIERA, SIS.EVENT_UPDATE);
                             });
                         }
                     });

@@ -20,6 +20,7 @@
 (function() {
 
     var jsondiff = require('jsondiffpatch');
+    var SIS = require('./constants');
 
     // Take in a schemaManager
     var HistoryManager = function(schemaManager) {
@@ -30,7 +31,7 @@
         this.idField = 'name';
 
         var init = function() {
-            self.model = self.model = schemaManager.getSisModel(schemaManager.SIS_HISTORY_SCHEMA_NAME);
+            self.model = schemaManager.getSisModel(SIS.SCHEMA_COMMITS);
         }
 
         this.recordHistory = function(oldDoc, newDoc, req, type, callback) {
@@ -43,7 +44,7 @@
                 case 'insert':
                     doc['diff'] = newDoc.toObject();
                     doc['old_value'] = null;
-                    doc['date_modified'] = newDoc[schemaManager.ENTITY_UPDATED_AT_FIELD];
+                    doc['date_modified'] = newDoc[SIS.FIELD_UPDATED_AT];
                     break;
                 case 'delete':
                     doc['diff'] = null;
@@ -54,13 +55,12 @@
                     // oldDoc is an object, newDoc is a doc
                     doc['diff'] = jsondiff.diff(oldDoc, newDoc.toObject());
                     doc['old_value'] = oldDoc;
-                    doc['date_modified'] = newDoc[schemaManager.ENTITY_UPDATED_AT_FIELD];
+                    doc['date_modified'] = newDoc[SIS.FIELD_UPDATED_AT];
                     break;
             }
             // TODO: modified_by presumably using req?
             var entry = new self.model(doc);
             entry.save(function(err, res) {
-                //console.log(JSON.stringify(res));
                 callback(err, res);
             });
         }

@@ -18,15 +18,15 @@
 // API for schemas
 (function() {
 
-    var Common = require("./common.js");
+    var Common = require("./common");
+    var SIS = require("../util/constants");
 
     var HookController = function(config) {
 
         var self = this;
         var schemaManager = config['schemaManager'];
         var hookManager = require('../util/hook-manager')(schemaManager);
-        var historyManager = require('../util/history-manager')(schemaManager);
-        this.historyManager = historyManager;
+        self.historyManager = require('../util/history-manager')(schemaManager);
 
         this.getAll = function(req, res) {
             Common.getAll(req, res, hookManager.model);
@@ -49,7 +49,7 @@
                 if (err) {
                     Common.sendError(res, 404, "Unable to delete hook with name " + hookName + " : " + err);
                 } else {
-                    historyManager.recordHistory(result, null, req, schemaManager.SIS_HOOK_SCHEMA_NAME, function(err, history) {
+                    self.historyManager.recordHistory(result, null, req, SIS.SCHEMA_HOOKS, function(err, history) {
                         Common.sendObject(res, 200, true);
                     });
                 }
@@ -61,7 +61,7 @@
                 if (err) {
                     Common.sendError(res, 400, "Unable to save hook: " + err);
                 } else {
-                    historyManager.recordHistory(null, entity, req, schemaManager.SIS_HOOK_SCHEMA_NAME, function(err, history) {
+                    self.historyManager.recordHistory(null, entity, req, SIS.SCHEMA_HOOKS, function(err, history) {
                         Common.sendObject(res, 201, entity);
                     });
                 }
@@ -75,7 +75,7 @@
                 } else if (!entity) {
                     Common.sendError(res, 404, "Hook not found");
                 } else {
-                    historyManager.recordHistory(oldValue, entity, req, schemaManager.SIS_HOOK_SCHEMA_NAME, function(err, history) {
+                    self.historyManager.recordHistory(oldValue, entity, req, SIS.SCHEMA_HOOKS, function(err, history) {
                         Common.sendObject(res, 200, entity);
                     })
                 }
