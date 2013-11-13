@@ -147,7 +147,7 @@
                     return "entity cannot be empty";
                 }
                 for (var i = 0; i < keys.length; ++i) {
-                    if (keys[i] in schemaManager.reservedFields) {
+                    if (keys[i][0] == '_') {
                         return keys[i] + " is a reserved field";
                     }
                 }
@@ -193,8 +193,11 @@
         this.update = function(req, res) {
             var entity = req.body;
             // remove reserved fields..
-            for (var rf in schemaManager.reservedFields) {
-                delete entity[rf];
+            // and sub objects
+            for (var rf in Object.keys(entity)) {
+                if (rf[0] == '_') {
+                    delete entity[rf];
+                }
             }
 
             // Get the entity by id

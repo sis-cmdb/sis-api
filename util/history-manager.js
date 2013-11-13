@@ -24,33 +24,13 @@
     // Take in a schemaManager
     var HistoryManager = function(schemaManager) {
 
-        // A mongoose model object for SIS history
-        var SisHistoryModel = null;
-
         var self = this;
 
         // default id field (schemas, hook, hiera)
         this.idField = 'name';
 
         var init = function() {
-            // schema definition
-            var schema = {
-                "name" : schemaManager.SIS_HISTORY_SCHEMA_NAME,
-                "definition" : {
-                    "type":"String",
-                    "entity_id":"String",
-                    "action" : {"type" : "String", "required" : true, enum : ["update", "insert", "delete"]},
-                    "diff":"Mixed",
-                    "old_value" : "Mixed",
-                    "date_modified":{ "type" : "Number" },
-                    "modified_by":"String"
-                }
-            };
-
-            SisHistoryModel = schemaManager.getEntityModel(schema);
-            SisHistoryModel.schema.index({ schema: 1, entity_id: 1 });
-            SisHistoryModel.schema.index({ date_modified: -1 });
-            self.model = SisHistoryModel;
+            self.model = self.model = schemaManager.getSisModel(schemaManager.SIS_HISTORY_SCHEMA_NAME);
         }
 
         this.recordHistory = function(oldDoc, newDoc, req, type, callback) {
@@ -78,7 +58,7 @@
                     break;
             }
             // TODO: modified_by presumably using req?
-            var entry = new SisHistoryModel(doc);
+            var entry = new self.model(doc);
             entry.save(function(err, res) {
                 //console.log(JSON.stringify(res));
                 callback(err, res);
@@ -104,7 +84,7 @@
         }
 
         this.getVersionById = function(type, id, hid, callback) {
-            SisHistoryModel.findOne({'_id' : hid}, function(err, result) {
+            self.model.findOne({'_id' : hid}, function(err, result) {
                 if (err || !result) {
                     callback(err, null);
                 } else {
@@ -131,7 +111,7 @@
                 "entity_id" : id,
                 "type" : type
             };
-            var q = SisHistoryModel.findOne(query).sort({date_modified: -1 });
+            var q = self.model.findOne(query).sort({date_modified: -1 });
             q.exec(function(err, result) {
                 if (err || !result) {
                     callback(err, null);

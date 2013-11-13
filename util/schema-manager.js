@@ -25,44 +25,40 @@
     // Take in a mongoose that's already been initialized.
     var SchemaManager = function(mongoose) {
 
-        // A mongoose.model object for SIS Schemas
-        var SisSchemaModel = null;
         // this..
         var self = this;
 
-        this.ENTITY_ID_FIELD = "_id";
-        this.ENTITY_VERS_FIELD = "__v";
         this.ENTITY_CREATED_AT_FIELD = "_created_at";
         this.ENTITY_UPDATED_AT_FIELD = "_updated_at";
 
-        this.reservedFields = {
-            "_id" : true,
-            "__v" : true
-        };
 
         // reserved schemas
         this.SIS_HIERA_SCHEMA_NAME = "sis_hiera";
         this.SIS_SCHEMA_NAME = "sis_schemas";
         this.SIS_HOOK_SCHEMA_NAME = "sis_hooks";
         this.SIS_HISTORY_SCHEMA_NAME = "sis_commits";
+        this.SIS_USER_SCHEMA_NAME = "sis_users";
+        this.SIS_SERVICE_SCHEMA_NAME = "sis_services";
+        this.SIS_TOKEN_SCHEMA_NAME = "sis_tokens";
 
         // initializer funct
         var init = function() {
-            // Set up the mongoose.Schema for a SIS Schema
-            var definition = {
-                "name" : {"type" : "String", "required" : true, "unique" : true, match : /^[a-z0-9_]+$/ },
-                "owner" : { "type" : "String", "required" : true },
-                "definition" : { "type" : {}, "required" : true }
+            var sisSchemas = require('./sis-schemas').schemas;
+            for (var i = 0; i < sisSchemas.length; ++i) {
+                self.getEntityModel(sisSchemas[i]);
             }
-            var name = self.SIS_SCHEMA_NAME;
+
             // Get the model from the definition and name
-            SisSchemaModel = self.getEntityModel({name : name, definition : definition});
-            self.model = SisSchemaModel;
+            self.model = self.getSisModel(self.SIS_SCHEMA_NAME);
+        }
+
+        this.getSisModel = function(name) {
+            return mongoose.models[name];
         }
 
         // Bootstrap mongoose by setting up entity models
         this.bootstrapEntitySchemas = function(callback) {
-            SisSchemaModel.find({}, function(err, schemas) {
+            self.model.find({}, function(err, schemas) {
                 if (err) { return callback(err); }
                 for (var i = 0; i < schemas.length; ++i) {
                     if (!self.getEntityModel(schemas[i])) {
@@ -75,12 +71,12 @@
 
         // Get all the SIS Schemas in the system
         this.getAll = function(condition, options, callback) {
-            SisSchemaModel.find(condition, null, options, callback);
+            self.model.find(condition, null, options, callback);
         }
 
         // Get a SIS Schema by name
         this.getByName = function(name, callback) {
-            SisSchemaModel.findOne({"name" : name}, callback);
+            self.model.findOne({"name" : name}, callback);
         }
 
         var validateSchemaObject = function(modelObj) {
@@ -122,7 +118,7 @@
                 return;
             }
             // Valid schema, so now we can create a SIS Schema object to persist
-            var entity = new SisSchemaModel(modelObj);
+            var entity = new self.model(modelObj);
             // TODO: need to cleanup the entity returned to callback
             entity.save(callback);
         }
@@ -159,6 +155,12 @@
                     this[self.ENTITY_UPDATED_AT_FIELD] = Date.now();
                     next();
                 });
+
+                if ('indexes' in sisSchema) {
+                    for (var i = 0; i < sisSchema.indexes.length; ++i) {
+                        schema.index(sisSchema.indexes[i]);
+                    }
+                }
 
                 mongoose.models[name] = result;
                 return result;
@@ -197,7 +199,7 @@
                 // find all paths that need to be unset/deleted
                 var pathsToDelete = null;
                 currentMongooseSchema.eachPath(function(name, type) {
-                    if (!(name in newDef) && !(name in self.reservedFields)) {
+                    if (!(name in newDef) && name[0] != '_') {
                         pathsToDelete = pathsToDelete || { };
                         pathsToDelete[name] = true;
                     }

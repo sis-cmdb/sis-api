@@ -29,8 +29,6 @@ var request = require('request');
     // Take in a schemaManager that's already been initialized.
     var HookManager = function(schemaManager) {
 
-        // A mongoose.model object for SIS Schemas
-        var SisHookModel = null;
         // this..
         var self = this;
 
@@ -42,39 +40,17 @@ var request = require('request');
 
         // initializer funct
         var init = function() {
-            // Set up the mongoose.Hook for a SIS Hook
-            // Get the model from the definition and name
-            var schema_definition = {
-                "name" : {"type" : "String", "required" : true, match : /^[a-z0-9_]+$/, "unique" : true },
-                "target" : {
-                        "type" : {
-                            "url" : { "type" : "String", "required" : true },
-                            "action" : {"type" : "String", "required" : true, enum : ["GET", "POST", "PUT"]}
-                        },
-                        "required" : true
-                },
-                "retry_count" : { "type" : "Number", "min" : 0, "max" : 20, "default" : 0 },
-                "retry_delay" : { "type" : "Number", "min" : 1, "max" : 60, "default" : 1 },
-                "events": { "type" : [{ "type" : "String",
-                                        "required" : true,
-                                        "enum" : [self.EVENT_INSERT, self.EVENT_UPDATE, self.EVENT_DELETE]
-                                       }], "required" : true},
-                "owner": "String",
-                "entity_type": "String"
-            }
-            var schema_name = schemaManager.SIS_HOOK_SCHEMA_NAME;
-            SisHookModel = schemaManager.getEntityModel({name : schema_name, definition : schema_definition, owner : "SIS"});
-            self.model = SisHookModel;
+            self.model = schemaManager.getSisModel(schemaManager.SIS_HOOK_SCHEMA_NAME);
         }
 
         // Get all the SIS Hooks in the system
         this.getAll = function(condition, options, callback) {
-            SisHookModel.find(condition, null, options, callback);
+            self.model.find(condition, null, options, callback);
         }
 
         // Get a SIS Hook by name
         this.getByName = function(name, callback) {
-            SisHookModel.findOne({"name" : name}, callback);
+            self.model.findOne({"name" : name}, callback);
         }
 
         var validateHookObject = function(modelObj) {
@@ -122,7 +98,7 @@ var request = require('request');
                 return;
             }
             // Valid schema, so now we can create a SIS Schema object to persist
-            var entity = new SisHookModel(modelObj);
+            var entity = new self.model(modelObj);
 
             // TODO: need to cleanup the entity returned to callback
             entity.save(callback);
@@ -135,7 +111,7 @@ var request = require('request');
                 callback(err, null);
                 return;
             }
-            SisHookModel.findOne({name : sisHook.name}, function(err, hookDoc) {
+            self.model.findOne({name : sisHook.name}, function(err, hookDoc) {
                 if (err || !hookDoc) {
                     return callback(err, hookDoc);
                 }
@@ -149,7 +125,7 @@ var request = require('request');
 
         // Delete a hook by name.
         this.deleteHook = function(name, callback) {
-            SisHookModel.findOne({"name": name}, function(err, result) {
+            self.model.findOne({"name": name}, function(err, result) {
                 if (!result) {
                     callback("Hook does not exist.", false);
                 } else {
@@ -215,7 +191,7 @@ var request = require('request');
             // find hooks that have the entity_type w/ the
             // event
             var query = {"entity_type" : entity_type, "events" :  event };
-            SisHookModel.find(query, function(err, hooks) {
+            self.model.find(query, function(err, hooks) {
                 if (err) {
                     callback(err);
                 } else {
