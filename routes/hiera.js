@@ -47,7 +47,7 @@
             var hieraName = req.params.id;
             self.model.findOne({"name" : hieraName}, function(err, result) {
                 if (err || !result) {
-                    Common.sendError(res, 404, "HieraData for " + hieraName + " not found.");
+                    Common.sendError(res, SIS.ERR_INTERNAL_OR_NOT_FOUND(err, "hiera", hieraName));
                 } else {
                     Common.sendObject(res, 200, result['hieradata']);
                 }
@@ -58,12 +58,12 @@
             var hieraName = req.params.id;
             self.model.findOne({"name" : hieraName}, function(err, result) {
                 if (err || !result) {
-                    Common.sendError(res, 404, "HieraData for " + hieraName + " not found.");
+                    Common.sendError(res, SIS.ERR_INTERNAL_OR_NOT_FOUND(err, "hiera", hieraName));
                 } else {
                     // delete the hiera entry by the id
                     result.remove(function(err) {
                         if (err) {
-                            Common.sendError(res, 500, "Could not delete hieradata for " + id + ": " + err);
+                            Common.sendError(res, SIS.ERR_INTERNAL(err));
                         } else {
                             self.historyManager.recordHistory(result, null, req, SIS.SCHEMA_HIERA, function(err, history) {
                                 Common.sendObject(res, 200, true);
@@ -96,13 +96,12 @@
             var entry = req.body;
             var err = validateEntry(entry);
             if (err) {
-                Common.sendError(res, 400, err);
-                return;
+                return Common.sendError(res, SIS.ERR_BAD_REQ(err));
             }
             entry = new self.model(entry);
             entry.save(function(err, result) {
                 if (err) {
-                    Common.sendError(res, 500, "Unable to add hieradata: " + err);
+                    Common.sendError(res, SIS.ERR_INTERNAL(err));
                 } else {
                     self.historyManager.recordHistory(null, result, req, SIS.SCHEMA_HIERA, function(err, history) {
                         Common.sendObject(res, 201, result);
@@ -116,25 +115,23 @@
             var entry = req.body;
             var err = validateEntry(entry);
             if (err) {
-                Common.sendError(res, 400, err);
-                return;
+                return Common.sendError(res, SIS.ERR_BAD_REQ(err));
             }
             var id = req.params.id;
             if (id != entry.name) {
-                Common.sendError(res, 400, "Name in body does not match name in path.");
-                return;
+                return Common.sendError(res, SIS.ERR_BAD_REQ("Name in body does not match name in path."));
             }
             // find it and update
             self.model.findOne({"name" : entry.name}, function(err, result) {
                 if (err || !result) {
-                    Common.sendError(res, 404, "HieraData for " + id + " not found.");
+                    Common.sendError(res, SIS.ERR_INTERNAL_OR_NOT_FOUND(err, "hiera", entry.name));
                 } else {
                     var oldObj = result.toObject();
                     /* allow partial update */
                     result.hieradata = Common.merge(result.hieradata, entry.hieradata);
                     result.save(function(err, updated) {
                         if (err) {
-                            Common.sendError(res, 500, "Unable to save hieradata: " + err);
+                            Common.sendError(res, SIS.ERR_INTERNAL(err));
                         } else {
                             self.historyManager.recordHistory(oldObj, updated, req, SIS.SCHEMA_HIERA, function(err, history) {
                                 Common.sendObject(res, 200, updated);

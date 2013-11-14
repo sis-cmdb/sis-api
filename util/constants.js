@@ -16,6 +16,8 @@
 
 'use strict';
 
+var util = require('util')
+
 module.exports = {
 
     // events / actions
@@ -38,6 +40,27 @@ module.exports = {
     SCHEMA_COMMITS : "sis_commits",
     SCHEMA_USERS : "sis_users",
     SCHEMA_SERVICES : "sis_services",
-    SCHEMA_TOKENS : "sis_tokens"
+    SCHEMA_TOKENS : "sis_tokens",
 
+    // errors
+    // error objects are an array w/ first elem as http status, second as err obj
+    // i.e. [ 404, { error : "string", code : ### }]
+    ERR_NOT_FOUND : function(type, id) {
+        return [404, { error : util.format("%s %s does not exist", type, id), code : 1000 }];
+    },
+    ERR_BAD_REQ : function(msg) {
+        return [400, { error : util.format("Bad request: %s", msg), code : 1001 }];
+    },
+    ERR_INTERNAL : function(msg) {
+        if (!msg) { return null; }
+        return [500, { error : util.format("Internal error %s", msg), code : 1002 }];
+    },
+    ERR_INTERNAL_OR_NOT_FOUND : function(err, type, id, result) {
+        if (err) {
+            console.log(err);
+            return module.exports.ERR_INTERNAL(err);
+        } else {
+            return module.exports.ERR_NOT_FOUND(type, id);
+        }
+    }
 }

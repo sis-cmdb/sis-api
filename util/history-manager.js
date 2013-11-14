@@ -61,7 +61,7 @@
             // TODO: modified_by presumably using req?
             var entry = new self.model(doc);
             entry.save(function(err, res) {
-                callback(err, res);
+                callback(SIS.ERR_INTERNAL(err), res);
             });
         }
 
@@ -80,7 +80,7 @@
                 default:
                     break;
             }
-            callback(obj ? null : "Invalid entry found", obj);
+            callback(obj ? null : SIS.ERR_INTERNAL("Error applying patch"), obj);
         }
 
         this.getVersionById = function(type, id, hid, callback) {
@@ -90,7 +90,7 @@
                 } else {
                     if (type != result['type'] ||
                         id != result['entity_id']) {
-                        callback("Entry does not exist.", null);
+                        callback(SIS.ERR_NOT_FOUND("commit", hid), null);
                     } else {
                         self.applyDiff(result, function(err, obj) {
                             if (err) {
@@ -114,7 +114,7 @@
             var q = self.model.findOne(query).sort({date_modified: -1 });
             q.exec(function(err, result) {
                 if (err || !result) {
-                    callback(err, null);
+                    callback(SIS.ERR_INTERNAL_OR_NOT_FOUND(err, "commit", utc), null);
                 } else {
                     self.applyDiff(result, callback);
                 }

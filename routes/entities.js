@@ -36,13 +36,7 @@
         // in case the behavior changes
         var getModelForType = function(type, callback) {
             schemaManager.getByName(type, function(err, result) {
-                if (err || !result) {
-                    callback(err, null);
-                } else {
-                    // convert the schema object from the model to a
-                    // mongoose model we can query directly
-                    callback(null, schemaManager.getEntityModel(result));
-                }
+                callback(err, schemaManager.getEntityModel(result));
             })
         }
 
@@ -52,14 +46,17 @@
         }
         this.getSchemaFromRequest= getTypeFromRequest;
 
-        var findSingle = function(type, condition, callback) {
+        var findSingle = function(type, id, callback) {
             getModelForType(type, function(err, EntityModel) {
-                if (err || !EntityModel) {
-                    callback(err || "Unknown type specified " + type, null);
-                    return;
+                if (err) {
+                    return callback(err, null);
                 }
-                EntityModel.findOne(condition, function(err, result) {
-                    callback(err, result);
+                EntityModel.findOne({"_id" : id }, function(err, result) {
+                    if (err || !result) {
+                        callback(SIS.ERR_NOT_FOUND(type, id), null);
+                    } else {
+                        callback(null, result);
+                    }
                 });
             });
         }
@@ -69,8 +66,8 @@
             // type is safe since this route wouldn't be called
             var type = getTypeFromRequest(req);
             getModelForType(type, function(err, EntityModel) {
-                if (err || !EntityModel) {
-                    Common.sendError(res, 404, "Unknown type specified: " + type);
+                if (err) {
+                    Common.sendError(res, err);
                 } else {
                     // default is to populate entities
                     if (!('populate' in req.query)) {
@@ -90,7 +87,7 @@
                 if (populate) {
                     result.populate(populate, function(err, populated) {
                         if (err || !populated) {
-                            Common.sendError(res, 500, "Failed to populate object.");
+                            Common.sendError(res, SIS.ERR_INTERNAL("Failed to populate object."));
                         } else {
                             Common.sendObject(res, status, populated);
                         }
@@ -108,9 +105,9 @@
             var type = getTypeFromRequest(req);
             // Get the id and type - wouldn't be routed here without it
             var id = req.params.id;
-            findSingle(type, {"_id" : id }, function(err, result) {
-                if (err || !result) {
-                    Common.sendError(res, 404, "Unable to find entity of type " + type + " with id " + id);
+            findSingle(type, id, function(err, result) {
+                if (err) {
+                    Common.sendError(res, err);
                 } else {
                     sendPopulatedResult(req, res, 200, result);
                 }
@@ -122,22 +119,21 @@
             var type = getTypeFromRequest(req);
             // Get the id and type - wouldn't be routed here without it
             var id = req.params.id;
-            findSingle(type, {"_id" : id }, function(err, result) {
-                if (err || !result) {
-                    Common.sendError(res, 404, "Unable to find entity of type " + type + " with id " + id);
-                } else {
-                    // delete the entity by the id
-                    result.remove(function(err, removed) {
-                        if (err) {
-                            Common.sendError(res, 500, "Could not delete entity " + id + ": " + err);
-                        } else {
-                            self.historyManager.recordHistory(result, null, req, type, function(err, history) {
-                                Common.sendObject(res, 200, true);
-                                hookManager.dispatchHooks(result, type, SIS.EVENT_DELETE);
-                            });
-                        }
-                    });
+            findSingle(type, id, function(err, result) {
+                if (err) {
+                    return Common.sendError(res, err);
                 }
+                // delete the entity by the id
+                result.remove(function(err, removed) {
+                    if (err) {
+                        Common.sendError(res, SIS.ERR_INTERNAL(err));
+                    } else {
+                        self.historyManager.recordHistory(result, null, req, type, function(err, history) {
+                            Common.sendObject(res, 200, true);
+                            hookManager.dispatchHooks(result, type, SIS.EVENT_DELETE);
+                        });
+                    }
+                });
             });
         }
 
@@ -165,21 +161,20 @@
             var entity = req.body;
             var err = validateEntity(entity);
             if (err) {
-                Common.sendError(res, 400, "Entity is invalid: " + err);
-                return;
+                return Common.sendError(res, SIS.ERR_BAD_REQ(err));
             }
 
             // Ensure the schema exists
             getModelForType(type, function(err, EntityModel) {
-                if (err || !EntityModel) {
-                    Common.sendError(res, 404, "Unknown type specified: ", type);
+                if (err) {
+                    Common.sendError(res, err);
                 } else {
                     // EntityModel is a mongoose model
                     var mongooseEntity = new EntityModel(entity);
                     // TODO: need to cleanup the entity returned to callback
                     mongooseEntity.save(function(err, result) {
                         if (err) {
-                            Common.sendError(res, 500, "Unable to add entity: " + err);
+                            Common.sendError(res, SIS.ERR_INTERNAL(err));
                         } else {
                             self.historyManager.recordHistory(null, result, req, type, function(err, history) {
                                 sendPopulatedResult(req, res, 201, result);
@@ -205,9 +200,9 @@
             var type = getTypeFromRequest(req);
             // Get the id and type - wouldn't be routed here without it
             var id = req.params.id;
-            findSingle(type, {"_id" : id }, function(err, result) {
-                if (err || !result) {
-                    Common.sendError(res, 404, "Unable to find entity of type " + type + " with id " + id);
+            findSingle(type, id, function(err, result) {
+                if (err) {
+                    Common.sendError(res, err);
                 } else {
                     // update fields that have a path on the schema
                     var schema = result.schema;
@@ -223,7 +218,7 @@
                     }
                     result.save(function(err, updated) {
                         if (err) {
-                            Common.sendError(res, 500, "Unable to save entity of type " + type + " with id " + id + ": " + err);
+                            Common.sendError(res, SIS.ERR_INTERNAL(err));
                         } else {
                             self.historyManager.recordHistory(oldObj, result, req, type, function(err, history) {
                                 sendPopulatedResult(req, res, 200, updated);

@@ -51,7 +51,7 @@
                 if (err) { return callback(err); }
                 for (var i = 0; i < schemas.length; ++i) {
                     if (!self.getEntityModel(schemas[i])) {
-                        return callback("Error building schema " + JSON.stringify(schemas[i]));
+                        return callback(SIS.ERR_INTERNAL("Error building schema " + JSON.stringify(schemas[i])));
                     }
                 }
                 callback(null);
@@ -60,12 +60,22 @@
 
         // Get all the SIS Schemas in the system
         this.getAll = function(condition, options, callback) {
-            self.model.find(condition, null, options, callback);
+            self.model.find(condition, null, options, function(err, results) {
+                if (err) {
+                    return callback(SIS.ERR_INTERNAL(err), null);
+                }
+                callback(null, results);
+            });
         }
 
         // Get a SIS Schema by name
         this.getByName = function(name, callback) {
-            self.model.findOne({"name" : name}, callback);
+            self.model.findOne({"name" : name}, function(err, result) {
+                if (err || !result) {
+                    return callback(SIS.ERR_INTERNAL_OR_NOT_FOUND(err, "schema", name), null);
+                }
+                callback(null, result);
+            });
         }
 
         var validateSchemaObject = function(modelObj) {
@@ -105,8 +115,7 @@
         this.addSchema = function(modelObj, callback) {
             var err = validateSchemaObject(modelObj);
             if (err) {
-                callback(err, null);
-                return;
+                return callback(SIS.ERR_BAD_REQ(err), null);
             }
             // Valid schema, so now we can create a SIS Schema object to persist
             var entity = new self.model(modelObj);
@@ -165,14 +174,12 @@
         this.updateSchema = function(sisSchema, callback) {
             var err = validateSchemaObject(sisSchema);
             if (err) {
-                callback(err, null);
-                return;
+                return callback(SIS.ERR_BAD_REQ(err), null);
             }
             // get the existing schema document
             this.getByName(sisSchema.name, function(err, currentSchema) {
-                if (err || !currentSchema) {
-                    callback(err, null);
-                    return;
+                if (err) {
+                    return callback(err, null);
                 }
 
                 // now we have the persisted schema document.
@@ -208,7 +215,7 @@
                     // update the document
                     currentSchema.definition = newDef;
                     currentSchema.save(function(err, savedSchema) {
-                        callback(err, savedSchema, oldValue);
+                        callback(SIS.ERR_INTERNAL(err), savedSchema, oldValue);
                     });
                 }
 
@@ -217,7 +224,7 @@
                     currentMongooseModel.update({},{ $unset : pathsToDelete}, {multi: true, safe : true, strict: false},
                         function(err) {
                             if (err) {
-                                callback(err, null);
+                                callback(SIS.ERR_INTERNAL(err), null);
                             } else {
                                 // cleanup the mongoose models and save the new document
                                 deleteCachedAndSaveNew();
@@ -237,16 +244,13 @@
         // associated with that schema
         this.deleteSchema = function(name, callback) {
             this.getByName(name, function(err, schema) {
-                if (err || !schema) {
-                    err = err || "Schema does not exist";
-                    callback(err, false);
-                    return;
+                if (err) {
+                    return callback(err, false);
                 }
                 // need to delete the schema document from mongo
                 schema.remove(function(err) {
                     if (err) {
-                        callback(err, false);
-                        return;
+                        return callback(SIS.ERR_INTERNAL(err), false);
                     }
                     // schema document is removed.. now delete the
                     // mongoose caches
@@ -266,7 +270,7 @@
                                 // at this point we're in a bad state.. we deleted the instance
                                 // but still have documents
                                 // TODO: handle this
-                                callback(err, false);
+                                callback(SIS.ERR_INTERNAL(err), false);
                             } else {
                                 callback(null, schema);
                             }

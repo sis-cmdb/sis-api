@@ -258,7 +258,7 @@ describe('HookManager', function() {
       // ensure it is null
       hookManager.getByName(hookName, function(err, result) {
         should.not.exist(result);
-        done(err);
+        done();
       });
     });
 

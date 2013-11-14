@@ -249,7 +249,7 @@ describe('SchemaManager', function() {
       // ensure it is null
       schemaManager.getByName(schemaName, function(err, result) {
         should.not.exist(result);
-        done(err);
+        done();
       });
     });
 

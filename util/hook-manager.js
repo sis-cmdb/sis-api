@@ -43,12 +43,22 @@ var request = require('request');
 
         // Get all the SIS Hooks in the system
         this.getAll = function(condition, options, callback) {
-            self.model.find(condition, null, options, callback);
+            self.model.find(condition, null, options, function(err, results) {
+                if (err) {
+                    return callback(SIS.ERR_INTERNAL(err), null);
+                }
+                callback(null, results);
+            });
         }
 
         // Get a SIS Hook by name
         this.getByName = function(name, callback) {
-            self.model.findOne({"name" : name}, callback);
+            self.model.findOne({"name" : name}, function(err, result) {
+                if (err || !result) {
+                    return callback(SIS.ERR_INTERNAL_OR_NOT_FOUND(err, "schema", name), null);
+                }
+                callback(null, result);
+            });
         }
 
         var validateHookObject = function(modelObj) {
@@ -92,31 +102,31 @@ var request = require('request');
         this.addHook = function(modelObj, callback) {
             var err = validateHookObject(modelObj);
             if (err) {
-                callback(err, null);
-                return;
+                return callback(SIS.ERR_BAD_REQ(err), null);
             }
             // Valid schema, so now we can create a SIS Schema object to persist
             var entity = new self.model(modelObj);
 
             // TODO: need to cleanup the entity returned to callback
-            entity.save(callback);
+            entity.save(function(err, result) {
+                callback(SIS.ERR_INTERNAL(err), result);
+            });
         }
 
         // Update an object schema
         this.updateHook = function(sisHook, callback) {
             var err = validateHookObject(sisHook);
             if (err) {
-                callback(err, null);
-                return;
+                return callback(SIS.ERR_BAD_REQ(err), null);
             }
             self.model.findOne({name : sisHook.name}, function(err, hookDoc) {
                 if (err || !hookDoc) {
-                    return callback(err, hookDoc);
+                    return callback(SIS.ERR_INTERNAL_OR_NOT_FOUND(err, "hook", sisHook.name), null);
                 }
                 var oldHook = hookDoc.toObject();
                 hookDoc.set(sisHook);
                 hookDoc.save(function(err, result) {
-                    callback(err, result, oldHook);
+                    callback(SIS.ERR_INTERNAL(err), result, oldHook);
                 });
             });
         }
@@ -124,12 +134,11 @@ var request = require('request');
         // Delete a hook by name.
         this.deleteHook = function(name, callback) {
             self.model.findOne({"name": name}, function(err, result) {
-                if (!result) {
-                    callback("Hook does not exist.", false);
+                if (err || !result) {
+                    callback(SIS.ERR_INTERNAL_OR_NOT_FOUND(err, "hook", name), false);
                 } else {
                     result.remove(function(err) {
-                        if (err) { return callback(err, null) }
-                        callback(null, result);
+                        return callback(SIS.ERR_INTERNAL(err), result);
                     });
                 }
             });
@@ -140,7 +149,7 @@ var request = require('request');
                 if (err || !res || res.statusCode >= 300) {
                     if (retry_count <= 0) {
                         // done with error
-                        return callback(err, null);
+                        return callback(SIS.ERR_INTERNAL(err), null);
                     } else {
                         // retry
                         setTimeout(function() {
@@ -191,7 +200,7 @@ var request = require('request');
             var query = {"entity_type" : entity_type, "events" :  event };
             self.model.find(query, function(err, hooks) {
                 if (err) {
-                    callback(err);
+                    callback(SIS.ERR_NOT_FOUND(err), null);
                 } else {
                     async.map(hooks, function(hook, cb) {
                         dispatchHook(hook, entity, event, cb);

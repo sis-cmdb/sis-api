@@ -35,8 +35,8 @@
         this.get = function(req, res) {
             var schemaName = req.params.id;
             schemaManager.getByName(schemaName, function(err, result) {
-                if (err || !result) {
-                    Common.sendError(res, 404, "Schema with name " + schemaName + " not found.");
+                if (err) {
+                    Common.sendError(res, err);
                 } else {
                     Common.sendObject(res, 200, result);
                 }
@@ -47,7 +47,7 @@
             var schemaName = req.params.id;
             schemaManager.deleteSchema(schemaName, function(err, result) {
                 if (err) {
-                    Common.sendError(res, 404, "Unable to delete schema with name " + schemaName + " : " + err);
+                    Common.sendError(res, err);
                 } else {
                     self.historyManager.recordHistory(result, null, req, SIS.SCHEMA_SCHEMAS, function(err, history) {
                         Common.sendObject(res, 200, true);
@@ -60,7 +60,7 @@
         this.add = function(req, res) {
             schemaManager.addSchema(req.body, function(err, entity) {
                 if (err) {
-                    Common.sendError(res, 400, "Unable to save schema " + err);
+                    Common.sendError(res, err);
                 } else {
                     self.historyManager.recordHistory(null, entity, req, SIS.SCHEMA_SCHEMAS, function(err, history) {
                         Common.sendObject(res, 201, entity);
@@ -73,15 +73,12 @@
         this.update = function(req, res) {
             var schemaName = req.params.id;
             var sisSchema = req.body;
-            if (!sisSchema || sisSchema.name != schemaName) {
-                Common.sendError(res, 400, "Schema name cannot be changed.");
-                return;
+            if (sisSchema && sisSchema.name != schemaName) {
+                return Common.sendError(res, SIS.ERR_BAD_REQ("Cannot change schema name."));
             }
             schemaManager.updateSchema(sisSchema, function(err, entity, oldValue) {
                 if (err) {
-                    Common.sendError(res, 400, "Unable to update schema " + err);
-                } else if (!entity) {
-                    Common.sendError(res, 404, "Schema not found");
+                    Common.sendError(res, err);
                 } else {
                     self.historyManager.recordHistory(oldValue, entity, req, SIS.SCHEMA_SCHEMAS, function(err, history) {
                         Common.sendObject(res, 200, entity);

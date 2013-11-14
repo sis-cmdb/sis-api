@@ -99,7 +99,7 @@ module.exports.schemas = [
     {
         name : SIS.SCHEMA_SERVICES,
         definition : {
-            name : { type : "String", required : true,  unique : true, match :  /^[a-z0-9_]+$/ },
+            name : { type : "String", required : true,  unique : true, match : /^[a-z0-9_]+$/ },
             creator : { type : "ObjectId", ref : SIS.SCHEMA_USERS },
             token : { type : "String", required : true, unique : true },
             roles : "Mixed"

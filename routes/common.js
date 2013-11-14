@@ -61,7 +61,7 @@
             var hid = req.params.hid;
             this.historyManager.getVersionById(type, id, hid, function(err, result) {
                 if (err || !result) {
-                    Common.sendError(res, 404, "History with id " + hid + " not found.");
+                    Common.sendError(res, SIS.ERR_NOT_FOUND("commit", hid));
                 } else {
                     Common.sendObject(res, 200, result);
                 }
@@ -74,7 +74,7 @@
             var utc = req.params.utc;
             this.historyManager.getVersionByUtc(type, id, utc, function(err, result) {
                 if (err || !result) {
-                    Common.sendError(res, 404, "History at time " + utc + " not found.");
+                    Common.sendError(res, SIS.ERR_NOT_FOUND("commit at time", utc));
                 } else {
                     Common.sendObject(res, 200, result);
                 }
@@ -96,8 +96,12 @@
     }
 
     // wrapped in case we want to do more things here..
-    module.exports.sendError = function(res, code, err) {
-        res.jsonp(code, {"error" : err });
+    // err is an object from SIS.ERR_
+    module.exports.sendError = function(res, err) {
+        if (!err || !err[0] || !err[1]) {
+            throw new Error("Invalid err sent... " + err);
+        }
+        res.jsonp(err[0], err[1]);
     }
 
     module.exports.sendObject = function(res, code, obj) {
