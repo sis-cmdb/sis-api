@@ -89,10 +89,10 @@ module.exports.schemas = [
     {
         name : SIS.SCHEMA_TOKENS,
         definition : {
-            token : { type : "String", unique : true },
+            name : { type : "String", unique : true },
             expires : { type : "Date", expires : 28800 },
             user : { type : "ObjectId", ref : SIS.SCHEMA_USERS },
-            svc : { type : "ObjectId", ref : SIS.SCHEMA_SERVICES }
+            service : { type : "ObjectId", ref : SIS.SCHEMA_SERVICES }
         }
     },
     // sis_services
@@ -101,7 +101,7 @@ module.exports.schemas = [
         definition : {
             name : { type : "String", required : true,  unique : true, match : /^[a-z0-9_]+$/ },
             creator : { type : "ObjectId", ref : SIS.SCHEMA_USERS },
-            token : { type : "String", required : true, unique : true },
+            token : { type : "String", unique : true },
             roles : "Mixed"
         }
     }

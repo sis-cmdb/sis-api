@@ -120,7 +120,9 @@
             // Valid schema, so now we can create a SIS Schema object to persist
             var entity = new self.model(modelObj);
             // TODO: need to cleanup the entity returned to callback
-            entity.save(callback);
+            entity.save(function(err, result) {
+                callback(SIS.ERR_INTERNAL(err), result);
+            });
         }
 
         // get a mongoose model back based on the sis schema

@@ -68,6 +68,19 @@ describe('Schema API', function() {
                 .send({"name" : "DNE", "owner" : "DNE", "definition" : {"k" : "String"}})
                 .expect(404, done);
         });
+        it("Should fail to add a schema with a bad name", function(done) {
+            var schema = {
+                "name" : "@#(*^! !(@#*$!",
+                "owner" : "test",
+                "definition" : {
+                    "name" : "String"
+                }
+            }
+            request(app).post("/api/v1/schemas")
+                .set("Content-type", "application/json")
+                .send(schema)
+                .expect(400, done);
+        });
     });
 
     describe("CRUD schema", function() {

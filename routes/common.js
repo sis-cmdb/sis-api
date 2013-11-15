@@ -99,6 +99,9 @@
     // err is an object from SIS.ERR_
     module.exports.sendError = function(res, err) {
         if (!err || !err[0] || !err[1]) {
+            if (err instanceof Error) {
+                console.log(err.stack);
+            }
             throw new Error("Invalid err sent... " + err);
         }
         res.jsonp(err[0], err[1]);
