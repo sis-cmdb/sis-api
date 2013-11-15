@@ -80,6 +80,9 @@ module.exports = {
     },
     ERR_INTERNAL_OR_NOT_FOUND : function(err, type, id, result) {
         if (err) {
+            if (typeof err == 'object' && err.name == 'CastError') {
+                return module.exports.ERR_NOT_FOUND(type, id);
+            }
             return module.exports.ERR_INTERNAL(err);
         } else {
             return module.exports.ERR_NOT_FOUND(type, id);

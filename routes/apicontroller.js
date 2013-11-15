@@ -30,6 +30,9 @@ function ApiController(config, opts) {
     }
     if (opts[SIS.OPT_LOG_COMMTS]) {
         this.commitManager = require("../util/history-manager")(this.sm);
+        if (opts[SIS.OPT_ID_FIELD]) {
+            this.commitManager.idField = opts[SIS.OPT_ID_FIELD];
+        }
     }
     if (opts[SIS.OPT_FIRE_HOOKS]) {
         this.hm = require('../util/hook-manager')(this.sm);
@@ -38,13 +41,11 @@ function ApiController(config, opts) {
 
 // overrides
 ApiController.prototype.getManager = function(req) {
-    var d = Q.defer();
     if (this.manager) {
-        d.resolve(this.manager);
+        return Q(this.manager);
     } else {
-        d.reject(SIS.ERR_INTERNAL("Error fetching object"));
+        return Q.reject(SIS.ERR_INTERNAL("Error fetching object"));
     }
-    return d.promise;
 }
 ApiController.prototype.getType = function(req) {
     return this.type || "invalid" ;
@@ -54,6 +55,9 @@ ApiController.prototype.convertToResponseObject = function(req, obj) {
     // default does nothing
     // hiera needs to return a sub field
     return Q(obj);
+}
+ApiController.prototype.applyDefaults = function(req) {
+    // noop
 }
 
 var MgrPromise = function(func) {
@@ -65,6 +69,7 @@ var MgrPromise = function(func) {
 
 // Common stuff that shouldn't need to be overridden..
 ApiController.prototype.getAll = function(req, res) {
+    this.applyDefaults(req);
     this.getManager(req).then(function(m) {
         Common.getAll(req, res, m.model);
     }, function(e) {
@@ -73,18 +78,21 @@ ApiController.prototype.getAll = function(req, res) {
 }
 
 ApiController.prototype.get = function(req, res) {
+    this.applyDefaults(req);
     var id = req.params.id;
     var p = this.getManager(req).then(MgrPromise(Manager.prototype.getById, id));
     this._finish(req, res, p, 200);
 }
 
 ApiController.prototype.delete = function(req, res) {
+    this.applyDefaults(req);
     var id = req.params.id;
     var p = this.getManager(req).then(MgrPromise(Manager.prototype.delete, id));
     this._finish(req, res, p, 200);
 }
 
 ApiController.prototype.update = function(req, res) {
+    this.applyDefaults(req);
     var id = req.params.id;
     var obj = req.body;
     var p = this.getManager(req).then(MgrPromise(Manager.prototype.update, id, obj));
@@ -92,6 +100,7 @@ ApiController.prototype.update = function(req, res) {
 }
 
 ApiController.prototype.add = function(req, res) {
+    this.applyDefaults(req);
     var obj = req.body;
     var p = this.getManager(req).then(MgrPromise(Manager.prototype.add, obj));
     this._finish(req, res, p, 201);
@@ -172,11 +181,10 @@ ApiController.prototype._getSendCallback = function(req, res, code) {
     var self = this;
     return function(err, result) {
         if (err) { return Common.sendError(res, err); }
-        var toSend = self.convertToResponseObject(req, result);
-        Common.sendObject(res, code, toSend);
+        Common.sendObject(res, code, result);
         // dispatch hooks
         if (self.hm && req.method in SIS.METHODS_TO_EVENT) {
-            self.hm.dispatchHooks(toSend, self.getType(req),
+            self.hm.dispatchHooks(result, self.getType(req),
                                   SIS.METHODS_TO_EVENT[req.method]);
         }
     }

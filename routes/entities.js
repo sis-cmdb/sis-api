@@ -20,174 +20,23 @@
 // the schemas API
 (function() {
 
-    var Common = require("./common");
+    var Manager = require("../util/manager");
+    var ApiController = require("./apicontroller");
     var SIS = require("../util/constants");
+    var Common = require("./common");
+    var Q = require("q");
 
-    var EntityController = function(config) {
+    //////////
+    // Entity manager
+    function EntityManager(model, opts) {
+        Manager.call(this, model, opts);
+    }
 
-        var self = this;
-        var schemaManager = config['schemaManager'];
-        var hookManager = require('../util/hook-manager')(schemaManager);
+    // inherit
+    EntityManager.prototype.__proto__ = Manager.prototype;
 
-        self.historyManager = require('../util/history-manager')(schemaManager);
-        self.historyManager.idField = SIS.FIELD_ID;
-
-        // Helper to get a model for a particular type.  Async
-        // in case the behavior changes
-        var getModelForType = function(type, callback) {
-            schemaManager.getByName(type, function(err, result) {
-                callback(err, schemaManager.getEntityModel(result));
-            })
-        }
-
-        // Wrapper around req.params.schema - depends on the route param
-        var getTypeFromRequest = function(req) {
-            return req.params.schema;
-        }
-        this.getSchemaFromRequest= getTypeFromRequest;
-
-        var findSingle = function(type, id, callback) {
-            getModelForType(type, function(err, EntityModel) {
-                if (err) {
-                    return callback(err, null);
-                }
-                EntityModel.findOne({"_id" : id }, function(err, result) {
-                    if (err || !result) {
-                        callback(SIS.ERR_NOT_FOUND(type, id), null);
-                    } else {
-                        callback(null, result);
-                    }
-                });
-            });
-        }
-
-        // Handler for GET /
-        this.getAll = function(req, res) {
-            // type is safe since this route wouldn't be called
-            var type = getTypeFromRequest(req);
-            getModelForType(type, function(err, EntityModel) {
-                if (err) {
-                    Common.sendError(res, err);
-                } else {
-                    // default is to populate entities
-                    if (!('populate' in req.query)) {
-                        req.query['populate'] = true;
-                    }
-                    Common.getAll(req, res, EntityModel);
-                }
-            });
-        }
-
-        var sendPopulatedResult = function(req, res, status, result) {
-            if (!('populate' in req.query)) {
-                req.query['populate'] = true;
-            }
-            if (Common.parsePopulate(req)) {
-                var populate = Common.buildPopulate(result.schema);
-                if (populate) {
-                    result.populate(populate, function(err, populated) {
-                        if (err || !populated) {
-                            Common.sendError(res, SIS.ERR_INTERNAL("Failed to populate object."));
-                        } else {
-                            Common.sendObject(res, status, populated);
-                        }
-                    });
-                } else {
-                    Common.sendObject(res, status, result);
-                }
-            } else {
-                Common.sendObject(res, status, result);
-            }
-        }
-
-        // Handler for GET /:id
-        this.get = function(req, res) {
-            var type = getTypeFromRequest(req);
-            // Get the id and type - wouldn't be routed here without it
-            var id = req.params.id;
-            findSingle(type, id, function(err, result) {
-                if (err) {
-                    Common.sendError(res, err);
-                } else {
-                    sendPopulatedResult(req, res, 200, result);
-                }
-            });
-        }
-
-        // Handler for DELETE /:id
-        this.delete = function(req, res) {
-            var type = getTypeFromRequest(req);
-            // Get the id and type - wouldn't be routed here without it
-            var id = req.params.id;
-            findSingle(type, id, function(err, result) {
-                if (err) {
-                    return Common.sendError(res, err);
-                }
-                // delete the entity by the id
-                result.remove(function(err, removed) {
-                    if (err) {
-                        Common.sendError(res, SIS.ERR_INTERNAL(err));
-                    } else {
-                        self.historyManager.recordHistory(result, null, req, type, function(err, history) {
-                            Common.sendObject(res, 200, true);
-                            hookManager.dispatchHooks(result, type, SIS.EVENT_DELETE);
-                        });
-                    }
-                });
-            });
-        }
-
-        var validateEntity = function(entity) {
-            try {
-                var keys = Object.keys(entity);
-                if (keys.length == 0) {
-                    return "entity cannot be empty";
-                }
-                for (var i = 0; i < keys.length; ++i) {
-                    if (keys[i][0] == '_') {
-                        return keys[i] + " is a reserved field";
-                    }
-                }
-            } catch (ex) {
-                return "cannot be empty or is not an object";
-            }
-            return null;
-        }
-
-        // Handler for POST /
-        this.add = function(req, res) {
-            // Get the type - this method would not be called without it
-            var type = getTypeFromRequest(req);
-            var entity = req.body;
-            var err = validateEntity(entity);
-            if (err) {
-                return Common.sendError(res, SIS.ERR_BAD_REQ(err));
-            }
-
-            // Ensure the schema exists
-            getModelForType(type, function(err, EntityModel) {
-                if (err) {
-                    Common.sendError(res, err);
-                } else {
-                    // EntityModel is a mongoose model
-                    var mongooseEntity = new EntityModel(entity);
-                    // TODO: need to cleanup the entity returned to callback
-                    mongooseEntity.save(function(err, result) {
-                        if (err) {
-                            Common.sendError(res, SIS.ERR_INTERNAL(err));
-                        } else {
-                            self.historyManager.recordHistory(null, result, req, type, function(err, history) {
-                                sendPopulatedResult(req, res, 201, result);
-                                hookManager.dispatchHooks(result, type, SIS.EVENT_INSERT);
-                            });
-                        }
-                    });
-                }
-            });
-        }
-
-        this.update = function(req, res) {
-            var entity = req.body;
+    EntityManager.prototype.validate = function(entity, isUpdate) {
+        if (isUpdate) {
             // remove reserved fields..
             // and sub objects
             for (var rf in Object.keys(entity)) {
@@ -195,46 +44,116 @@
                     delete entity[rf];
                 }
             }
+        }
+        try {
+            var keys = Object.keys(entity);
+            if (keys.length == 0) {
+                return "entity cannot be empty";
+            }
+            for (var i = 0; i < keys.length; ++i) {
+                if (keys[i][0] == '_') {
+                    return keys[i] + " is a reserved field";
+                }
+            }
+        } catch (ex) {
+            return "cannot be empty or is not an object";
+        }
+        return null;
+    }
 
-            // Get the entity by id
-            var type = getTypeFromRequest(req);
-            // Get the id and type - wouldn't be routed here without it
-            var id = req.params.id;
-            findSingle(type, id, function(err, result) {
-                if (err) {
-                    Common.sendError(res, err);
+    EntityManager.prototype.applyUpdate = function(result, entity) {
+        var schema = result.schema;
+        for (var k in entity) {
+            if (schema.path(k)) {
+                if (entity[k] != null) {
+                    result[k] = Common.merge(result[k], entity[k]);
                 } else {
-                    // update fields that have a path on the schema
-                    var schema = result.schema;
-                    var oldObj = result.toObject();
-                    for (var k in entity) {
-                        if (schema.path(k)) {
-                            if (entity[k] != null) {
-                                result[k] = Common.merge(result[k], entity[k]);
-                            } else {
-                                delete result[k];
-                            }
-                        }
-                    }
-                    result.save(function(err, updated) {
-                        if (err) {
-                            Common.sendError(res, SIS.ERR_INTERNAL(err));
-                        } else {
-                            self.historyManager.recordHistory(oldObj, result, req, type, function(err, history) {
-                                sendPopulatedResult(req, res, 200, updated);
-                                hookManager.dispatchHooks(updated, type, SIS.EVENT_UPDATE);
-                            });
-                        }
-                    });
+                    delete result[k];
+                }
+            }
+        }
+        return result;
+    }
+    //////////
+
+    //////////
+    // Entity controller
+    function EntityController(config) {
+        var opts = { };
+        opts[SIS.OPT_LOG_COMMTS] = true;
+        opts[SIS.OPT_FIRE_HOOKS] = true;
+        opts[SIS.OPT_ID_FIELD] = SIS.FIELD_ID;
+        this.opts = opts;
+        ApiController.call(this, config, this.opts);
+        this.managerCache = { };
+    }
+
+    // inherit
+    EntityController.prototype.__proto__ = ApiController.prototype;
+
+    // overrides
+    EntityController.prototype.getManager = function(req) {
+        var name = this.getType(req);
+        if (this.sm.hasEntityModel(name)) {
+            var smModel = this.sm.getEntityModelByName(name);
+            var current = this.managerCache[name];
+            if (!current || current.model != smModel) {
+                // out of date..
+                this.managerCache[name] = new EntityManager(smModel, this.opts);
+            }
+            return Q(this.managerCache[name]);
+        } else {
+            // query to see if it's there (could be due to replication)
+            var self = this;
+            var d = Q.defer();
+            this.sm.getByName(name, function(e, schema) {
+                if (e) {
+                    d.reject(e);
+                } else {
+                    var model = self.sm.getEntityModel(schema);
+                    self.managerCache[name] = new EntityManager(model, self.opts);
+                    d.resolve(self.managerCache[name]);
                 }
             });
+            return d.promise;
         }
     }
+    EntityController.prototype.getType = function(req) {
+        return req.params.schema;
+    }
+    EntityController.prototype.applyDefaults = function(req) {
+        if (req.method == "GET") {
+            // need to populate..
+            if (!('populate' in req.query)) {
+                req.query['populate'] = true;
+            }
+        }
+    }
+    EntityController.prototype.convertToResponseObject = function(req, obj) {
+        if (Common.parsePopulate(req)) {
+            var populate = Common.buildPopulate(obj.schema);
+            if (populate) {
+                var d = Q.defer();
+                obj.populate(populate, function(err, populated) {
+                    if (err || !populated) {
+                        d.reject(SIS.ERR_INTERNAL("Failed to populate object."));
+                    } else {
+                        d.resolve(populated);
+                    }
+                });
+                return d.promise;
+            } else {
+                return Q(obj);
+            }
+        }
+        return Q(obj);
+    }
+    /////////////////////////////////
 
     // all route controllers expose a setup method
     module.exports.setup = function(app, config) {
         var controller = new EntityController(config);
-        Common.attachController(app, controller, "/api/v1/entities/:schema");
+        controller.attach(app, "/api/v1/entities/:schema");
     }
 
 })();

@@ -125,6 +125,14 @@
             });
         }
 
+        this.hasEntityModel = function(name) {
+            return name in mongoose.models;
+        }
+
+        this.getEntityModelByName = function(name) {
+            return mongoose.models[name];
+        }
+
         // get a mongoose model back based on the sis schema
         // passed in.  sisSchema would be an object returned by
         // calls like getByName

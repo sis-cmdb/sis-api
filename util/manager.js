@@ -21,8 +21,8 @@ var helpers = require('./helpers');
 function Manager(model, opts) {
     this.model = model;
     opts = opts || { }
-    this.idField = opts.name || 'name';
-    this.type = opts.type || this.model.modelName;
+    this.idField = opts[SIS.OPT_ID_FIELD] || 'name';
+    this.type = opts[SIS.OPT_TYPE] || this.model.modelName;
 }
 
 // return a string if validation fails
@@ -90,9 +90,7 @@ Manager.prototype.update = function(id, obj, callback) {
             var innerP = self._merge(found, obj)
                 .then(self._save.bind(self))
                 .then(function(updated) {
-                    var d = Q.defer();
-                    d.resolve([old, updated]);
-                    return d.promise;
+                    return Q([old, updated]);
                 });
             return innerP;
         });
@@ -145,9 +143,7 @@ Manager.prototype._getModCallback = function(d) {
 // returns a promise function that accepts a document from
 // find and applies the update
 Manager.prototype._merge = function(doc, update) {
-    var d = Q.defer();
-    d.resolve(this.applyUpdate(doc, update));
-    return d.promise;
+    return Q(this.applyUpdate(doc, update));
 }
 
 Manager.prototype._save = function(obj, callback) {
