@@ -22,6 +22,7 @@
     var ApiController = require("./apicontroller");
     var SIS = require("../util/constants");
     var Common = require("./common");
+    var Q = require("q");
 
     /////////////////////////////////
     // Hiera Manager
@@ -76,9 +77,9 @@
 
     HieraController.prototype.convertToResponseObject = function(req, obj) {
         if (req.method == "GET") {
-            return obj['hieradata'];
+            return Q(obj['hieradata']);
         }
-        return obj;
+        return Q(obj);
     }
     /////////////////////////////////
 

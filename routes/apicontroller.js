@@ -53,7 +53,7 @@ ApiController.prototype.getType = function(req) {
 ApiController.prototype.convertToResponseObject = function(req, obj) {
     // default does nothing
     // hiera needs to return a sub field
-    return obj;
+    return Q(obj);
 }
 
 var MgrPromise = function(func) {
@@ -75,7 +75,7 @@ ApiController.prototype.getAll = function(req, res) {
 ApiController.prototype.get = function(req, res) {
     var id = req.params.id;
     var p = this.getManager(req).then(MgrPromise(Manager.prototype.getById, id));
-    return Q.nodeify(p, this._getSendCallback(req, res, 200));
+    this._finish(req, res, p, 200);
 }
 
 ApiController.prototype.delete = function(req, res) {
@@ -218,9 +218,13 @@ ApiController.prototype._saveCommit = function(req) {
 }
 
 ApiController.prototype._finish = function(req, res, p, code) {
-    if (this.commitManager) {
+    var self = this;
+    if (this.commitManager && req.method in SIS.METHODS_TO_EVENT) {
         p = p.then(this._saveCommit(req));
     }
+    p = p.then(function(o) {
+        return self.convertToResponseObject(req, o);
+    });
     return Q.nodeify(p, this._getSendCallback(req, res, code));
 }
 
