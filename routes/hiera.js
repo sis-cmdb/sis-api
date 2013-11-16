@@ -21,7 +21,6 @@
     var Manager = require("../util/manager");
     var ApiController = require("./apicontroller");
     var SIS = require("../util/constants");
-    var Common = require("./common");
     var Q = require("q");
 
     /////////////////////////////////
@@ -56,7 +55,7 @@
 
     HieraManager.prototype.applyUpdate = function(doc, updateObj) {
         /* allow partial update */
-        doc.hieradata = Common.merge(doc.hieradata, updateObj.hieradata);
+        doc.hieradata = this.applyPartial(doc.hieradata, updateObj.hieradata);
         return doc;
     }
     /////////////////////////////////
@@ -76,7 +75,7 @@
     HieraController.prototype.__proto__ = ApiController.prototype;
 
     HieraController.prototype.convertToResponseObject = function(req, obj) {
-        if (req.method == "GET") {
+        if (req.method == "GET" && req.params.id) {
             return Q(obj['hieradata']);
         }
         return Q(obj);

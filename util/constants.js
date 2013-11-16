@@ -43,6 +43,7 @@ module.exports = {
     FIELD_VERS : "__v",
     FIELD_CREATED_AT : "_created_at",
     FIELD_UPDATED_AT : "_updated_at",
+    FIELD_NAME : "name",
 
     // schema names
     SCHEMA_SCHEMAS : "sis_schemas",
@@ -61,6 +62,14 @@ module.exports = {
     OPT_ID_FIELD : "id_field",
     OPT_TYPE : "type",
 
+    MAX_RESULTS : 200,
+
+    // populate option
+    OPT_MGR_POPULATE : "_sis_populate",
+
+    // headers
+    HEADER_TOTAL_COUNT : "x-total-count",
+
     // errors
     // error objects are an array w/ first elem as http status, second as err obj
     // i.e. [ 404, { error : "string", code : ### }]
@@ -73,13 +82,12 @@ module.exports = {
     ERR_INTERNAL : function(msg) {
         if (!msg) { return null; }
         if (typeof msg == 'object' && msg.name == 'ValidationError') {
-            return [400, { error : util.format("Invalid data %s", msg), code : 1001}];
+            return [400, { error : util.format("Invalid data %s", msg), code : 1001 }];
         }
-        console.log(msg);
-        return [500, { error : util.format("Internal error %s", msg), code : 1002 }];
+        return [500, { error : util.format("Internal error %s", msg), code : 1002 }, msg];
     },
     ERR_INTERNAL_OR_NOT_FOUND : function(err, type, id, result) {
-        if (err) {
+        if (err) {;
             if (typeof err == 'object' && err.name == 'CastError') {
                 return module.exports.ERR_NOT_FOUND(type, id);
             }

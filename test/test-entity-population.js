@@ -83,7 +83,7 @@ describe('Entity Population API', function() {
 
         before(function(done) {
             // setup the schemas
-            async.map(schemas, schemaManager.addSchema.bind(schemaManager), function(err, res) {
+            async.map(schemas, schemaManager.add.bind(schemaManager), function(err, res) {
                 if (err) { return done(err, res); }
 
                 var createEntity = function(i) {
@@ -112,7 +112,7 @@ describe('Entity Population API', function() {
 
         after(function(done) {
             var names = schemas.map(function(s) { return s.name; });
-            async.map(names, schemaManager.deleteSchema.bind(schemaManager), done);
+            async.map(names, schemaManager.delete.bind(schemaManager), done);
         });
 
         it("Should populate pop_schema_2 ref_field", function(done) {

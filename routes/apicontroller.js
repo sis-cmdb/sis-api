@@ -15,9 +15,7 @@
  ***********************************************************/
 
 'use strict';
-// API for schemas
 
-var Common = require("./common");
 var SIS = require("../util/constants");
 var Manager = require("../util/manager");
 var Q = require('q');
@@ -60,6 +58,53 @@ ApiController.prototype.applyDefaults = function(req) {
     // noop
 }
 
+// Utils
+ApiController.prototype.sendError = function(res, err) {
+    if (typeof err == 'object' && err.stack) {
+        console.log(err.stack);
+    }
+
+    if (!(err instanceof Array) || err.length != 2) {
+        err = [500, err];
+    }
+    if (err.length == 3) {
+        console.log(err[2].stack);
+    }
+    res.jsonp(err[0], err[1]);
+}
+
+ApiController.prototype.sendObject = function(res, code, obj) {
+    res.jsonp(code, obj);
+}
+
+ApiController.prototype.parseQuery = function(req) {
+    var query = req.query.q || { };
+    // try parsing..
+    try {
+        if (typeof query === 'string') {
+            query = JSON.parse(query);
+        }
+    } catch (ex) {
+        query = {};
+    }
+    var limit = parseInt(req.query.limit) || SIS.MAX_RESULTS;
+    if (limit > SIS.MAX_RESULTS) { limit = SIS.MAX_RESULTS };
+    var offset = parseInt(req.query.offset) || 0;
+    return {'query' : query, 'limit' : limit, 'offset' : offset};
+}
+
+ApiController.prototype.parsePopulate = function(req) {
+    if (typeof req.query.populate == 'string') {
+        try {
+            return JSON.parse(req.query.populate);
+        } catch(ex) {
+            return false;
+        }
+    } else {
+        return req.query.populate || false;
+    }
+}
+
 var MgrPromise = function(func) {
     var argsToFunc = Array.prototype.slice.call(arguments, 1);
     return function(manager) {
@@ -70,17 +115,34 @@ var MgrPromise = function(func) {
 // Common stuff that shouldn't need to be overridden..
 ApiController.prototype.getAll = function(req, res) {
     this.applyDefaults(req);
-    this.getManager(req).then(function(m) {
-        Common.getAll(req, res, m.model);
-    }, function(e) {
-        Common.sendError(res, e);
-    });
+    var rq = this.parseQuery(req);
+    var options = { skip : rq.offset, limit: rq.limit};
+    var condition = rq.query;
+    var self = this;
+    var p = this.getManager(req)
+                .then(function(mgr) {
+                    return mgr.count(condition).then(function(c) {
+                        c = c || 0;
+                        res.setHeader(SIS.HEADER_TOTAL_COUNT, c);
+                        if (!c) {
+                            return Q([]);
+                        }
+                        return mgr.getAll(condition, options)
+                            .then(self._getPopulatePromise(req, mgr));
+                    });
+                });
+    this._finish(req, res, p, 200);
 }
 
 ApiController.prototype.get = function(req, res) {
     this.applyDefaults(req);
     var id = req.params.id;
-    var p = this.getManager(req).then(MgrPromise(Manager.prototype.getById, id));
+    var self = this;
+    var p = this.getManager(req)
+                .then(function(m) {
+                    return m.getById(id).then(self._getPopulatePromise(req, m));
+                });
+
     this._finish(req, res, p, 200);
 }
 
@@ -122,10 +184,11 @@ ApiController.prototype.attach = function(app, prefix) {
 
 ApiController.prototype._enableCommitApi = function(app, prefix) {
     // all history
+    var self = this;
     app.get(prefix + "/:id/commits", function(req, res) {
         var type = this.getType(req);
         var id = req.params.id;
-        var rq = Common.parseQuery(req);
+        var rq = this.parseQuery(req);
         var mongooseModel = this.commitManager.model;
 
         // update the query for the right types
@@ -135,14 +198,14 @@ ApiController.prototype._enableCommitApi = function(app, prefix) {
         mongooseModel.count(rq.query, function(err, c) {
             if (err || !c) {
                 res.setHeader("x-total-count", 0);
-                return Common.sendObject(res, 200, []);
+                return self.sendObject(res, 200, []);
             }
             var opts = { skip : rq.offset, limit: rq.limit};
             var mgQuery = mongooseModel.find(rq.query, null, opts);
             mgQuery = mgQuery.sort({date_modified: -1});
             mgQuery.exec(function(err, entities) {
                 res.setHeader("x-total-count", c);
-                Common.sendObject(res, 200, entities);
+                self.sendObject(res, 200, entities);
             });
         });
     }.bind(this));
@@ -154,9 +217,9 @@ ApiController.prototype._enableCommitApi = function(app, prefix) {
         var hid = req.params.hid;
         this.commitManager.getVersionById(type, id, hid, function(err, result) {
             if (err || !result) {
-                Common.sendError(res, SIS.ERR_NOT_FOUND("commit", hid));
+                self.sendError(res, SIS.ERR_NOT_FOUND("commit", hid));
             } else {
-                Common.sendObject(res, 200, result);
+                self.sendObject(res, 200, result);
             }
         });
     }.bind(this));
@@ -167,9 +230,9 @@ ApiController.prototype._enableCommitApi = function(app, prefix) {
         var utc = req.params.utc;
         this.commitManager.getVersionByUtc(type, id, utc, function(err, result) {
             if (err || !result) {
-                Common.sendError(res, SIS.ERR_NOT_FOUND("commit at time", utc));
+                self.sendError(res, SIS.ERR_NOT_FOUND("commit at time", utc));
             } else {
-                Common.sendObject(res, 200, result);
+                self.sendObject(res, 200, result);
             }
         });
 
@@ -180,8 +243,8 @@ ApiController.prototype._enableCommitApi = function(app, prefix) {
 ApiController.prototype._getSendCallback = function(req, res, code) {
     var self = this;
     return function(err, result) {
-        if (err) { return Common.sendError(res, err); }
-        Common.sendObject(res, code, result);
+        if (err) { return self.sendError(res, err); }
+        self.sendObject(res, code, result);
         // dispatch hooks
         if (self.hm && req.method in SIS.METHODS_TO_EVENT) {
             self.hm.dispatchHooks(result, self.getType(req),
@@ -236,5 +299,17 @@ ApiController.prototype._finish = function(req, res, p, code) {
     return Q.nodeify(p, this._getSendCallback(req, res, code));
 }
 
+ApiController.prototype._getPopulatePromise = function(req, m) {
+    var self = this;
+    return function(results) {
+        if (self.parsePopulate(req)) {
+            return m.populate(results);
+        } else {
+            return Q(results);
+        }
+    }
+}
+
 // export it
 module.exports = exports = ApiController;
+

@@ -80,10 +80,10 @@ describe('Entity API', function() {
             }
         };
         before(function(done) {
-            schemaManager.addSchema(schema, done);
+            schemaManager.add(schema, done);
         });
         after(function(done) {
-            schemaManager.deleteSchema(schema.name, done);
+            schemaManager.delete(schema.name, done);
         });
         var entityId = null;
         var expectedEntity = {
@@ -214,7 +214,7 @@ describe('Entity API', function() {
             }
         };
         before(function(done) {
-            schemaManager.addSchema(schema, function(err, result) {
+            schemaManager.add(schema, function(err, result) {
                 if (err) { return done(err, result) }
                 request(app).post("/api/v1/entities/test_nested_entity")
                     .set("Content-Type", "application/json")
@@ -230,7 +230,7 @@ describe('Entity API', function() {
             });
         });
         after(function(done) {
-            schemaManager.deleteSchema(schema.name, done);
+            schemaManager.delete(schema.name, done);
         });
         it("Should update nested_obj.obj2.name only", function(done) {
             entity['nested_obj']['obj2']['name'] == "hello";

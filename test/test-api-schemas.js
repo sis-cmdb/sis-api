@@ -161,10 +161,10 @@ describe('Schema API', function() {
                            { "name":"s2", "definition": { "field" : "String" }, "owner" : "ResOps" },
                            { "name":"t1", "definition": { "field" : "String" }, "owner" : "ProvOps" }];
             // async magic - https://github.com/caolan/async
-            async.map(schemas, schemaManager.addSchema.bind(schemaManager), done);
+            async.map(schemas, schemaManager.add.bind(schemaManager), done);
         });
         after(function(done) {
-            async.map(['s1', 's2', 't1'], schemaManager.deleteSchema.bind(schemaManager), done);
+            async.map(['s1', 's2', 't1'], schemaManager.delete.bind(schemaManager), done);
         });
         it("Should return 2 results", function(done) {
             request(app).get("/api/v1/schemas")

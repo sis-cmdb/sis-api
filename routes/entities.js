@@ -23,7 +23,6 @@
     var Manager = require("../util/manager");
     var ApiController = require("./apicontroller");
     var SIS = require("../util/constants");
-    var Common = require("./common");
     var Q = require("q");
 
     //////////
@@ -66,7 +65,7 @@
         for (var k in entity) {
             if (schema.path(k)) {
                 if (entity[k] != null) {
-                    result[k] = Common.merge(result[k], entity[k]);
+                    result[k] = this.applyPartial(result[k], entity[k]);
                 } else {
                     delete result[k];
                 }
@@ -106,7 +105,7 @@
             // query to see if it's there (could be due to replication)
             var self = this;
             var d = Q.defer();
-            this.sm.getByName(name, function(e, schema) {
+            this.sm.getById(name, function(e, schema) {
                 if (e) {
                     d.reject(e);
                 } else {
@@ -128,25 +127,6 @@
                 req.query['populate'] = true;
             }
         }
-    }
-    EntityController.prototype.convertToResponseObject = function(req, obj) {
-        if (Common.parsePopulate(req)) {
-            var populate = Common.buildPopulate(obj.schema);
-            if (populate) {
-                var d = Q.defer();
-                obj.populate(populate, function(err, populated) {
-                    if (err || !populated) {
-                        d.reject(SIS.ERR_INTERNAL("Failed to populate object."));
-                    } else {
-                        d.resolve(populated);
-                    }
-                });
-                return d.promise;
-            } else {
-                return Q(obj);
-            }
-        }
-        return Q(obj);
     }
     /////////////////////////////////
 

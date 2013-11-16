@@ -45,7 +45,7 @@ describe('SchemaManager', function() {
     it("should error adding an empty string ", function(done) {
       var name = "name";
       var schema = "";
-      schemaManager.addSchema({"name" : name, "definition" : schema}, function(err, entity) {
+      schemaManager.add({"name" : name, "definition" : schema}, function(err, entity) {
         should.exist(err);
         done();
       });
@@ -54,7 +54,7 @@ describe('SchemaManager', function() {
     it("should error adding an empty object ", function(done) {
       var name = "name";
       var schema = { };
-      schemaManager.addSchema({"name" : name, "definition" : schema}, function(err, entity) {
+      schemaManager.add({"name" : name, "definition" : schema}, function(err, entity) {
         should.exist(err);
         done();
       });
@@ -64,7 +64,7 @@ describe('SchemaManager', function() {
     it("should error adding a schema with an unkown type ", function(done) {
       var name = "name";
       var schema = { "field1" : "Bogus", "field2" : "String" };
-      schemaManager.addSchema({"name" : name, "definition" : schema}, function(err, entity) {
+      schemaManager.add({"name" : name, "definition" : schema}, function(err, entity) {
         should.exist(err);
         done();
       });
@@ -74,7 +74,7 @@ describe('SchemaManager', function() {
     it("should error adding a schema with no name ", function(done) {
       var name = "";
       var schema = { "field1" : "String", "field2" : "String" };
-      schemaManager.addSchema({"name" : name, "definition" : schema}, function(err, entity) {
+      schemaManager.add({"name" : name, "definition" : schema}, function(err, entity) {
         should.exist(err);
         done();
       });
@@ -96,7 +96,7 @@ describe('SchemaManager', function() {
           bgpip6: "String"
         }
       };
-      schemaManager.addSchema(schema, function(err, entity) {
+      schemaManager.add(schema, function(err, entity) {
         should.not.exist(err);
 
         entity.should.have.property('name', 'network_element');
@@ -115,7 +115,7 @@ describe('SchemaManager', function() {
                 ne_type: "String",
               }
             };
-            schemaManager.addSchema(schema, function(err, entity) {
+            schemaManager.add(schema, function(err, entity) {
                 should.exist(err);
                 should.not.exist(entity);
                 done();
@@ -128,7 +128,7 @@ describe('SchemaManager', function() {
           "owner" : "test",
           "definition" : { }
         };
-        schemaManager.addSchema(schema, function(err, entity) {
+        schemaManager.add(schema, function(err, entity) {
             should.exist(err);
             should.not.exist(entity);
             done();
@@ -145,7 +145,7 @@ describe('SchemaManager', function() {
                 }
             }
             schema['definition'][field] = 'String';
-            schemaManager.addSchema(schema, function(err, entity) {
+            schemaManager.add(schema, function(err, entity) {
                 should.exist(err);
                 should.not.exist(entity);
                 done();
@@ -158,7 +158,7 @@ describe('SchemaManager', function() {
             "owner" : "test",
             "definition" : "Bogus"
         }
-        schemaManager.addSchema(schema, function(err, entity) {
+        schemaManager.add(schema, function(err, entity) {
             should.exist(err);
             should.not.exist(entity);
             done();
@@ -172,7 +172,7 @@ describe('SchemaManager', function() {
                 "name" : "UnknownType"
             }
         }
-        schemaManager.addSchema(schema, function(err, entity) {
+        schemaManager.add(schema, function(err, entity) {
             should.exist(err);
             should.not.exist(entity);
             done();
@@ -207,7 +207,7 @@ describe('SchemaManager', function() {
       "definition" : schemaDef
     };
     before(function(done) {
-      schemaManager.addSchema(fullSchema, function(err, entity) {
+      schemaManager.add(fullSchema, function(err, entity) {
         if (err) {
           done(err);
           return;
@@ -230,15 +230,15 @@ describe('SchemaManager', function() {
     });
 
     it("Should return false if schema dne ", function(done) {
-      schemaManager.deleteSchema("DNE", function(err, result) {
+      schemaManager.delete("DNE", function(err, result) {
         should.exist(err);
-        result.should.not.be.ok;
+        should.not.exist(result);
         done();
       });
     });
 
     it("Should return true if schema exists ", function(done) {
-      schemaManager.deleteSchema(schemaName, function(err, result) {
+      schemaManager.delete(schemaName, function(err, result) {
         should.not.exist(err);
         result.should.be.ok;
         done(err);
@@ -247,14 +247,14 @@ describe('SchemaManager', function() {
 
     it("Should no longer exist ", function(done) {
       // ensure it is null
-      schemaManager.getByName(schemaName, function(err, result) {
+      schemaManager.getById(schemaName, function(err, result) {
         should.not.exist(result);
         done();
       });
     });
 
     it("Should have no documents ", function(done) {
-      schemaManager.addSchema(fullSchema, function(err, entity) {
+      schemaManager.add(fullSchema, function(err, entity) {
         if (err) {
           done(err);
           return;
@@ -293,7 +293,7 @@ describe('SchemaManager', function() {
 
     // create the schema and add an entity
     before(function(done) {
-        schemaManager.addSchema(schema, function(err, result) {
+        schemaManager.add(schema, function(err, result) {
           if (err) return done(err);
           var EntityType = schemaManager.getEntityModel(schema);
           var doc = new EntityType(initialEntity);
@@ -305,7 +305,7 @@ describe('SchemaManager', function() {
         });
     });
     after(function(done) {
-        schemaManager.deleteSchema(schema.name, done);
+        schemaManager.delete(schema.name, done);
     });
 
     it("Should update the schema", function(done) {
@@ -313,8 +313,10 @@ describe('SchemaManager', function() {
       delete schema.definition['num'];
       schema.definition['bool'] = 'String';
       schema.definition['newBool'] = "Boolean";
-      schemaManager.updateSchema(schema, function(err, updated) {
+      schemaManager.update(schema.name, schema, function(err, updated) {
         should.not.exist(err);
+        updated = updated[1];
+        should.exist(updated.definition);
         should.exist(updated.definition.newBool);
         should.not.exist(updated.definition.num);
         done();
@@ -322,7 +324,7 @@ describe('SchemaManager', function() {
     });
 
     it("Should retrieve the existing entity", function(done) {
-      schemaManager.getByName(schema.name, function(err, entitySchema) {
+      schemaManager.getById(schema.name, function(err, entitySchema) {
         should.not.exist(err);
         var EntityType = schemaManager.getEntityModel(entitySchema);
         EntityType.findOne({"_id" : savedEntity['_id']}, function(err, result) {
@@ -336,7 +338,7 @@ describe('SchemaManager', function() {
     });
 
     it("Should not save the initial entity num field " + JSON.stringify(initialEntity), function(done) {
-      schemaManager.getByName(schema.name, function(err, entitySchema) {
+      schemaManager.getById(schema.name, function(err, entitySchema) {
         should.not.exist(err);
         var EntityType = schemaManager.getEntityModel(entitySchema);
         var doc = new EntityType(initialEntity);
@@ -352,7 +354,7 @@ describe('SchemaManager', function() {
     });
 
     it("Should save an updated entity", function(done) {
-      schemaManager.getByName(schema.name, function(err, entitySchema) {
+      schemaManager.getById(schema.name, function(err, entitySchema) {
         should.not.exist(err);
         var EntityType = schemaManager.getEntityModel(entitySchema);
         var doc = new EntityType({

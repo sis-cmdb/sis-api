@@ -16,7 +16,6 @@
 
 var Q = require('q');
 var SIS = require('./constants');
-var helpers = require('./helpers');
 
 function Manager(model, opts) {
     this.model = model;
@@ -30,9 +29,15 @@ Manager.prototype.validate = function(obj, isUpdate) {
     return null;
 }
 
+// can return a document or promise
 Manager.prototype.applyUpdate = function(doc, updateObj) {
     doc.set(updateObj);
     return doc;
+}
+
+Manager.prototype.objectRemoved = function(obj) {
+    // default just returns a fullfilled promise
+    return Q(obj);
 }
 
 /** Common methods - rare to override these **/
@@ -45,7 +50,24 @@ Manager.prototype.getAll = function(condition, options, callback) {
 
 Manager.prototype.count = function(condition, callback) {
     var d = Q.defer();
+    this.model.count(condition, function(err, c) {
+        if (err || !c) {
+            d.resolve(0);
+        } else {
+            d.resolve(c);
+        }
+    });
+    return d.promise;
+}
 
+Manager.prototype.populate = function(toPopulate, callback) {
+    var fields = this._getPopulateFields();
+    if (!fields) {
+        return Q(toPopulate);
+    }
+    var d = Q.defer();
+    this.model.populate(toPopulate, fields, this._getModCallback(d));
+    return Q.nodeify(d.promise, callback);
 }
 
 // get a single object by id.
@@ -76,9 +98,7 @@ Manager.prototype.update = function(id, obj, callback) {
                          callback);
     }
     if (this.idField in obj && id != obj[this.idField]) {
-        var d = Q.defer();
-        d.reject(SIS.ERR_BAD_REQ(this.idField + " cannot be changed."));
-        return Q.nodeify(d.promise, callback);
+        return Q.nodeify(Q.reject(SIS.ERR_BAD_REQ(this.idField + " cannot be changed.")), callback);
     }
     var self = this;
     var p = this.getById(id)
@@ -97,9 +117,30 @@ Manager.prototype.update = function(id, obj, callback) {
 
 
 Manager.prototype.delete = function(id, callback) {
-    var p = this.getById(id).then(this._remove.bind(this));
+    var p = this.getById(id)
+                .then(this._remove.bind(this))
+                .then(this.objectRemoved.bind(this));
     return Q.nodeify(p, callback);
 }
+
+// utils
+Manager.prototype.applyPartial = function (full, partial) {
+    if (typeof partial !== 'object' || partial instanceof Array) {
+        return partial;
+    } else {
+        // merge the object
+        var result = full;
+        for (var k in partial) {
+            if (partial[k] != null) {
+                result[k] = this.applyPartial(full[k], partial[k]);
+            } else {
+                delete result[k];
+            }
+        }
+        return result;
+    }
+};
+
 
 /** Private methods **/
 //private - get a mongoose callback for the find methods
@@ -136,6 +177,20 @@ Manager.prototype._getModCallback = function(d) {
             d.resolve(result);
         }
     }
+}
+
+Manager.prototype._getPopulateFields = function() {
+    var paths = [];
+    var schema = this.model.schema;
+    schema.eachPath(function(pathName, schemaType) {
+        if (schemaType.instance == "ObjectID" && pathName != "_id") {
+            paths.push(pathName);
+        }
+    });
+    if (paths.length) {
+        return paths.join(" ");
+    }
+    return null;
 }
 
 // returns a promise function that accepts a document from

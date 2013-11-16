@@ -49,7 +49,7 @@ describe('API at the Edge ', function() {
             app = expressApp;
             httpServer = httpSrv;
             // create a schema
-            schemaManager.addSchema(schema, done);
+            schemaManager.add(schema, done);
         });
     });
 
