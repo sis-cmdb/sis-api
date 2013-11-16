@@ -218,7 +218,7 @@ describe('Hiera API', function() {
                 if (err) {
                     done(err);
                 }
-                hookManager.addHook(hook, function(err, result) {
+                hookManager.add(hook, function(err, result) {
                     done();
                 });
             });
@@ -226,7 +226,7 @@ describe('Hiera API', function() {
 
         after(function(done) {
             hookHttpServer.close();
-            hookManager.deleteHook(hookName, function() {
+            hookManager.delete(hookName, function() {
                 done();
             });
         });
@@ -254,7 +254,7 @@ describe('Hiera API', function() {
             hook['retry_count'] = 5;
             hook['retry_delay'] = 1;
             hook.events.push(SIS.EVENT_UPDATE);
-            hookManager.updateHook(hook, function(err, result) {
+            hookManager.update(hook.name, hook, function(err, result) {
                 if (err) { return done(err); }
                 hiera_data.hieradata['field3'] = 'foo';
                 request(app).put("/api/v1/hiera/hiera_key")

@@ -18,74 +18,27 @@
 // API for schemas
 (function() {
 
-    var Common = require("./common");
+    var ApiController = require("./apicontroller");
     var SIS = require("../util/constants");
 
-    var HookController = function(config) {
-
-        var self = this;
-        var schemaManager = config['schemaManager'];
-        var hookManager = require('../util/hook-manager')(schemaManager);
-        self.historyManager = require('../util/history-manager')(schemaManager);
-
-        this.getAll = function(req, res) {
-            Common.getAll(req, res, hookManager.model);
-        }
-
-        this.get = function(req, res) {
-            var hookName = req.params.id;
-            hookManager.getByName(hookName, function(err, result) {
-                if (err) {
-                    Common.sendError(res, err);
-                } else {
-                    Common.sendObject(res, 200, result);
-                }
-            });
-        }
-
-        this.delete = function(req, res) {
-            var hookName = req.params.id;
-            hookManager.deleteHook(hookName, function(err, result) {
-                if (err) {
-                    Common.sendError(res, err);
-                } else {
-                    self.historyManager.recordHistory(result, null, req, SIS.SCHEMA_HOOKS, function(err, history) {
-                        Common.sendObject(res, 200, true);
-                    });
-                }
-            })
-        }
-
-        this.add = function(req, res) {
-            hookManager.addHook(req.body, function(err, entity) {
-                if (err) {
-                    Common.sendError(res, err);
-                } else {
-                    self.historyManager.recordHistory(null, entity, req, SIS.SCHEMA_HOOKS, function(err, history) {
-                        Common.sendObject(res, 201, entity);
-                    });
-                }
-            });
-        }
-
-        this.update = function(req, res) {
-            hookManager.updateHook(req.body, function(err, entity, oldValue) {
-                if (err) {
-                    Common.sendError(res, err);
-                } else {
-                    self.historyManager.recordHistory(oldValue, entity, req, SIS.SCHEMA_HOOKS, function(err, history) {
-                        Common.sendObject(res, 200, entity);
-                    })
-                }
-            });
-
-        }
+    /////////////////////////////////
+    // Hiera controller
+    function HookController(config) {
+        var opts = { };
+        opts[SIS.OPT_LOG_COMMTS] = true;
+        opts[SIS.OPT_TYPE] = SIS.SCHEMA_HOOKS;
+        ApiController.call(this, config, opts);
+        this.manager = require("../util/hook-manager")(this.sm);
     }
+
+    // inherit
+    HookController.prototype.__proto__ = ApiController.prototype;
+    /////////////////////////////////
 
     // all route controllers expose a setup method
     module.exports.setup = function(app, config) {
         var controller = new HookController(config);
-        Common.attachController(app, controller, "/api/v1/hooks");
+        controller.attach(app, "/api/v1/hooks");
     }
 
 })();

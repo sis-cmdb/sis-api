@@ -45,7 +45,7 @@ describe('HookManager', function() {
   describe('add-invalid-hook', function() {
     it("should error adding an empty string ", function(done) {
       var hook = "";
-      hookManager.addHook(hook, function(err, entity) {
+      hookManager.add(hook, function(err, entity) {
         should.exist(err);
         done();
       });
@@ -53,7 +53,7 @@ describe('HookManager', function() {
 
     it("should error adding an empty object ", function(done) {
       var hook = { };
-      hookManager.addHook(hook, function(err, entity) {
+      hookManager.add(hook, function(err, entity) {
         should.exist(err);
         done();
       });
@@ -71,7 +71,7 @@ describe('HookManager', function() {
         },
         "events": ['insert','update']
       };
-      hookManager.addHook(hook, function(err, entity) {
+      hookManager.add(hook, function(err, entity) {
         should.exist(err);
         done();
       });
@@ -87,7 +87,7 @@ describe('HookManager', function() {
         },
         "events": ['insert','update']
       };
-      hookManager.addHook(hook, function(err, entity) {
+      hookManager.add(hook, function(err, entity) {
         should.exist(err);
         done();
       });
@@ -103,7 +103,7 @@ describe('HookManager', function() {
         },
         "events": ['insert','update']
       };
-      hookManager.addHook(hook, function(err, entity) {
+      hookManager.add(hook, function(err, entity) {
         should.exist(err);
         done();
       });
@@ -116,7 +116,7 @@ describe('HookManager', function() {
         "entity_type" : "Schema",
         "events": ['insert','update']
       };
-      hookManager.addHook(hook, function(err, entity) {
+      hookManager.add(hook, function(err, entity) {
         should.exist(err);
         done();
       });
@@ -131,7 +131,7 @@ describe('HookManager', function() {
         },
         "events": ['insert','update']
       };
-      hookManager.addHook(hook, function(err, entity) {
+      hookManager.add(hook, function(err, entity) {
         should.exist(err);
         done();
       });
@@ -146,7 +146,7 @@ describe('HookManager', function() {
         },
         "events": ['insert','update']
       };
-      hookManager.addHook(hook, function(err, entity) {
+      hookManager.add(hook, function(err, entity) {
         should.exist(err);
         done();
       });
@@ -161,7 +161,7 @@ describe('HookManager', function() {
             "url" : "http://foo.bar.com/foo"
         }
       };
-      hookManager.addHook(hook, function(err, entity) {
+      hookManager.add(hook, function(err, entity) {
         should.exist(err);
         done();
       });
@@ -177,7 +177,7 @@ describe('HookManager', function() {
         },
         "events": []
       };
-      hookManager.addHook(hook, function(err, entity) {
+      hookManager.add(hook, function(err, entity) {
         should.exist(err);
         done();
       });
@@ -188,7 +188,7 @@ describe('HookManager', function() {
   describe('add-valid-hook', function() {
     var hookName = "test_hook";
     after(function(done) {
-        hookManager.deleteHook(hookName, done);
+        hookManager.delete(hookName, done);
     });
     it("should add a valid hook object", function(done) {
       var hook = {
@@ -201,7 +201,7 @@ describe('HookManager', function() {
         },
         "events": ['insert','update']
       };
-      hookManager.addHook(hook, function(err, entity) {
+      hookManager.add(hook, function(err, entity) {
         should.not.exist(err);
 
         entity.should.have.property('name', 'test_hook');
@@ -229,7 +229,7 @@ describe('HookManager', function() {
     };
 
     before(function(done) {
-      hookManager.addHook(hook, function(err, entity) {
+      hookManager.add(hook, function(err, entity) {
         if (err) {
           done(err);
           return;
@@ -239,15 +239,15 @@ describe('HookManager', function() {
     });
 
     it("Should return false if hook dne ", function(done) {
-      hookManager.deleteHook("dne", function(err, result) {
+      hookManager.delete("dne", function(err, result) {
         should.exist(err);
-        result.should.not.be.ok;
+        should.not.exist(result);
         done();
       });
     });
 
     it("Should return true if hook exists ", function(done) {
-      hookManager.deleteHook(hookName, function(err, result) {
+      hookManager.delete(hookName, function(err, result) {
         should.not.exist(err);
         result.should.be.ok;
         done(err);
@@ -256,7 +256,7 @@ describe('HookManager', function() {
 
     it("Should no longer exist ", function(done) {
       // ensure it is null
-      hookManager.getByName(hookName, function(err, result) {
+      hookManager.getById(hookName, function(err, result) {
         should.not.exist(result);
         done();
       });
@@ -289,19 +289,21 @@ describe('HookManager', function() {
 
     // create the hook
     before(function(done) {
-        hookManager.addHook(initialHook, function(err, result) {
+        hookManager.add(initialHook, function(err, result) {
           if (err) return done(err);
           done();
         });
     });
     after(function(done) {
-        hookManager.deleteHook(hookName, done);
+        hookManager.delete(hookName, done);
     });
 
     it("Should update the hook", function(done) {
       // delete the num field, change bool to string, add field
-      hookManager.updateHook(updatedHook, function(err, updated) {
+      hookManager.update(hookName, updatedHook, function(err, updated) {
         should.not.exist(err);
+        should.exist(updated);
+        updated = updated[1];
         JSON.stringify(updated.owner).should.eql(JSON.stringify(["Bob"]));
         updated.should.have.property('entity_type','EntityA');
         updated['target'].should.eql(updatedHook.target);

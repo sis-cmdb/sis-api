@@ -63,19 +63,17 @@ Manager.prototype.getSingleByCondition = function(condition, name, callback) {
 Manager.prototype.add = function(obj, callback) {
     var err = this.validate(obj, false);
     if (err) {
-        var d = Q.defer();
-        d.reject(SIS.ERR_BAD_REQ(err));
-        return Q.nodeify(d.promise, callback);
+        return Q.nodeify(Q.reject(SIS.ERR_BAD_REQ(err)),
+                         callback);
     }
-    return this._save(obj);
+    return Q.nodeify(this._save(obj), callback);
 }
 
 Manager.prototype.update = function(id, obj, callback) {
     var err = this.validate(obj, true);
     if (err) {
-        var d = Q.defer();
-        d.reject(SIS.ERR_BAD_REQ(err));
-        return Q.nodeify(d.promise, callback);
+        return Q.nodeify(Q.reject(SIS.ERR_BAD_REQ(err)),
+                         callback);
     }
     if (this.idField in obj && id != obj[this.idField]) {
         var d = Q.defer();

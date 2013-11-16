@@ -229,7 +229,7 @@ describe('Schema API', function() {
                 if (err) {
                     done(err);
                 }
-                hookManager.addHook(hook, function(err, result) {
+                hookManager.add(hook, function(err, result) {
                     done();
                 });
             });
@@ -237,7 +237,7 @@ describe('Schema API', function() {
 
         after(function(done) {
             hookHttpServer.close();
-            hookManager.deleteHook(hookName, function() {
+            hookManager.delete(hookName, function() {
                 done();
             });
         });

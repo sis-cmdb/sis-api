@@ -169,10 +169,10 @@ describe('Hook API', function() {
                 }
             ];
             // async magic - https://github.com/caolan/async
-            async.map(hooks, hookManager.addHook.bind(hookManager), done);
+            async.map(hooks, hookManager.add.bind(hookManager), done);
         });
         after(function(done) {
-            async.map(['test_hook1', 'test_hook2', 'test_hook3'], hookManager.deleteHook.bind(hookManager), done);
+            async.map(['test_hook1', 'test_hook2', 'test_hook3'], hookManager.delete.bind(hookManager), done);
         });
         it("Should return 2 results", function(done) {
             request(app).get("/api/v1/hooks")
