@@ -44,6 +44,12 @@ module.exports = {
     FIELD_CREATED_AT : "_created_at",
     FIELD_UPDATED_AT : "_updated_at",
     FIELD_NAME : "name",
+    FIELD_EXPIRES : "expires",
+    FIELD_TOKEN : "token",
+    FIELD_DESC : "desc",
+    FIELD_ROLES : "roles",
+    FIELD_PW : "pw",
+    FIELD_OWNER : "owner",
 
     // schema names
     SCHEMA_SCHEMAS : "sis_schemas",
@@ -54,6 +60,9 @@ module.exports = {
     SCHEMA_SERVICES : "sis_services",
     SCHEMA_TOKENS : "sis_tokens",
 
+    AUTH_TYPES : ["sis_users", "sis_services"],
+    AUTH_EXPIRATION_TIME : '8h', // 8 hrs
+
     // option keys
     OPT_SCHEMA_MGR : "schemaManager", // TODO: snake case
     OPT_LOG_COMMTS : "log_commits",
@@ -61,6 +70,7 @@ module.exports = {
     OPT_READONLY : "readonly",
     OPT_ID_FIELD : "id_field",
     OPT_TYPE : "type",
+    OPT_USE_AUTH : "auth",
 
     MAX_RESULTS : 200,
 
@@ -69,6 +79,7 @@ module.exports = {
 
     // headers
     HEADER_TOTAL_COUNT : "x-total-count",
+    HEADER_AUTH_TOKEN : "x-auth-token",
 
     // errors
     // error objects are an array w/ first elem as http status, second as err obj
@@ -83,6 +94,9 @@ module.exports = {
         if (!msg) { return null; }
         if (typeof msg == 'object' && msg.name == 'ValidationError') {
             return [400, { error : util.format("Invalid data %s", msg), code : 1001 }];
+        }
+        if (msg.stack) {
+            console.log(msg.stack);
         }
         return [500, { error : util.format("Internal error %s", msg), code : 1002 }, msg];
     },

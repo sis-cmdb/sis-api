@@ -25,6 +25,7 @@ var routes = [
     'entities',
     'hiera',
     'hooks',
+    'users',
     'index'
 ];
 
@@ -38,12 +39,16 @@ var allowCrossDomain = function(req,res,next) {
 
 
 var startServer = function(config, callback) {
-
+    var passport = require("passport");
+    var authUtil = require("./routes/authutil");
     var nconf = require('nconf');
+    var SIS = require('./util/constants');
+
     nconf.env('__').argv();
     nconf.defaults(config);
 
     var app = express();
+
     app.use(express.json());
     app.use(allowCrossDomain);
 
@@ -74,8 +79,14 @@ var startServer = function(config, callback) {
                 if (err) {
                     throw err;
                 }
+                passport.use(authUtil.createTokenStrategy(schemaManager));
+                passport.use(authUtil.createUserPassStrategy(schemaManager));
+
+                app.use(passport.initialize());
+
                 var cfg = {
-                    'schemaManager' : schemaManager
+                    'schemaManager' : schemaManager,
+                    'auth' : app.get(SIS.OPT_USE_AUTH) || false
                 }
                 app.set("schemaManager", schemaManager);
                 // setup the routes

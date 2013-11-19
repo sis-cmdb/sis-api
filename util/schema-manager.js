@@ -33,9 +33,8 @@
             this.getEntityModel(sisSchemas[i]);
         }
         var model = this.getSisModel(SIS.SCHEMA_SCHEMAS);
-        var opts = { }
-        opts[SIS.OPT_TYPE] = SIS.SCHEMA_SCHEMAS;
-        Manager.call(this, model, opts);
+        Manager.call(this, model);
+        this.auth = require("./auth")(this);
     }
 
     SchemaManager.prototype.__proto__ = Manager.prototype;

@@ -19,9 +19,13 @@
 var SIS = require("../util/constants");
 var Manager = require("../util/manager");
 var Q = require('q');
+var passport = require("passport");
+
+Q.longStackSupport = true;
 
 function ApiController(config, opts) {
     this.sm = config[SIS.OPT_SCHEMA_MGR];
+    this.doAuth = config[SIS.OPT_USE_AUTH];
     opts = opts || { };
     if (opts[SIS.OPT_TYPE]) {
         this.type = opts[SIS.OPT_TYPE];
@@ -108,7 +112,7 @@ ApiController.prototype.parsePopulate = function(req) {
 var MgrPromise = function(func) {
     var argsToFunc = Array.prototype.slice.call(arguments, 1);
     return function(manager) {
-        return func.apply(manager, argsToFunc);
+        return manager[func].apply(manager, argsToFunc);
     };
 }
 
@@ -146,10 +150,24 @@ ApiController.prototype.get = function(req, res) {
     this._finish(req, res, p, 200);
 }
 
+ApiController.prototype.wrapAuth = function(func) {
+    return function(req, res) {
+        if (!this.doAuth) {
+            return func.call(this, req, res);
+        }
+        var p = this.authenticate(req, res, SIS.SCHEMA_TOKENS);
+        var self = this;
+        Q.nodeify(p, function(err, auth) {
+            if (err) { return self.sendError(res, err); }
+            func.call(self, req, res);
+        });
+    }
+}
+
 ApiController.prototype.delete = function(req, res) {
     this.applyDefaults(req);
     var id = req.params.id;
-    var p = this.getManager(req).then(MgrPromise(Manager.prototype.delete, id));
+    var p = this.getManager(req).then(MgrPromise('delete', id, req.user));
     this._finish(req, res, p, 200);
 }
 
@@ -157,14 +175,14 @@ ApiController.prototype.update = function(req, res) {
     this.applyDefaults(req);
     var id = req.params.id;
     var obj = req.body;
-    var p = this.getManager(req).then(MgrPromise(Manager.prototype.update, id, obj));
+    var p = this.getManager(req).then(MgrPromise('update', id, obj, req.user));
     this._finish(req, res, p, 200);
 }
 
 ApiController.prototype.add = function(req, res) {
     this.applyDefaults(req);
     var obj = req.body;
-    var p = this.getManager(req).then(MgrPromise(Manager.prototype.add, obj));
+    var p = this.getManager(req).then(MgrPromise('add', obj, req.user));
     this._finish(req, res, p, 201);
 }
 
@@ -175,13 +193,33 @@ ApiController.prototype.attach = function(app, prefix) {
     if (!app.get(SIS.OPT_READONLY)) {
         app.put(prefix + "/:id", this.update.bind(this));
         app.post(prefix, this.add.bind(this));
-        app.delete(prefix + "/:id", this.delete.bind(this));
+        app.delete(prefix + "/:id", this.wrapAuth(this.delete).bind(this));
         if (this.commitManager) {
             this._enableCommitApi(app, prefix);
         }
     }
 }
 
+ApiController.prototype.authenticate = function(req, res, type) {
+    var d = Q.defer();
+    var self = this;
+    var next = function(err) {
+        if (err) {
+            d.reject(err);
+        }
+    }
+    passport.authenticate(type, {session : false}, function(err, user) {
+        if (err || !user) {
+            d.reject(SIS.ERR_BAD_CREDS);
+        } else {
+            req.user = user;
+            d.resolve(user)
+        }
+    })(req, res, next);
+    return d.promise;
+}
+
+// private / subclass support
 ApiController.prototype._enableCommitApi = function(app, prefix) {
     // all history
     var self = this;
@@ -294,6 +332,12 @@ ApiController.prototype._finish = function(req, res, p, code) {
         p = p.then(this._saveCommit(req));
     }
     p = p.then(function(o) {
+        if (req.method == SIS.METHOD_PUT && req.params.id &&
+            o instanceof Array) {
+            // was an update on a single item from a manager.
+            // grab the update
+            o = o[1];
+        }
         return self.convertToResponseObject(req, o);
     });
     return Q.nodeify(p, this._getSendCallback(req, res, code));

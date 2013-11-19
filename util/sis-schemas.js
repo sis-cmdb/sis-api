@@ -82,7 +82,7 @@ module.exports.schemas = [
             verified : { type : "Boolean", default : false },
             super_user : { type : "Boolean", default : false },
             pw : { type : "String", required : true },
-            roles : "Mixed"
+            roles : { type : {} }
         }
     },
     // sis_tokens
@@ -90,9 +90,11 @@ module.exports.schemas = [
         name : SIS.SCHEMA_TOKENS,
         definition : {
             name : { type : "String", unique : true },
-            expires : { type : "Date", expires : 28800 },
-            user : { type : "ObjectId", ref : SIS.SCHEMA_USERS },
-            service : { type : "ObjectId", ref : SIS.SCHEMA_SERVICES }
+            expires : { type : "Date", expires : SIS.AUTH_EXPIRATION_TIME },
+            type : { type : "String", required : true, enum : SIS.AUTH_TYPES },
+            ref : { "sis_services" : { "type" : "ObjectId", ref : SIS.SCHEMA_SERVICES },
+                    "sis_users" : { "type" : "ObjectId", ref : SIS.SCHEMA_USERS }
+                  }
         }
     },
     // sis_services
@@ -100,9 +102,10 @@ module.exports.schemas = [
         name : SIS.SCHEMA_SERVICES,
         definition : {
             name : { type : "String", required : true,  unique : true, match : /^[a-z0-9_]+$/ },
+            desc : "String",
             creator : { type : "ObjectId", ref : SIS.SCHEMA_USERS },
             token : { type : "String", unique : true },
-            roles : "Mixed"
+            roles : { type : {} }
         }
     }
 

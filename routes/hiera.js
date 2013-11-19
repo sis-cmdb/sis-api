@@ -18,47 +18,9 @@
 // API for schemas
 (function() {
 
-    var Manager = require("../util/manager");
     var ApiController = require("./apicontroller");
     var SIS = require("../util/constants");
     var Q = require("q");
-
-    /////////////////////////////////
-    // Hiera Manager
-    // hiera overrides
-    function HieraManager(sm) {
-        var model = sm.getSisModel(SIS.SCHEMA_HIERA);
-        var opts = { };
-        opts[SIS.OPT_TYPE] = SIS.SCHEMA_HIERA;
-        Manager.call(this, model, opts);
-    }
-
-    // inherit
-    HieraManager.prototype.__proto__ = Manager.prototype;
-
-    HieraManager.prototype.validate = function(entry, isUpdate) {
-        if (!entry || !entry.name || typeof entry.name != 'string') {
-            return "Hiera entry has an invalid or missing name";
-        }
-        var name = entry.name;
-        var hieradata = entry.hieradata;
-        try {
-            // validate it's an object
-            if (Object.keys(entry.hieradata).length == 0) {
-                return "hieradata cannot be empty";
-            }
-        } catch (ex) {
-            return "hieradata is not a valid object";
-        }
-        return null;
-    }
-
-    HieraManager.prototype.applyUpdate = function(doc, updateObj) {
-        /* allow partial update */
-        doc.hieradata = this.applyPartial(doc.hieradata, updateObj.hieradata);
-        return doc;
-    }
-    /////////////////////////////////
 
     /////////////////////////////////
     // Hiera controller
@@ -68,7 +30,7 @@
         opts[SIS.OPT_FIRE_HOOKS] = true;
         opts[SIS.OPT_TYPE] = SIS.SCHEMA_HIERA;
         ApiController.call(this, config, opts);
-        this.manager = new HieraManager(this.sm);
+        this.manager = require("../util/hiera-manager")(this.sm);
     }
 
     // inherit

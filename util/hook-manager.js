@@ -33,9 +33,7 @@ var request = require('request');
     // Hook Manager
     function HookManager(sm) {
         var model = sm.getSisModel(SIS.SCHEMA_HOOKS);
-        var opts = { };
-        opts[SIS.OPT_TYPE] = SIS.SCHEMA_HOOKS;
-        Manager.call(this, model, opts);
+        Manager.call(this, model);
     }
 
     HookManager.prototype.__proto__ = Manager.prototype;

@@ -82,7 +82,45 @@ Manager.prototype.getSingleByCondition = function(condition, name, callback) {
     return Q.nodeify(d.promise, callback);
 }
 
-Manager.prototype.add = function(obj, callback) {
+// Manager.prototype.authorize = function(req) {
+//     var self = this;
+//     return function(u) {
+//         var id = req.params.id;
+//         if (!req.user || !req.user[SIS.FIELD_ROLES]) {
+//             return Q.reject(SIS.ERR_BAD_CREDS);
+//         }
+//         // get the item by id
+//         return self.getManager(req).then(function(m) {
+//             return m.getById(id).then(function(obj) {
+//                 return self.authorizeModForObject(req, m, obj);
+//             });
+//         });
+//     }
+// }
+// // default just looks @ owners
+// Manager.prototype.authorizeModForObject = function(req, manager, obj) {
+//     if (!obj[SIS.FIELD_OWNER]) {
+//         return Q(obj);
+//     }
+//     var roles = req.user[SIS.FIELD_ROLES];
+//     // get the owners of the object
+//     var owners = obj[SIS.FIELD_OWNER];
+//     // ensure the user has a group
+//     var authorized = false;
+//     for (var i = 0; i < owners.length; ++i) {
+//         var owner = owners[i];
+//         if (owner in roles) {
+//             return Q(obj);
+//         }
+//     }
+//     return Q.reject(SIS.ERR_BAD_CREDS);
+// }
+
+Manager.prototype.add = function(obj, user, callback) {
+    if (!callback && typeof user === 'function') {
+        callback = user;
+        user = null;
+    }
     var err = this.validate(obj, false);
     if (err) {
         return Q.nodeify(Q.reject(SIS.ERR_BAD_REQ(err)),
@@ -91,7 +129,11 @@ Manager.prototype.add = function(obj, callback) {
     return Q.nodeify(this._save(obj), callback);
 }
 
-Manager.prototype.update = function(id, obj, callback) {
+Manager.prototype.update = function(id, obj, user, callback) {
+    if (!callback && typeof user === 'function') {
+        callback = user;
+        user = null;
+    }
     var err = this.validate(obj, true);
     if (err) {
         return Q.nodeify(Q.reject(SIS.ERR_BAD_REQ(err)),
@@ -116,7 +158,11 @@ Manager.prototype.update = function(id, obj, callback) {
 }
 
 
-Manager.prototype.delete = function(id, callback) {
+Manager.prototype.delete = function(id, user, callback) {
+    if (!callback && typeof user === 'function') {
+        callback = user;
+        user = null;
+    }
     var p = this.getById(id)
                 .then(this._remove.bind(this))
                 .then(this.objectRemoved.bind(this));
@@ -131,8 +177,13 @@ Manager.prototype.applyPartial = function (full, partial) {
         // merge the object
         var result = full;
         for (var k in partial) {
-            if (partial[k] != null) {
-                result[k] = this.applyPartial(full[k], partial[k]);
+            if (partial[k]) {
+                if (!full[k]) {
+                    result[k] = partial[k];
+                } else {
+                    result[k] = this.applyPartial(full[k], partial[k]);
+                }
+
             } else {
                 delete result[k];
             }
