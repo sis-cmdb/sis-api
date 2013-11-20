@@ -43,12 +43,14 @@ describe('API at the Edge ', function() {
     before(function(done) {
         config.app = config.app || { };
         config.app['readonly'] = true;
+        console.log("Starting server.");
         server.startServer(config, function(expressApp, httpSrv) {
             mongoose = server.mongoose;
             schemaManager = expressApp.get("schemaManager");
             app = expressApp;
             httpServer = httpSrv;
             // create a schema
+            console.log("adding schema.");
             schemaManager.add(schema, done);
         });
     });

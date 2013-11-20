@@ -22,6 +22,8 @@ function Manager(model, opts) {
     opts = opts || { }
     this.idField = opts[SIS.OPT_ID_FIELD] || 'name';
     this.type = opts[SIS.OPT_TYPE] || this.model.modelName;
+    this.authEnabled = SIS.OPT_USE_AUTH in opts ? opts[SIS.OPT_USE_AUTH] : SIS.DEFAULT_OPT_USE_AUTH;
+    this.adminRequired = opts[SIS.OPT_ADMIN_REQUIRED] || false;
 }
 
 // return a string if validation fails
@@ -82,51 +84,55 @@ Manager.prototype.getSingleByCondition = function(condition, name, callback) {
     return Q.nodeify(d.promise, callback);
 }
 
-// Manager.prototype.authorize = function(req) {
-//     var self = this;
-//     return function(u) {
-//         var id = req.params.id;
-//         if (!req.user || !req.user[SIS.FIELD_ROLES]) {
-//             return Q.reject(SIS.ERR_BAD_CREDS);
-//         }
-//         // get the item by id
-//         return self.getManager(req).then(function(m) {
-//             return m.getById(id).then(function(obj) {
-//                 return self.authorizeModForObject(req, m, obj);
-//             });
-//         });
-//     }
-// }
-// // default just looks @ owners
-// Manager.prototype.authorizeModForObject = function(req, manager, obj) {
-//     if (!obj[SIS.FIELD_OWNER]) {
-//         return Q(obj);
-//     }
-//     var roles = req.user[SIS.FIELD_ROLES];
-//     // get the owners of the object
-//     var owners = obj[SIS.FIELD_OWNER];
-//     // ensure the user has a group
-//     var authorized = false;
-//     for (var i = 0; i < owners.length; ++i) {
-//         var owner = owners[i];
-//         if (owner in roles) {
-//             return Q(obj);
-//         }
-//     }
-//     return Q.reject(SIS.ERR_BAD_CREDS);
-// }
+Manager.prototype.authorize = function(evt, doc, user, mergedDoc) {
+    // get the permissions on the doc being added/updated/deleted
+    var permission = this.getPermissionsForObject(doc, user);
+    if (permission == SIS.PERMISSION_ADMIN) {
+        return Q(mergedDoc || doc);
+    }
+    switch (evt) {
+        case SIS.EVENT_INSERT:
+        case SIS.EVENT_DELETE:
+            if (permission == SIS.PERMISSION_USER_ALL_GROUPS && !this.adminRequired) {
+                return Q(doc);
+            } else {
+                return Q.reject(SIS.ERR_BAD_CREDS("Insufficient permissions."));
+            }
+            break;
+        default:
+            // update.. doc is the merged one
+            // did the owners change?
+            if (!SIS.UTIL_ARRAYS_EQUAL(mergedDoc.owner, doc.owner)) {
+                if (permission == SIS.PERMISSION_ADMIN) {
+                    return Q(mergedDoc);
+                } else {
+                    return Q.reject(SIS.ERR_BAD_CREDS("Must be an admin to change the owners."));
+                }
+            } else {
+                if (permission == SIS.PERMISSION_ADMIN ||
+                    (permission == SIS.PERMISSION_USER_ALL_GROUPS && !this.adminRequired)) {
+                    return Q(mergedDoc);
+                } else {
+                    return Q.reject(SIS.ERR_BAD_CREDS("Insufficient permissions."));
+                }
+            }
+            break;
+    }
+
+}
 
 Manager.prototype.add = function(obj, user, callback) {
     if (!callback && typeof user === 'function') {
         callback = user;
         user = null;
     }
-    var err = this.validate(obj, false);
+    var err = this.validate(obj, false, user);
     if (err) {
         return Q.nodeify(Q.reject(SIS.ERR_BAD_REQ(err)),
                          callback);
     }
-    return Q.nodeify(this._save(obj), callback);
+    var p = this.authorize(SIS.EVENT_INSERT, obj, user).then(this._save.bind(this));
+    return Q.nodeify(p, callback);
 }
 
 Manager.prototype.update = function(id, obj, user, callback) {
@@ -134,7 +140,7 @@ Manager.prototype.update = function(id, obj, user, callback) {
         callback = user;
         user = null;
     }
-    var err = this.validate(obj, true);
+    var err = this.validate(obj, true, user);
     if (err) {
         return Q.nodeify(Q.reject(SIS.ERR_BAD_REQ(err)),
                          callback);
@@ -148,6 +154,9 @@ Manager.prototype.update = function(id, obj, user, callback) {
             // need to save found's old state
             var old = found.toObject();
             var innerP = self._merge(found, obj)
+                .then(function(merged) {
+                    return self.authorize(SIS.EVENT_UPDATE, old, user, merged);
+                })
                 .then(self._save.bind(self))
                 .then(function(updated) {
                     return Q([old, updated]);
@@ -163,13 +172,78 @@ Manager.prototype.delete = function(id, user, callback) {
         callback = user;
         user = null;
     }
+    var self = this;
     var p = this.getById(id)
+                .then(function(obj) {
+                    return self.authorize(SIS.EVENT_DELETE, obj, user);
+                })
                 .then(this._remove.bind(this))
                 .then(this.objectRemoved.bind(this));
     return Q.nodeify(p, callback);
 }
 
 // utils
+// Expects a valid object - should be called at the end of
+// a validate routine and changes the owner to an array
+// if it is a string
+Manager.prototype.validateOwner = function(obj) {
+    if (!obj || !obj[SIS.FIELD_OWNER]) {
+        return SIS.FIELD_OWNER + " field is required.";
+    }
+    var owner = obj[SIS.FIELD_OWNER];
+    if (typeof owner === 'string') {
+        if (owner.length == 0) {
+            return SIS.FIELD_OWNER + " can not be empty.";
+        }
+        obj[SIS.FIELD_OWNER] = [owner];
+    } else if (owner instanceof Array) {
+        if (owner.length == 0) {
+            return SIS.FIELD_OWNER + " can not be empty.";
+        }
+        // sort it
+        owner.sort();
+    } else {
+        // invalid format
+        return SIS.FIELD_OWNER + " must be a string or array.";
+    }
+    return null;
+}
+
+// expects object to have an owners array - i.e. should have passed
+// validateOwners
+Manager.prototype.getPermissionsForObject = function(user, obj) {
+    if (!this.authEnabled) {
+        return SIS.PERMISSION_ADMIN;
+    }
+    // if either is null, just say nothing..
+    if (!user || !obj) {
+        return SIS.PERMISSION_NONE;
+    }
+    if (user[SIS.FIELD_SUPERUSER]) {
+        return SIS.PERMISSION_ADMIN;
+    }
+    var owners = obj[SIS.FIELD_OWNER];
+    var roles = user[SIS.FIELD_ROLES];
+    var userRoleCount = 0;
+    for (var i = 0; i < owners.length; ++i) {
+        var owner = owners[i];
+        if (owner in roles) {
+            if (roles[owner] == SIS.ROLE_ADMIN) {
+                // can just return admin
+                return SIS.PERMISSION_ADMIN;
+            } else if (roles[owner] == SIS.ROLE_USER) {
+                userRoleCount++;
+            }
+        }
+    }
+    // are we permitted to operate on all groups?
+    if (userRoleCount == owners.length) {
+        return SIS.PERMISSION_USER_ALL_GROUPS;
+    } else {
+        return userRoleCount ? SIS.PERMISSION_USER : SIS.PERMISSION_NONE;
+    }
+}
+
 Manager.prototype.applyPartial = function (full, partial) {
     if (typeof partial !== 'object' || partial instanceof Array) {
         return partial;
@@ -192,8 +266,6 @@ Manager.prototype.applyPartial = function (full, partial) {
     }
 };
 
-
-/** Private methods **/
 //private - get a mongoose callback for the find methods
 Manager.prototype._remove = function(doc) {
     var d = Q.defer();

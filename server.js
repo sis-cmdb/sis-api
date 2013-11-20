@@ -68,13 +68,11 @@ var startServer = function(config, callback) {
             }
 
             // express app settings
-            if (nconf.get('app')) {
-                var appConfig = nconf.get('app');
-                for (var k in appConfig) {
-                    app.set(k, appConfig[k]);
-                }
+            var appConfig = nconf.get('app') || {};
+            for (var k in appConfig) {
+                app.set(k, appConfig[k]);
             }
-            var schemaManager = require('./util/schema-manager')(mongoose);
+            var schemaManager = require('./util/schema-manager')(mongoose, appConfig);
             schemaManager.bootstrapEntitySchemas(function(err) {
                 if (err) {
                     throw err;
@@ -86,7 +84,7 @@ var startServer = function(config, callback) {
 
                 var cfg = {
                     'schemaManager' : schemaManager,
-                    'auth' : app.get(SIS.OPT_USE_AUTH) || false
+                    'auth' : app.get(SIS.OPT_USE_AUTH)
                 }
                 app.set("schemaManager", schemaManager);
                 // setup the routes

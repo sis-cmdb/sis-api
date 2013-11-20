@@ -27,8 +27,10 @@
         var opts = { };
         opts[SIS.OPT_LOG_COMMTS] = true;
         opts[SIS.OPT_TYPE] = SIS.SCHEMA_HOOKS;
-        ApiController.call(this, config, opts);
-        this.manager = require("../util/hook-manager")(this.sm);
+        opts[SIS.OPT_USE_AUTH] = config[SIS.OPT_USE_AUTH];
+        SIS.UTIL_MERGE_SHALLOW(opts, config);
+        ApiController.call(this, opts);
+        this.manager = require("../util/hook-manager")(this.sm, opts);
     }
 
     // inherit

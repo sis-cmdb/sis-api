@@ -30,8 +30,8 @@ describe('SchemaManager', function() {
     mongoose.connect(nconf.get('db').url);
     var db = mongoose.connection;
     db.once('open', function() {
-      schemaManager = require('../util/schema-manager')(mongoose);
-      done();
+        schemaManager = require('../util/schema-manager')(mongoose, {auth : false});
+        done();
     });
   });
 

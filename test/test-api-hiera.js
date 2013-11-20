@@ -71,13 +71,13 @@ describe('Hiera API', function() {
         it("Should fail to update an entry that doesn't exist", function(done) {
             request(app).put("/api/v1/hiera/dne")
                 .set("Content-Type", "application/json")
-                .send({"name" : "dne", "hieradata" : {"key1" : "v1"}})
+                .send({"name" : "dne", "owner" : "foo", "hieradata" : {"key1" : "v1"}})
                 .expect(404, done);
         });
         it("Should fail to add an empty entry", function(done) {
             request(app).post("/api/v1/hiera")
                 .set("Content-Type", "application/json")
-                .send({"name": "entry", "hieradata" : {}})
+                .send({"name": "entry", "owner" : "foo", "hieradata" : {}})
                 .expect(400, done);
         });
     });
@@ -85,6 +85,7 @@ describe('Hiera API', function() {
     describe("Hiera success cases", function() {
         var item = {
             "name" : "host.name.here",
+            "owner" : "test",
             "hieradata" : {
                 "servers" : ["10.0.0.1", "10.0.0.2"],
                 "port" : 80,
@@ -115,7 +116,7 @@ describe('Hiera API', function() {
             request(app)
                 .put("/api/v1/hiera/host.name.here")
                 .set("Content-Type", "application/json")
-                .send({"name" : "host.name.here", "hieradata" : {"port" : null, "name" : "some_name"}})
+                .send({"name" : "host.name.here", "owner" : "test", "hieradata" : {"port" : null, "name" : "some_name"}})
                 .expect(200)
                 .end(function(err, res) {
                     should.not.exist(err);
@@ -130,7 +131,7 @@ describe('Hiera API', function() {
         it("Should remove the k field from obj and add the l field", function(done) {
             request(app).put("/api/v1/hiera/host.name.here")
                 .set("Content-Type", "application/json")
-                .send({"name" : "host.name.here", "hieradata" : { "obj" : { "k" : null, "l" : "l"} } })
+                .send({"name" : "host.name.here", "owner" : "test", "hieradata" : { "obj" : { "k" : null, "l" : "l"} } })
                 .expect(200, function(err, res) {
                     should.not.exist(err);
                     var hieradata = res.body.hieradata;
@@ -152,7 +153,7 @@ describe('Hiera API', function() {
             request(app)
                 .put("/api/v1/hiera/host.name.here")
                 .set("Content-Type", "application/json")
-                .send({"name" : "does.not.match", "hieradata" : {"should" : "fail"}})
+                .send({"name" : "does.not.match", "owner" : "test", "hieradata" : {"should" : "fail"}})
                 .expect(400, done);
         });
         it("Should delete the hiera entry", function(done) {
@@ -233,6 +234,7 @@ describe('Hiera API', function() {
 
         var hiera_data = {
             "name" : "hiera_key",
+            "owner" : "test",
             "hieradata" : {
                 "field" : "String",
                 "field2" : "Number"

@@ -28,7 +28,9 @@
         opts[SIS.OPT_LOG_COMMTS] = true;
         opts[SIS.OPT_FIRE_HOOKS] = true;
         opts[SIS.OPT_TYPE] = SIS.SCHEMA_SCHEMAS;
-        ApiController.call(this, config, opts);
+        opts[SIS.OPT_USE_AUTH] = config[SIS.OPT_USE_AUTH];
+        SIS.UTIL_MERGE_SHALLOW(opts, config);
+        ApiController.call(this, opts);
         this.manager = this.sm;
     }
 

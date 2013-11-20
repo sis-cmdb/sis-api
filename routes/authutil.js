@@ -61,7 +61,7 @@
             if (err) {
                 return self.error(err);
             } else if (!user) {
-                return self.error(SIS.ERR_BAD_CREDS);
+                return self.error(SIS.ERR_BAD_CREDS("No user for the token exists."));
             }
             self.success(user);
         }

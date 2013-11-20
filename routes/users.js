@@ -28,7 +28,8 @@
         var opts = { };
         opts[SIS.OPT_LOG_COMMTS] = true;
         opts[SIS.OPT_TYPE] = SIS.SCHEMA_USERS;
-        ApiController.call(this, config, opts);
+        SIS.UTIL_MERGE_SHALLOW(opts, config);
+        ApiController.call(this, opts);
         this.manager = this.sm.auth[SIS.SCHEMA_USERS];
     }
 
@@ -65,8 +66,10 @@
         var opts = { };
         opts[SIS.OPT_LOG_COMMTS] = true;
         opts[SIS.OPT_TYPE] = SIS.SCHEMA_SERVICES;
-        ApiController.call(this, config, opts);
+        SIS.UTIL_MERGE_SHALLOW(opts, config);
+        ApiController.call(this, opts);
         this.manager = this.sm.auth[SIS.SCHEMA_SERVICES];
+        this.userManager = this.sm.auth[SIS.SCHEMA_USERS];
     }
 
     // inherit
@@ -75,6 +78,9 @@
 
     // all route controllers expose a setup method
     module.exports.setup = function(app, config) {
+        if (!config[SIS.OPT_USE_AUTH]) {
+            return;
+        }
         var controller = new UserController(config);
         controller.attach(app, "/api/v1/users");
 

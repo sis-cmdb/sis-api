@@ -26,15 +26,17 @@
     var Manager = require("./manager");
     var Q = require("q");
 
-    function SchemaManager(mongoose) {
+    function SchemaManager(mongoose, opts) {
         this.mongoose = mongoose;
         var sisSchemas = require('./sis-schemas').schemas;
         for (var i = 0; i < sisSchemas.length; ++i) {
             this.getEntityModel(sisSchemas[i]);
         }
         var model = this.getSisModel(SIS.SCHEMA_SCHEMAS);
-        Manager.call(this, model);
-        this.auth = require("./auth")(this);
+        Manager.call(this, model, opts);
+        if (this.authEnabled) {
+            this.auth = require("./auth")(this);
+        }
     }
 
     SchemaManager.prototype.__proto__ = Manager.prototype;
@@ -44,10 +46,9 @@
         if (!modelObj || !modelObj.name || typeof modelObj.name != 'string') {
             return "Schema has an invalid name: " + modelObj.name;
         }
-        if (!modelObj.owner ||
-            !(typeof modelObj.owner == 'string' ||
-              (modelObj.owner instanceof Array && modelObj.owner.length > 0))) {
-            return "Schema owner is invalid.";
+        var ownerError = this.validateOwner(modelObj);
+        if (ownerError) {
+            return ownerError;
         }
 
         if (modelObj.name.indexOf("sis_") == 0) {
@@ -231,8 +232,8 @@
     }
 
     // export
-    module.exports = function(mongoose) {
-        return new SchemaManager(mongoose);
+    module.exports = function(mongoose, opts) {
+        return new SchemaManager(mongoose, opts);
     }
 
 })();

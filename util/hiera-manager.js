@@ -25,10 +25,10 @@
     /////////////////////////////////
     // Hiera Manager
     // hiera overrides
-    function HieraManager(sm) {
+    function HieraManager(sm, opts) {
+        opts = opts || {};
+        opts[SIS.OPT_USE_AUTH] = sm.authEnabled;
         var model = sm.getSisModel(SIS.SCHEMA_HIERA);
-        var opts = { };
-        opts[SIS.OPT_TYPE] = SIS.SCHEMA_HIERA;
         Manager.call(this, model, opts);
     }
 
@@ -53,7 +53,7 @@
         } catch (ex) {
             return "hieradata is not a valid object";
         }
-        return null;
+        return this.validateOwner(entry);
     }
 
     HieraManager.prototype.applyUpdate = function(doc, updateObj) {
@@ -63,8 +63,8 @@
     }
     /////////////////////////////////
 
-    module.exports = function(schemaManager) {
-        return new HieraManager(schemaManager);
+    module.exports = function(schemaManager, opts) {
+        return new HieraManager(schemaManager, opts);
     }
 
 })();

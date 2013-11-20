@@ -28,6 +28,7 @@ describe('History API', function() {
     before(function(done) {
         server.startServer(config, function(expressApp, httpSrv) {
             mongoose = server.mongoose;
+            mongoose.set('debug', true);
             schemaManager = expressApp.get("schemaManager");
             app = expressApp;
             httpServer = httpSrv;
@@ -111,12 +112,14 @@ describe('History API', function() {
         { "prefix" : "/api/v1/hiera",
           "entries" : [
             { "name" : "hist_hiera",
+              "owner" : "test",
               "hieradata" : {
                 "field" : "v1",
                 "field_n" : 0
               }
             },
             { "name" : "hist_hiera",
+              "owner" : "test",
               "hieradata" : {
                 "field" : null,
                 "new_field" : "new",
@@ -124,6 +127,7 @@ describe('History API', function() {
               }
             },
             { "name" : "hist_hiera",
+              "owner" : "test",
               "hieradata" : {
                 "field" : "v3",
                 "field_n" : 20

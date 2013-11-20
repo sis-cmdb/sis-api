@@ -30,7 +30,7 @@ describe('HookManager', function() {
     mongoose.connect(nconf.get('db').url);
     var db = mongoose.connection;
     db.once('open', function() {
-        var schemaManager = require("../util/schema-manager")(mongoose);
+        var schemaManager = require("../util/schema-manager")(mongoose, {"auth" : false});
         hookManager = require('../util/hook-manager')(schemaManager);
         done();
     });

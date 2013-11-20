@@ -32,8 +32,10 @@
         opts[SIS.OPT_LOG_COMMTS] = true;
         opts[SIS.OPT_FIRE_HOOKS] = true;
         opts[SIS.OPT_ID_FIELD] = SIS.FIELD_ID;
+        opts[SIS.OPT_USE_AUTH] = config[SIS.OPT_USE_AUTH];
+        SIS.UTIL_MERGE_SHALLOW(opts, config);
         this.opts = opts;
-        ApiController.call(this, config, this.opts);
+        ApiController.call(this, this.opts);
         this.managerCache = { };
     }
 

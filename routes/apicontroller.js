@@ -23,9 +23,9 @@ var passport = require("passport");
 
 Q.longStackSupport = true;
 
-function ApiController(config, opts) {
-    this.sm = config[SIS.OPT_SCHEMA_MGR];
-    this.doAuth = config[SIS.OPT_USE_AUTH];
+function ApiController(opts) {
+    this.sm = opts[SIS.OPT_SCHEMA_MGR];
+    this.auth = SIS.OPT_USE_AUTH in opts ? opts[SIS.OPT_USE_AUTH] : SIS.DEFAULT_OPT_USE_AUTH;
     opts = opts || { };
     if (opts[SIS.OPT_TYPE]) {
         this.type = opts[SIS.OPT_TYPE];
@@ -150,20 +150,6 @@ ApiController.prototype.get = function(req, res) {
     this._finish(req, res, p, 200);
 }
 
-ApiController.prototype.wrapAuth = function(func) {
-    return function(req, res) {
-        if (!this.doAuth) {
-            return func.call(this, req, res);
-        }
-        var p = this.authenticate(req, res, SIS.SCHEMA_TOKENS);
-        var self = this;
-        Q.nodeify(p, function(err, auth) {
-            if (err) { return self.sendError(res, err); }
-            func.call(self, req, res);
-        });
-    }
-}
-
 ApiController.prototype.delete = function(req, res) {
     this.applyDefaults(req);
     var id = req.params.id;
@@ -189,11 +175,11 @@ ApiController.prototype.add = function(req, res) {
 // Attach the controller to the app at a particular base
 ApiController.prototype.attach = function(app, prefix) {
     app.get(prefix, this.getAll.bind(this));
-    app.get(prefix + "/:id", this.get.bind(this));
+    app.get(prefix + "/:id", this._wrapAuth(this.get).bind(this));
     if (!app.get(SIS.OPT_READONLY)) {
-        app.put(prefix + "/:id", this.update.bind(this));
+        app.put(prefix + "/:id", this._wrapAuth(this.update).bind(this));
         app.post(prefix, this.add.bind(this));
-        app.delete(prefix + "/:id", this.wrapAuth(this.delete).bind(this));
+        app.delete(prefix + "/:id", this._wrapAuth(this.delete).bind(this));
         if (this.commitManager) {
             this._enableCommitApi(app, prefix);
         }
@@ -209,8 +195,10 @@ ApiController.prototype.authenticate = function(req, res, type) {
         }
     }
     passport.authenticate(type, {session : false}, function(err, user) {
-        if (err || !user) {
-            d.reject(SIS.ERR_BAD_CREDS);
+        if (err) {
+            d.reject(SIS.ERR_BAD_CREDS("" + err));
+        } else if (!user) {
+            d.reject(SIS.ERR_BAD_CREDS("Invalid credentials"));
         } else {
             req.user = user;
             d.resolve(user)
@@ -220,6 +208,20 @@ ApiController.prototype.authenticate = function(req, res, type) {
 }
 
 // private / subclass support
+ApiController.prototype._wrapAuth = function(func) {
+    return function(req, res) {
+        if (!this.doAuth) {
+            return func.call(this, req, res);
+        }
+        var p = this.authenticate(req, res, SIS.SCHEMA_TOKENS);
+        var self = this;
+        Q.nodeify(p, function(err, auth) {
+            if (err) { return self.sendError(res, err); }
+            func.call(self, req, res);
+        });
+    }
+}
+
 ApiController.prototype._enableCommitApi = function(app, prefix) {
     // all history
     var self = this;

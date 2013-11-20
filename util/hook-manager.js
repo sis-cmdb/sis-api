@@ -31,9 +31,11 @@ var request = require('request');
 
     /////////////////////////////////
     // Hook Manager
-    function HookManager(sm) {
+    function HookManager(sm, opts) {
         var model = sm.getSisModel(SIS.SCHEMA_HOOKS);
-        Manager.call(this, model);
+        opts = opts || {};
+        opts[SIS.OPT_USE_AUTH] = sm.authEnabled;
+        Manager.call(this, model, opts);
     }
 
     HookManager.prototype.__proto__ = Manager.prototype;
@@ -66,7 +68,7 @@ var request = require('request');
         if(!modelObj.events.length) {
             return "Hook on parameter has no values.";
         }
-        return null;
+        return this.validateOwner(modelObj);
     }
     /////////////////////////////////
 
@@ -135,7 +137,7 @@ var request = require('request');
         });
     }
 
-    module.exports = function(schemaManager) {
+    module.exports = function(schemaManager, opts) {
         return new HookManager(schemaManager);
     }
 

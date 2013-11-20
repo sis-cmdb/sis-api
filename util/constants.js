@@ -50,6 +50,8 @@ module.exports = {
     FIELD_ROLES : "roles",
     FIELD_PW : "pw",
     FIELD_OWNER : "owner",
+    FIELD_SUPERUSER : "super_user",
+    FIELD_CREATOR : "creator",
 
     // schema names
     SCHEMA_SCHEMAS : "sis_schemas",
@@ -71,11 +73,24 @@ module.exports = {
     OPT_ID_FIELD : "id_field",
     OPT_TYPE : "type",
     OPT_USE_AUTH : "auth",
+    OPT_ADMIN_REQUIRED : "admin_required",
+
+    ROLE_USER : "user",
+    ROLE_ADMIN : "admin",
+
+    // an admin of one of the groups
+    PERMISSION_ADMIN : "admin",
+    // a user of one of the groups
+    PERMISSION_USER : "user",
+    // a user of all of the groups
+    PERMISSION_USER_ALL_GROUPS : "all_groups",
+    // no permissions at all
+    PERMISSION_NONE : "none",
+
+    DEFAULT_OPT_USE_AUTH : true,
+
 
     MAX_RESULTS : 200,
-
-    // populate option
-    OPT_MGR_POPULATE : "_sis_populate",
 
     // headers
     HEADER_TOTAL_COUNT : "x-total-count",
@@ -93,7 +108,7 @@ module.exports = {
     ERR_INTERNAL : function(msg) {
         if (!msg) { return null; }
         if (typeof msg == 'object' && msg.name == 'ValidationError') {
-            return [400, { error : util.format("Invalid data %s", msg), code : 1001 }];
+            return [400, { error : util.format("Invalid data %s", msg), code : 1003 }];
         }
         if (msg.stack) {
             console.log(msg.stack);
@@ -110,5 +125,48 @@ module.exports = {
             return module.exports.ERR_NOT_FOUND(type, id);
         }
     },
-    ERR_BAD_CREDS : [401, { error : "Invalid credentials", code : 1003}]
+    ERR_BAD_CREDS : function(msg) {
+        throw new Error("WTF?!?!");
+        return [401, { error : util.format("Unauthorized. %s", msg), code : 1004 }, msg];
+    },
+
+    UTIL_MERGE_SHALLOW : function(obj, partial) {
+        for (var k in partial) {
+            if (partial.hasOwnProperty(k) && !(k in obj)) {
+                obj[k] = partial[k];
+            }
+        }
+    },
+    // credit.. http://stackoverflow.com/a/16436975/263895
+    UTIL_ARRAYS_EQUAL : function(a, b) {
+        if (a === b) return true;
+        if (a == null || b == null) return false;
+        if (a.length != b.length) return false;
+
+        // If you don't care about the order of the elements inside
+        // the array, you should sort both arrays here.
+        for (var i = 0; i < a.length; ++i) {
+            if (a[i] !== b[i]) return false;
+        }
+        return true;
+    },
+
+    UTIL_ROLES_EQUAL : function(a, b) {
+        var rolesA = a['roles'];
+        var rolesB = b['roles'];
+        if (rolesA === rolesB) return true;
+        if (rolesA == null || rolesB == null) return false;
+        var roleNamesA = Object.keys(rolesA).sort();
+        var roleNamesB = Object.keys(rolesB).sort();
+        if (!this.UTIL_ARRAYS_EQUAL(roleNamesA, roleNamesB)) {
+            return false;
+        }
+        for (var r in rolesB) {
+            if (rolesB[r] != rolesA[r]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
 }

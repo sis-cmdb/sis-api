@@ -103,7 +103,7 @@ module.exports.schemas = [
         definition : {
             name : { type : "String", required : true,  unique : true, match : /^[a-z0-9_]+$/ },
             desc : "String",
-            creator : { type : "ObjectId", ref : SIS.SCHEMA_USERS },
+            creator : { type : "String", required : true },
             token : { type : "String", unique : true },
             roles : { type : {} }
         }
