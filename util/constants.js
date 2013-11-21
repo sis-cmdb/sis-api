@@ -126,7 +126,7 @@ module.exports = {
         }
     },
     ERR_BAD_CREDS : function(msg) {
-        throw new Error("WTF?!?!");
+        //throw new Error("WTF?!?!");
         return [401, { error : util.format("Unauthorized. %s", msg), code : 1004 }, msg];
     },
 

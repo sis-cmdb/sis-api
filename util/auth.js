@@ -26,6 +26,7 @@
     var hat = require('hat');
 
     function ensureRoleSubset(roles, subset, adminOnly) {
+
         for (var k in subset) {
             if (!(k in roles)) {
                 return false;
@@ -46,24 +47,28 @@
         return true;
     }
 
-    function validateRoles(obj) {
+    function validateRoles(obj, isUser) {
+        if (isUser) {
+            // super users can get away with no roles..
+            if (obj[SIS.FIELD_SUPERUSER]) {
+                return null;
+            }
+        }
         if (!(SIS.FIELD_ROLES in obj)) {
             return "roles are missing.";
-        }
-        if (SIS.FIELD_SUPERUSER in obj && obj[SIS.FIELD_SUPERUSER]) {
-            // ok.
-            return null;
         }
         var roles = obj[SIS.FIELD_ROLES];
         try {
             var keys = Object.keys(roles);
+            // allow empty roles
             if (keys.length == 0) {
-                return "roles cannot be empty.";
+                return null;
             }
             for (var i = 0; i < keys.length; ++i) {
-                if (roles[i] != SIS.ROLE_USER &&
-                    roles[i] != SIS.ROLE_ADMIN) {
-                    return "invalid role specified: " + roles[i];
+                var k = keys[i];
+                if (roles[k] != SIS.ROLE_USER &&
+                    roles[k] != SIS.ROLE_ADMIN) {
+                    return "invalid role specified: " + roles[k];
                 }
             }
         } catch (ex) {
@@ -97,11 +102,11 @@
     }
 
     // need to hash the pw
-    UserManager.prototype.add = function(obj, callback) {
+    UserManager.prototype.add = function(obj, user, callback) {
         if (obj[SIS.FIELD_PW]) {
             obj[SIS.FIELD_PW] = this.hashPw(obj[SIS.FIELD_PW]);
         }
-        return Manager.prototype.add.call(this, obj, callback);
+        return Manager.prototype.add.call(this, obj, user, callback);
     }
 
     UserManager.prototype.applyUpdate = function(obj, updateObj) {
@@ -128,13 +133,15 @@
         if (!this.authEnabled) {
             return Q(mergedDoc || doc);
         }
-        if (!user || !user[SIS.FIELD_ROLES]) {
-            return Q.reject(SIS.ERR_BAD_CREDS("Invalid user."));
+        if (!user) {
+            return Q.reject(SIS.ERR_BAD_CREDS("User is null."));
         }
-        // the only one who can make a change to a service
-        // is the creator or super user
+        // super users do it all
         if (user[SIS.FIELD_SUPERUSER]) {
             return Q(mergedDoc || doc);
+        }
+        if (!user[SIS.FIELD_ROLES]) {
+            return Q.reject(SIS.ERR_BAD_CREDS("Invalid user."));
         }
         // doc is a user object
         switch (evt) {
@@ -143,7 +150,7 @@
                 if (doc[SIS.FIELD_SUPERUSER] && !user[SIS.FIELD_SUPERUSER]) {
                     return Q.reject(SIS.ERR_BAD_CREDS("Only superusers can " + evt + " superusers."));
                 }
-                if (!ensureRoleSubset(user, doc, true)) {
+                if (!ensureRoleSubset(user[SIS.FIELD_ROLES], doc[SIS.FIELD_ROLES], true)) {
                     return Q.reject(SIS.ERR_BAD_CREDS("Cannot " + evt + " user unless admin of all roles."));
                 }
                 if (doc[SIS.FIELD_NAME] == user[SIS.FIELD_NAME]) {
@@ -176,7 +183,7 @@
         if (!obj || !obj[SIS.FIELD_NAME]) {
             return "User must have a name.";
         }
-        return validateRoles(obj);
+        return validateRoles(obj, true);
     }
     /////////////////////////////////
 
@@ -190,10 +197,10 @@
     ServiceManager.prototype.__proto__ = Manager.prototype;
 
     // Need to add a service token when adding a service
-    ServiceManager.prototype.add = function(obj, callback) {
+    ServiceManager.prototype.add = function(obj, user, callback) {
         var self = this;
         var tm = this.sm.auth[SIS.SCHEMA_TOKENS];
-        var p = Manager.prototype.add.call(this, obj);
+        var p = Manager.prototype.add.call(this, obj, user);
         p = p.then(function(svc) {
             var tp = tm.createToken(svc[SIS.FIELD_ID], SIS.SCHEMA_SERVICES);
             tp.then(function(token) {

@@ -28,7 +28,6 @@ describe('History API', function() {
     before(function(done) {
         server.startServer(config, function(expressApp, httpSrv) {
             mongoose = server.mongoose;
-            mongoose.set('debug', true);
             schemaManager = expressApp.get("schemaManager");
             app = expressApp;
             httpServer = httpSrv;
