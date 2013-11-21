@@ -74,6 +74,34 @@
 
     // inherit
     ServiceController.prototype.__proto__ = ApiController.prototype;
+
+    var wrapEnsure = function(func) {
+        // expects to be bound as ServiceController..
+        var self = this;
+        return function(req, res) {
+            self.ensureUser(req, function(err, user) {
+                if (err) {
+                    self.sendError(res, err);
+                } else {
+                    // call the function being wrapped..
+                    func.call(self, req, res);
+                }
+            });
+        }
+    }
+
+    // override main entry points to ensure user exists..
+    ServiceController.prototype.ensureUser = function(req, callback) {
+        var uid = req.params.uid;
+        return Q.nodeify(this.userManager.getById(uid), callback);
+    }
+
+    ServiceController.prototype.get = wrapEnsure(ApiController.prototype.get).bind(this);
+    ServiceController.prototype.getAll = wrapEnsure(ApiController.prototype.getAll).bind(this);
+    ServiceController.prototype.add = wrapEnsure(ApiController.prototype.add).bind(this);
+    ServiceController.prototype.update = wrapEnsure(ApiController.prototype.update).bind(this);
+    ServiceController.prototype.delete = wrapEnsure(ApiController.prototype.delete).bind(this);
+
     /////////////////////////////////
 
     // all route controllers expose a setup method
