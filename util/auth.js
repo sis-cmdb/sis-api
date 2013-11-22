@@ -24,6 +24,7 @@
     var Q = require("q");
     var crypto = require("crypto");
     var hat = require('hat');
+    var jsondiff = require("jsondiffpatch");
 
     function ensureRoleSubset(roles, subset, adminOnly) {
 
@@ -113,7 +114,8 @@
         if (updateObj[SIS.FIELD_PW]) {
             obj[SIS.FIELD_PW] = this.hashPw(updateObj[SIS.FIELD_PW]);
         }
-        return this.applyPartial(obj, updateObj);
+        //return this.applyPartial(obj, updateObj);
+        return Manager.prototype.applyUpdate.call(this, obj, updateObj);
     }
 
     UserManager.prototype.getVerifiedUser = function(username, pw, callback) {
@@ -167,6 +169,15 @@
                     // changing roles
                     if (doc[SIS.FIELD_NAME] == user[SIS.FIELD_NAME]) {
                         return Q.reject(SIS.ERR_BAD_CREDS("User's cannot change their own roles."));
+                    }
+                    // need to get the diffs..
+                    var userRoles = user[SIS.FIELD_ROLES];
+                    var roleDiff = jsondiff.diff(doc[SIS.FIELD_ROLES], mergedDoc[SIS.FIELD_ROLES]);
+                    for (var k in roleDiff) {
+                        // need to make sure the user is an admin of the role being added/deleted/updated
+                        if (!(k in userRoles) || userRoles[k] != SIS.ROLE_ADMIN) {
+                            return Q.reject(SIS.ERR_BAD_CREDS(user[SIS.FIELD_NAME] + " is not an admin of role " + k));
+                        }
                     }
                 } else {
                     // not changing roles.. only fields

@@ -16,7 +16,8 @@
 
 'use strict';
 
-var util = require('util')
+var util = require('util');
+var diff = require('jsondiffpatch');
 
 module.exports = {
 
@@ -52,6 +53,7 @@ module.exports = {
     FIELD_OWNER : "owner",
     FIELD_SUPERUSER : "super_user",
     FIELD_CREATOR : "creator",
+    FIELD_EMAIL : "email",
 
     // schema names
     SCHEMA_SCHEMAS : "sis_schemas",
@@ -168,5 +170,4 @@ module.exports = {
         }
         return true;
     }
-
 }

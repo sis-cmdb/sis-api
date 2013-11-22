@@ -102,8 +102,10 @@ Manager.prototype.authorize = function(evt, doc, user, mergedDoc) {
         default:
             // update.. doc is the merged one
             // did the owners change?
+            var mergedPermission = this.getPermissionsForObject(mergedDoc, user);
             if (!SIS.UTIL_ARRAYS_EQUAL(mergedDoc.owner, doc.owner)) {
-                if (permission == SIS.PERMISSION_ADMIN) {
+                if (permission == SIS.PERMISSION_ADMIN &&
+                    mergedPermission == SIS.PERMISSION_ADMIN) {
                     return Q(mergedDoc);
                 } else {
                     return Q.reject(SIS.ERR_BAD_CREDS("Must be an admin to change the owners."));

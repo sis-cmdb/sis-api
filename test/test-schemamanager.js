@@ -319,7 +319,10 @@ describe('SchemaManager', function() {
         should.exist(updated.definition);
         should.exist(updated.definition.newBool);
         should.not.exist(updated.definition.num);
-        done();
+        schemaManager.getById(schema.name, function(e,o) {
+            updated.toObject().should.eql(o.toObject());
+            done();
+        });
       });
     });
 
