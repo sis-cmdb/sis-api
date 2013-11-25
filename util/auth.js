@@ -87,11 +87,13 @@
     }
     UserManager.prototype.__proto__ = Manager.prototype;
 
-    UserManager.prototype.createToken = function(user, callback) {
+    UserManager.prototype.createTempToken = function(user, callback) {
         var tm = this.sm.auth[SIS.SCHEMA_TOKENS];
-        var p = tm.createToken(user[SIS.FIELD_ID],
-                               SIS.SCHEMA_USERS,
-                               SIS.AUTH_EXPIRATION_TIME);
+        var token = {
+            username : user[SIS.FIELD_NAME],
+            expires : Date.now() + SIS.AUTH_EXPIRATION_TIME
+        }
+        var p = tm.add(token, user);
         return Q.nodeify(p, callback);
     }
 
@@ -190,78 +192,25 @@
         }
     }
 
+    UserManager.prototype.objectRemoved = function(user) {
+        // remove all tokens where username = user[name];
+        var tokenManager = this.sm.auth[SIS.SCHEMA_TOKENS];
+        var d = Q.defer();
+        tokenManager.model.remove({username : user[SIS.FIELD_NAME]}, function(err) {
+            if (err) {
+                d.reject(SIS.ERR_INTERNAL("Unable to clear tokens for user."));
+            } else {
+                d.resolve(user);
+            }
+        });
+        return d.promise;
+    }
+
     UserManager.prototype.validate = function(obj, isUpdate) {
         if (!obj || !obj[SIS.FIELD_NAME]) {
             return "User must have a name.";
         }
         return validateRoles(obj, true);
-    }
-    /////////////////////////////////
-
-    /////////////////////////////////
-    // Services
-    function ServiceManager(sm) {
-        Manager.call(this, sm.getSisModel(SIS.SCHEMA_SERVICES), {});
-        this.sm = sm;
-        this.authEnabled = this.sm.authEnabled;
-    }
-    ServiceManager.prototype.__proto__ = Manager.prototype;
-
-    // Need to add a service token when adding a service
-    ServiceManager.prototype.add = function(obj, user, callback) {
-        var self = this;
-        var tm = this.sm.auth[SIS.SCHEMA_TOKENS];
-        var p = Manager.prototype.add.call(this, obj, user);
-        p = p.then(function(svc) {
-            var tp = tm.createToken(svc[SIS.FIELD_ID], SIS.SCHEMA_SERVICES);
-            tp.then(function(token) {
-                svc[SIS.FIELD_TOKEN] = token[FIELD_NAME];
-                return self._save(svc);
-            });
-        });
-        return Q.nodeify(p, callback);
-    }
-
-    ServiceManager.prototype.applyUpdate = function(svc, updateObj) {
-        // only change the description
-        svc[SIS.FIELD_DESC] = updateObj[SIS.FIELD_DESC];
-        // and roles
-        this.applyPartial(svc[SIS.FIELD_ROLES], updateObj[SIS.FIELD_ROLES]);
-        return svc;
-    }
-
-    ServiceManager.prototype.authorize = function(evt, doc, user, mergedDoc) {
-        if (!this.authEnabled) {
-            return Q(mergedDoc || doc);
-        }
-        if (!user || !user[SIS.FIELD_ROLES]) {
-            return Q.reject(SIS.ERR_BAD_CREDS("Invalid user."));
-        }
-        // the only one who can make a change to a service
-        // is the creator or super user
-        if (user[SIS.FIELD_SUPERUSER]) {
-            return Q(mergedDoc || doc);
-        }
-        if (user[SIS.FIELD_NAME] != doc[SIS.FIELD_CREATOR]) {
-            return Q.reject(SIS.ERR_BAD_CREDS("User is not superuser or creator."));
-        }
-        // doc is a service object..
-        if (evt == SIS.EVENT_INSERT || evt == SIS.EVENT_UPDATE) {
-            // ensure the service being added has equivalent or subset of roles
-            var serviceDoc = mergedDoc || doc;
-            if (!ensureRoleSubset(user[SIS.FIELD_ROLES], serviceDoc[SIS.FIELD_ROLES], false)) {
-                return Q.reject(SIS.ERR_BAD_CREDS("User cannot grant service privileges higher than creator."));
-            }
-        }
-        // creators can delete their own services.
-       return Q(mergedDoc || doc);
-    }
-
-    ServiceManager.prototype.validate = function(obj, isUpdate) {
-        if (!obj || !obj[SIS.FIELD_NAME]) {
-            return "Service must have a name.";
-        }
-        return validateRoles(obj);
     }
     /////////////////////////////////
 
@@ -282,15 +231,23 @@
         return Q.nodeify(p, callback);
     }
 
-    TokenManager.prototype.createToken = function(id, type, expiration) {
-        var d = Q.defer();
-        var refObj = {};
-        refObj[type] = id;
-        var token = { type : type, ref : refObj };
-        if (expiration) {
-            token[SIS.FIELD_EXPIRES] = new Date();
+    // override add to use createToken
+    TokenManager.prototype.add = function(obj, user, callback) {
+        if (!callback && typeof user === 'function') {
+            callback = user;
+            user = null;
         }
+        var err = this.validate(obj, false, user);
+        if (err) {
+            return Q.nodeify(Q.reject(SIS.ERR_BAD_REQ(err)),
+                             callback);
+        }
+        var p = this.authorize(SIS.EVENT_INSERT, obj, user)
+                    .then(this.createToken.bind(this));
+        return Q.nodeify(p, callback);
+    }
 
+    TokenManager.prototype.createToken = function(token) {
         // save token
         var self = this;
         var d = Q.defer();
@@ -300,7 +257,7 @@
             doc.save(function(err, result) {
                 if (err) {
                     if (err.code == 11000) {
-                        createTokenHelper(token, d);
+                        createTokenHelper();
                     } else {
                         d.reject(SIS.ERR_INTERNAL(err));
                     }
@@ -310,12 +267,61 @@
             })
         }
         createTokenHelper();
-        return d.promise.then(this.populate.bind(this));
+        return d.promise;
     }
 
-    // always authorize - this is an internal thing only.
+    // only the user, super user
     TokenManager.prototype.authorize = function(evt, doc, user, mergedDoc) {
-        return Q(mergedDoc || doc);
+        if (!doc[SIS.FIELD_USERNAME]) {
+            return Q.reject(SIS.ERR_BAD_REQ("Missing username in token."));
+        }
+        if (mergedDoc && mergedDoc[SIS.FIELD_USERNAME] != doc[SIS.FIELD_USERNAME]) {
+            return Q.reject(SIS.ERR_BAD_REQ("Cannot change the username of the token."));
+        }
+        if (mergedDoc && mergedDoc[SIS.FIELD_EXPIRES]) {
+            return Q.reject(SIS.ERR_BAD_REQ("Cannot change a temporary token."));
+        }
+        if (doc[SIS.FIELD_EXPIRES] && doc[SIS.FIELD_USERNAME] != user[SIS.FIELD_NAME]) {
+            return Q.reject(SIS.ERR_BAD_REQ("Cannot create a temp token for another user."));
+        }
+        if (!this.authEnabled) {
+            return Q(mergedDoc || doc);
+        }
+        if (!user) {
+            return Q.reject(SIS.ERR_BAD_CREDS("User is null."));
+        }
+        // super users do the rest
+        if (user[SIS.FIELD_SUPERUSER]) {
+            return Q(mergedDoc || doc);
+        }
+        if (!user[SIS.FIELD_ROLES]) {
+            return Q.reject(SIS.ERR_BAD_CREDS("Invalid user."));
+        }
+        // get the user
+        var username = doc[SIS.FIELD_USERNAME];
+        var d = Q.defer();
+        this.sm.auth[SIS.SCHEMA_USERS].getById(username, function(e, tokenUser) {
+            if (e) {
+                return d.reject(e);
+            }
+            if (tokenUser[SIS.FIELD_SUPERUSER] && !doc[SIS.FIELD_EXPIRES]) {
+                // super users cannot have a persistent token.  too much power
+                return d.reject(SIS.ERR_BAD_REQ("Super users cannot have persistent tokens."));
+            }
+            // can do it all as the user.
+            if (tokenUser[SIS.FIELD_NAME] == user[SIS.FIELD_NAME]) {
+                return d.resolve(mergedDoc || doc);
+            }
+            // can this user manage the roles of the token user
+            // and is admin
+            if (ensureRoleSubset(user[SIS.FIELD_ROLES], tokenUser[SIS.FIELD_ROLES], true)) {
+                // yep
+                return d.resolve(mergedDoc || doc);
+            } else {
+                return d.reject(SIS.ERR_BAD_CREDS("Only admins of the user or the user can manage the token."));
+            }
+        });
+        return d.promise;
     }
     /////////////////////////////////
 
@@ -323,7 +329,6 @@
         var auth = {};
         auth[SIS.SCHEMA_USERS] = new UserManager(sm);
         auth[SIS.SCHEMA_TOKENS] = new TokenManager(sm);
-        auth[SIS.SCHEMA_SERVICES] = new ServiceManager(sm);
         return auth;
     }
 

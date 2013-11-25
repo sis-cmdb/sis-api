@@ -54,6 +54,8 @@ module.exports = {
     FIELD_SUPERUSER : "super_user",
     FIELD_CREATOR : "creator",
     FIELD_EMAIL : "email",
+    FIELD_USERNAME : "username",
+    FIELD_TOKEN_USER : "sis_token_user",
 
     // schema names
     SCHEMA_SCHEMAS : "sis_schemas",
@@ -61,7 +63,6 @@ module.exports = {
     SCHEMA_HIERA : "sis_hiera",
     SCHEMA_COMMITS : "sis_commits",
     SCHEMA_USERS : "sis_users",
-    SCHEMA_SERVICES : "sis_services",
     SCHEMA_TOKENS : "sis_tokens",
 
     AUTH_TYPES : ["sis_users", "sis_services"],

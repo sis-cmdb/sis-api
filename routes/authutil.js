@@ -32,8 +32,9 @@
 
     var _verifySisToken = function(token, done) {
         var tokenManager = this.auth[SIS.SCHEMA_TOKENS];
+        var userManager = this.auth[SIS.SCHEMA_USERS];
         var p = tokenManager.getById(token).then(function(t) {
-            return Q(t.ref[t.type]);
+            return userManager.getById(t[SIS.FIELD_USERNAME]);
         });
         return Q.nodeify(p, done);
     };

@@ -74,4 +74,72 @@ var users = {
     })
 };
 
+var addTests = [
+    // array defining test
+    // firstuser can add seconduser pass/fail
+    // superman can add everyone
+    ["superman", "admin1", true],
+    ["superman", "admin1_1", true],
+    ["superman", "superman2", true],
+    ["superman", "admin2", true],
+    ["superman", "admin3", true],
+    ["superman", "admin4", true],
+    ["superman", "user1", true],
+    ["superman", "user2", true],
+    ["superman", "user3", true],
+    // admin1 - similar as admin2
+    ["admin1", "superman", false],
+    ["admin1", "admin1_1", true],
+    ["admin1", "admin2", false],
+    ["admin1", "admin3", false],
+    ["admin1", "admin4", false],
+    ["admin1", "user1", true],
+    ["admin1", "user2", false],
+    ["admin1", "user3", false],
+    // admin3
+    ["admin3", "admin2", false],
+    ["admin3", "admin4", false],
+    ["admin3", "user1", true],
+    ["admin3", "user2", false],
+    ["admin3", "user3", false],
+    // users
+    ["user3", "superman", false],
+    ["user3", "admin1", false],
+    ["user3", "admin2", false],
+    ["user3", "admin3", false],
+    ["user3", "user1", false],
+    ["user3", "user2", false]
+];
+
+
+var superTests = addTests.filter(function(test) {
+    return test[0] == "superman";
+});
+
+
+var updateTests = [
+    // adds and updates
+    // can do whatever he wants on group1
+    ["admin1", "admin2", 'a', 'group1', 'user', true],
+    ["admin1", "admin3", 'd', 'group1', null, true],
+    ["admin1", "user3", 'u', 'group1', 'admin', true],
+
+    // superman does it all
+    ["superman", "admin1", 'a', 'group2', 'user', true],
+    ["superman", "admin1", 'a', 'group2', 'admin', true],
+    ["superman", "user1", 'u', 'group1', 'user', true],
+
+    // admin1 only administers group1
+    ["admin1", "admin1_1", 'a', 'group2', 'user', false],
+    // can't modify a super user
+    ["admin1", "superman2", 'a', 'group1', 'user', false],
+
+    // user3 isn't an admin of anything
+    ["user3", "admin1", 'a', "group2", 'user', false]
+];
+
 module.exports.users = users;
+module.exports.addTests = addTests;
+module.exports.superTests = superTests;
+module.exports.updateTests = updateTests;
+

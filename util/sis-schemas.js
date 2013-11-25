@@ -89,23 +89,11 @@ module.exports.schemas = [
     {
         name : SIS.SCHEMA_TOKENS,
         definition : {
+            // the token itself
             name : { type : "String", unique : true },
-            expires : { type : "Date", expires : SIS.AUTH_EXPIRATION_TIME },
-            type : { type : "String", required : true, enum : SIS.AUTH_TYPES },
-            ref : { "sis_services" : { "type" : "ObjectId", ref : SIS.SCHEMA_SERVICES },
-                    "sis_users" : { "type" : "ObjectId", ref : SIS.SCHEMA_USERS }
-                  }
-        }
-    },
-    // sis_services
-    {
-        name : SIS.SCHEMA_SERVICES,
-        definition : {
-            name : { type : "String", required : true,  unique : true, match : /^[a-z0-9_]+$/ },
             desc : "String",
-            creator : { type : "String", required : true },
-            token : { type : "String", unique : true },
-            roles : { type : {} }
+            expires : { type : "Date", expires : 0 },
+            username : { type: "String", required : true }
         }
     }
 
