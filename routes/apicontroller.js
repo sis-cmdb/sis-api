@@ -68,11 +68,12 @@ ApiController.prototype.sendError = function(res, err) {
         console.log(err.stack);
     }
 
-    if (!(err instanceof Array) || err.length != 2) {
+    if (!(err instanceof Array) || err.length < 2) {
+        console.log(JSON.stringify(err));
         err = [500, err];
     }
     if (err.length == 3) {
-        console.log(err[2].stack);
+        console.log(err[2].stack || err[2]);
     }
     res.jsonp(err[0], err[1]);
 }
@@ -175,10 +176,10 @@ ApiController.prototype.add = function(req, res) {
 // Attach the controller to the app at a particular base
 ApiController.prototype.attach = function(app, prefix) {
     app.get(prefix, this.getAll.bind(this));
-    app.get(prefix + "/:id", this._wrapAuth(this.get).bind(this));
+    app.get(prefix + "/:id", this.get.bind(this));
     if (!app.get(SIS.OPT_READONLY)) {
         app.put(prefix + "/:id", this._wrapAuth(this.update).bind(this));
-        app.post(prefix, this.add.bind(this));
+        app.post(prefix, this._wrapAuth(this.add).bind(this));
         app.delete(prefix + "/:id", this._wrapAuth(this.delete).bind(this));
         if (this.commitManager) {
             this._enableCommitApi(app, prefix);
@@ -210,7 +211,7 @@ ApiController.prototype.authenticate = function(req, res, type) {
 // private / subclass support
 ApiController.prototype._wrapAuth = function(func) {
     return function(req, res) {
-        if (!this.doAuth) {
+        if (!this.auth) {
             return func.call(this, req, res);
         }
         var p = this.authenticate(req, res, SIS.SCHEMA_TOKENS);

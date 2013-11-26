@@ -93,7 +93,8 @@ describe('Schema API', function() {
                 "ip":      "String",
                 "ip6":     "String",
                 "bgpip":   "String",
-                "bgpip6":  "String"
+                "bgpip6":  "String",
+                "owner" : ["String"]
             }
         };
         it("Should create new schemas", function(done) {
@@ -203,7 +204,7 @@ describe('Schema API', function() {
         before(function(done) {
             var express = require('express');
             hookServer = express();
-            hookServer.use(express.bodyParser());
+            hookServer.use(express.json());
             hookServer.post('/hook', function(req, res) {
                 should.exist(req.body);
                 req.body.entity_type.should.eql(SIS.SCHEMA_SCHEMAS);

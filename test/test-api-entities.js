@@ -95,6 +95,10 @@ describe('Entity API', function() {
         };
         var validateWithExpected = function(entity) {
             for (var k in expectedEntity) {
+                if (!(k in entity)) {
+                    console.log(k);
+                    console.log(JSON.stringify(entity));
+                }
                 should.exist(entity[k]);
                 JSON.stringify(expectedEntity[k]).should.eql(JSON.stringify(entity[k]));
             }

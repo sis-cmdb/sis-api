@@ -107,8 +107,12 @@ Manager.prototype.authorize = function(evt, doc, user, mergedDoc) {
                 if (permission == SIS.PERMISSION_ADMIN &&
                     mergedPermission == SIS.PERMISSION_ADMIN) {
                     return Q(mergedDoc);
+                } else if (!this.adminOnly &&
+                           permission == SIS.PERMISSION_USER_ALL_GROUPS &&
+                           mergedPermission == SIS.PERMISSION_USER_ALL_GROUPS) {
+                    return Q(mergedDoc);
                 } else {
-                    return Q.reject(SIS.ERR_BAD_CREDS("Must be an admin to change the owners."));
+                    return Q.reject(SIS.ERR_BAD_CREDS("Insufficient permissions to change owners."));
                 }
             } else {
                 if (permission == SIS.PERMISSION_ADMIN ||
@@ -227,19 +231,22 @@ Manager.prototype.getPermissionsForObject = function(user, obj) {
     var owners = obj[SIS.FIELD_OWNER];
     var roles = user[SIS.FIELD_ROLES];
     var userRoleCount = 0;
+    var adminRoleCount = 0;
     for (var i = 0; i < owners.length; ++i) {
         var owner = owners[i];
         if (owner in roles) {
             if (roles[owner] == SIS.ROLE_ADMIN) {
-                // can just return admin
-                return SIS.PERMISSION_ADMIN;
+                adminRoleCount++;
+                userRoleCount++;
             } else if (roles[owner] == SIS.ROLE_USER) {
                 userRoleCount++;
             }
         }
     }
     // are we permitted to operate on all groups?
-    if (userRoleCount == owners.length) {
+    if (adminRoleCount == owners.length) {
+        return SIS.PERMISSION_ADMIN;
+    } else if (userRoleCount == owners.length) {
         return SIS.PERMISSION_USER_ALL_GROUPS;
     } else {
         return userRoleCount ? SIS.PERMISSION_USER : SIS.PERMISSION_NONE;

@@ -194,7 +194,6 @@ describe('User Manager', function() {
                     userManager.delete(u2[SIS.FIELD_NAME], u1, cb);
                 }
             }), done);
-            done();
         });
 
 

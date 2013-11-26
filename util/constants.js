@@ -66,7 +66,7 @@ module.exports = {
     SCHEMA_TOKENS : "sis_tokens",
 
     AUTH_TYPES : ["sis_users", "sis_services"],
-    AUTH_EXPIRATION_TIME : '8h', // 8 hrs
+    AUTH_EXPIRATION_TIME : 1000 * 60 * 60 * 8, // 8 hrs
 
     // option keys
     OPT_SCHEMA_MGR : "schemaManager", // TODO: snake case

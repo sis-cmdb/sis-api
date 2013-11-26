@@ -20,6 +20,8 @@
 (function() {
 
     var Manager = require("./manager");
+    var Q = require("q");
+    var SIS = require("./constants");
 
     //////////
     // Entity manager
@@ -34,7 +36,7 @@
     EntityManager.prototype.validate = function(entity, isUpdate) {
         if (isUpdate) {
             // remove reserved fields..
-            // and sub objects
+            // TODO: and sub objects
             for (var rf in Object.keys(entity)) {
                 if (rf[0] == '_') {
                     delete entity[rf];
@@ -51,10 +53,44 @@
                     return keys[i] + " is a reserved field";
                 }
             }
+            if (SIS.FIELD_OWNER in entity) {
+                console.log("here..");
+                var err = this.validateOwner(entity);
+                if (err) {
+                    console.log(err);
+                    return err;
+                }
+                // ensure the document is a subset of owners of the schema
+                var owners = entity[SIS.FIELD_OWNER];
+                var schemaOwners = this.schema[SIS.FIELD_OWNER];
+                for (var i = 0; i < owners.length; ++i) {
+                    if (schemaOwners.indexOf(owners[i]) == -1) {
+                        // must be a subset
+                        return "entity owners must be a subset of the schema owners.";
+                    }
+                }
+            }
         } catch (ex) {
-            return "cannot be empty or is not an object";
+            console.log(ex);
+            return "cannot be empty or is not an object " + ex;
         }
         return null;
+    }
+
+    EntityManager.prototype.authorize = function(evt, doc, user, mergedDoc) {
+        // authorize against entity subset or schema
+        if (doc[SIS.FIELD_OWNER]) {
+            return Manager.prototype.authorize.call(this, evt, doc, user, mergedDoc);
+        } else {
+            // schema. so ensure we have the permission to do so
+            var permission = this.getPermissionsForObject(this.schema, user);
+            if (permission == SIS.PERMISSION_ADMIN ||
+                permission == SIS.PERMISSION_USER_ALL_GROUPS) {
+                return Q(mergedDoc || doc);
+            } else {
+                return Q.reject("Insufficient privileges to operate on entities in this schema.");
+            }
+        }
     }
 
     EntityManager.prototype.applyUpdate = function(result, entity) {

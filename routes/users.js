@@ -21,6 +21,7 @@
     var ApiController = require("./apicontroller");
     var SIS = require("../util/constants");
     var passport = require("passport");
+    var Q = require("q");
 
     /////////////////////////////////
     // User controller
@@ -68,24 +69,12 @@
         opts[SIS.OPT_TYPE] = SIS.SCHEMA_TOKENS;
         SIS.UTIL_MERGE_SHALLOW(opts, config);
         ApiController.call(this, opts);
-        this.manager = this.sm.auth[SIS.SCHEMA_SERVICES];
+        this.manager = this.sm.auth[SIS.SCHEMA_TOKENS];
         this.userManager = this.sm.auth[SIS.SCHEMA_USERS];
     }
 
     // inherit
     TokenController.prototype.__proto__ = ApiController.prototype;
-
-    TokenController.prototype.ensureUserMiddleWare = function(err, req, res, next) {
-        var self = this;
-        this.ensureUser(req, function(e, user) {
-            if (e) {
-                return self.sendError(res, e);
-            } else {
-                req[SIS.FIELD_TOKEN_USER] = user;
-                next();
-            }
-        });
-    }
 
     TokenController.prototype.applyDefaults = function(req) {
         if (req.method == "GET" && req[SIS.FIELD_TOKEN_USER]) {
@@ -103,25 +92,37 @@
     }
 
     var fixBody = function(req) {
-        var obj = req.body;
-        if (obj) {
-            obj[SIS.FIELD_TOKEN_USER] = req[SIS.FIELD_TOKEN_USER][SIS.FIELD_NAME];
-            delete obj[SIS.FIELD_EXPIRES];
+        if (req.method == "PUT" || req.method == "POST") {
+            var obj = req.body;
+            if (obj) {
+                obj[SIS.FIELD_TOKEN_USER] = req[SIS.FIELD_TOKEN_USER][SIS.FIELD_NAME];
+                delete obj[SIS.FIELD_EXPIRES];
+            }
         }
     }
 
-    // ensure the body is accurate..
-    TokenController.prototype.add = function(req, res) {
-        // need to ensure the username is set to the
-        // actual user in the path..
-        // cannot add a temp token through this method either
-        fixBody(req);
-        ApiController.prototype.add.call(this, req, res);
-    }
-
-    TokenController.prototype.update = function(req, res) {
-        fixBody(req);
-        ApiController.prototype.update.call(this, req, res);
+    TokenController.prototype.wrapApi = function() {
+        var self = this;
+        // takes in an api controller function(req, res), and
+        // returns a wrapper around it
+        var wrapFunc = function(func) {
+            return function(req, res) {
+                self.ensureUser(req, function(e, user) {
+                    if (e) {
+                        return self.sendError(res, e);
+                    } else {
+                        req[SIS.FIELD_TOKEN_USER] = user;
+                        fixBody(req);
+                        func.call(self, req, res);
+                    }
+                });
+            }
+        }
+        var apis = ['get', 'getAll', 'update', 'add', 'delete'];
+        for (var i = 0; i < apis.length; ++i) {
+            var fname = apis[i];
+            this[fname] = wrapFunc(ApiController.prototype[fname]).bind(this);
+        }
     }
 
     /////////////////////////////////
@@ -136,8 +137,7 @@
 
         // services
         controller = new TokenController(config);
-        // attach the middle ware
-        app.use("/api/v1/users/:uid/tokens", controller.ensureUserMiddleWare.bind(controller));
+        controller.wrapApi();
         controller.attach(app, "/api/v1/users/:uid/tokens");
     }
 

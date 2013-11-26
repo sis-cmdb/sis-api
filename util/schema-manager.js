@@ -65,6 +65,8 @@
                     return fields[i] + " is a reserved field";
                 }
             }
+            // set the model object to have owners
+            modelObj.definition[SIS.FIELD_OWNER] = ["String"];
             this.mongoose.Schema(modelObj.definition);
         } catch (ex) {
             return "Schema is invalid: " + ex;

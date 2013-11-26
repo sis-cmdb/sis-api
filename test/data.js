@@ -55,6 +55,14 @@ var users = {
             "group2" : "admin"
         }
     }),
+    "admin5" : genUser("admin5", {
+        roles : {
+            "group1" : "admin",
+            "group2" : "admin",
+            "group3" : "admin"
+        }
+    }),
+
     // user of group1
     "user1" : genUser("user1", {
         roles : {
@@ -71,8 +79,27 @@ var users = {
             "group1" : "user",
             "group2" : "user"
         }
+    }),
+    "user4" : genUser("user4", {
+        roles : {
+            "group1" : "user",
+            "group2" : "user",
+            "group3" : "user"
+        }
     })
 };
+
+var schemas = {
+    "s1" : {
+        "name" : "s1",
+        "owners" : ["group1", "group2", "group3"],
+        "definition" : {
+            "str" : "String",
+            "num" : "Number"
+        }
+    },
+
+}
 
 var addTests = [
     // array defining test
@@ -84,9 +111,11 @@ var addTests = [
     ["superman", "admin2", true],
     ["superman", "admin3", true],
     ["superman", "admin4", true],
+    ["superman", "admin5", true],
     ["superman", "user1", true],
     ["superman", "user2", true],
     ["superman", "user3", true],
+    ["superman", "user4", true],
     // admin1 - similar as admin2
     ["admin1", "superman", false],
     ["admin1", "admin1_1", true],
@@ -116,10 +145,17 @@ var superTests = addTests.filter(function(test) {
     return test[0] == "superman";
 });
 
+var nonSuperUsers = Object.keys(users).filter(function(uname) {
+    return !('super_user' in users[uname]);
+});
+
 
 var updateTests = [
+    // test is:
+    // [userDoingTheAction, userBeingManaged, action(add, delete, update), group modified, role, pass/fail]
+
     // adds and updates
-    // can do whatever he wants on group1
+    // admin1 can do whatever he wants on group1
     ["admin1", "admin2", 'a', 'group1', 'user', true],
     ["admin1", "admin3", 'd', 'group1', null, true],
     ["admin1", "user3", 'u', 'group1', 'admin', true],
@@ -142,4 +178,36 @@ module.exports.users = users;
 module.exports.addTests = addTests;
 module.exports.superTests = superTests;
 module.exports.updateTests = updateTests;
+module.exports.nonSuperUsers = nonSuperUsers;
 
+// authorization tests
+var schemas = {
+    "s1" : {
+        name : "s1",
+        owners : ["group1", "group2", "group3"],
+        definition : {
+            "str" : "String",
+            "num" : "Number"
+        }
+    },
+
+    "s2" : {
+        name : "s2",
+        owners : ["group1", "group2"],
+        definition : {
+            "str" : "String",
+            "num" : "Number"
+        }
+    }
+}
+
+// entities
+var entities = {
+    "e1" : {
+        schema : "s1",
+        entity : {
+            str : "e1",
+            num : 10,
+        }
+    }
+}

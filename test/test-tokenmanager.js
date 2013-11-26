@@ -41,12 +41,14 @@ describe('Token Manager', function() {
 
     describe("temp tokens", function() {
         before(function(done) {
+            SIS.AUTH_EXPIRATION_TIME = 80000;
             var userManager = schemaManager.auth[SIS.SCHEMA_USERS];
             var superUser = users['superman'];
             var admin = users['admin1'];
             userManager.add(admin, superUser, done);
         });
         after(function(done) {
+            SIS.AUTH_EXPIRATION_TIME = 1000 * 60 * 60 * 8;
             var userManager = schemaManager.auth[SIS.SCHEMA_USERS];
             var superUser = users['superman'];
             userManager.delete('admin1', superUser, done);
@@ -56,7 +58,6 @@ describe('Token Manager', function() {
             // timeout in 75 seconds
             // set the expiration time to 80 seconds (in ms).
             // mongo runs every minute.
-            SIS.AUTH_EXPIRATION_TIME = 80000;
             this.timeout(200000);
             console.log("Testing temp token expiration.  This takes a little over 2 minutes.");
             var userManager = schemaManager.auth[SIS.SCHEMA_USERS];
