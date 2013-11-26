@@ -56,6 +56,7 @@ module.exports = {
     FIELD_EMAIL : "email",
     FIELD_USERNAME : "username",
     FIELD_TOKEN_USER : "sis_token_user",
+    FIELD_MODIFIED_BY : "modified_by",
 
     // schema names
     SCHEMA_SCHEMAS : "sis_schemas",

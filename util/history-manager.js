@@ -40,6 +40,9 @@
             var doc = { 'type' : type,
                         'entity_id' : id,
                         'action' : action }
+            if (req && req.user && req.user[SIS.FIELD_NAME]) {
+                doc[SIS.FIELD_MODIFIED_BY] = req.user[SIS.FIELD_NAME];
+            }
             switch (action) {
                 case 'insert':
                     doc['diff'] = newDoc.toObject();

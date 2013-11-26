@@ -87,12 +87,12 @@ Manager.prototype.getSingleByCondition = function(condition, name, callback) {
 Manager.prototype.authorize = function(evt, doc, user, mergedDoc) {
     // get the permissions on the doc being added/updated/deleted
     var permission = this.getPermissionsForObject(doc, user);
-    if (permission == SIS.PERMISSION_ADMIN) {
-        return Q(mergedDoc || doc);
-    }
     switch (evt) {
         case SIS.EVENT_INSERT:
         case SIS.EVENT_DELETE:
+            if (permission == SIS.PERMISSION_ADMIN) {
+                return Q(mergedDoc || doc);
+            }
             if (permission == SIS.PERMISSION_USER_ALL_GROUPS && !this.adminRequired) {
                 return Q(doc);
             } else {
@@ -217,7 +217,7 @@ Manager.prototype.validateOwner = function(obj) {
 
 // expects object to have an owners array - i.e. should have passed
 // validateOwners
-Manager.prototype.getPermissionsForObject = function(user, obj) {
+Manager.prototype.getPermissionsForObject = function(obj, user) {
     if (!this.authEnabled) {
         return SIS.PERMISSION_ADMIN;
     }

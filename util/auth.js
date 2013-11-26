@@ -290,11 +290,7 @@
         if (!user) {
             return Q.reject(SIS.ERR_BAD_CREDS("User is null."));
         }
-        // super users do the rest
-        if (user[SIS.FIELD_SUPERUSER]) {
-            return Q(mergedDoc || doc);
-        }
-        if (!user[SIS.FIELD_ROLES]) {
+        if (!user[SIS.FIELD_ROLES] && !user[SIS.FIELD_SUPERUSER]) {
             return Q.reject(SIS.ERR_BAD_CREDS("Invalid user."));
         }
         // get the user
@@ -307,6 +303,10 @@
             if (tokenUser[SIS.FIELD_SUPERUSER] && !doc[SIS.FIELD_EXPIRES]) {
                 // super users cannot have a persistent token.  too much power
                 return d.reject(SIS.ERR_BAD_REQ("Super users cannot have persistent tokens."));
+            }
+            // super users do the rest
+            if (user[SIS.FIELD_SUPERUSER]) {
+                return d.resolve(mergedDoc || doc);
             }
             // can do it all as the user.
             if (tokenUser[SIS.FIELD_NAME] == user[SIS.FIELD_NAME]) {

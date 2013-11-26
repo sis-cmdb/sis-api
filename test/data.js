@@ -145,11 +145,6 @@ var superTests = addTests.filter(function(test) {
     return test[0] == "superman";
 });
 
-var nonSuperUsers = Object.keys(users).filter(function(uname) {
-    return !('super_user' in users[uname]);
-});
-
-
 var updateTests = [
     // test is:
     // [userDoingTheAction, userBeingManaged, action(add, delete, update), group modified, role, pass/fail]
@@ -178,13 +173,13 @@ module.exports.users = users;
 module.exports.addTests = addTests;
 module.exports.superTests = superTests;
 module.exports.updateTests = updateTests;
-module.exports.nonSuperUsers = nonSuperUsers;
 
 // authorization tests
+// schemas
 var schemas = {
     "s1" : {
         name : "s1",
-        owners : ["group1", "group2", "group3"],
+        owner : ["group1", "group2", "group3"],
         definition : {
             "str" : "String",
             "num" : "Number"
@@ -193,7 +188,7 @@ var schemas = {
 
     "s2" : {
         name : "s2",
-        owners : ["group1", "group2"],
+        owner : ["group1", "group2"],
         definition : {
             "str" : "String",
             "num" : "Number"
@@ -207,7 +202,142 @@ var entities = {
         schema : "s1",
         entity : {
             str : "e1",
-            num : 10,
+            num : 1,
+        }
+    },
+    "e2" : {
+        schema : "s1",
+        entity : {
+            str : "e2",
+            num : 2,
+            owner : ["group1", "group2"]
         }
     }
 }
+
+module.exports.schemas = schemas;
+module.exports.entities = entities;
+
+
+// tests
+
+// an obj where each key is
+// a schema id and it maps
+// to an object w/ a pass
+// and fail array.  The arrays
+// contain the users that it would fail/pass for
+var addSchemaTests = {
+    "s1" : {
+        pass : ['superman', 'superman2', 'admin5']
+    },
+    "s2" : {
+        pass : ['superman', 'superman2', 'admin5', 'admin4']
+    }
+}
+
+// add the failures
+for (var k in addSchemaTests) {
+    var test = addSchemaTests[k];
+    var passes = test['pass'];
+    test['fail'] = Object.keys(users).filter(function(uname) {
+        return passes.indexOf(uname) == -1;
+    });
+}
+
+// add entity tests
+var addEntityTests = {
+    "e1" : {
+        // group1 -> group3 users
+        pass : ['superman', 'superman2', 'admin5', 'user4']
+    },
+    "e2" : {
+        // group 1 and group2
+        pass : ['superman', 'superman2', 'admin5',
+                'user4', 'admin3', 'admin4', 'user3']
+    }
+};
+
+// add the failures
+for (var k in addEntityTests) {
+    var test = addEntityTests[k];
+    var passes = test['pass'];
+    test['fail'] = Object.keys(users).filter(function(uname) {
+        return passes.indexOf(uname) == -1;
+    });
+}
+
+// entities that can't be added
+var badEntities = {
+    "e3" : {
+        schema : "s2",
+        entity : {
+            str : "e3",
+            num : 3,
+            owner : ["group3", "group2"]
+        }
+    }
+}
+
+module.exports.addEntityTests = addEntityTests;
+module.exports.addSchemaTests = addSchemaTests;
+module.exports.badEntities = badEntities;
+
+// update tests
+// schema - test adding owner, removing owner
+var updateSchemaTests = {
+    's2' : [
+        {
+            owner : ['group1', 'group2', 'group3'],
+            pass : ['superman', 'superman2', 'admin5']
+        },
+        {
+            owner : ['group2'],
+            pass : ['superman', 'superman2', 'admin5',
+                    'admin3', 'admin4']
+        },
+        {
+            owner : ['group4'],
+            pass : ['superman', 'superman2']
+        }
+    ]
+};
+
+for (var k in updateSchemaTests) {
+    var items = updateSchemaTests[k];
+    for (var i = 0; i < items.length; ++i) {
+        var test = items[i];
+        var passes = test['pass'];
+        test['fail'] = Object.keys(users).filter(function(uname) {
+            return passes.indexOf(uname) == -1;
+        });
+    }
+}
+
+var updateEntityTests = {
+    'e2' : [
+        {
+            owner : ['group4'],
+            pass : [],
+            err_code : 400
+        },
+        {
+            owner : ['group3'],
+            pass : ['superman', 'superman2', 'admin5', 'user4'],
+            err_code : 401
+        }
+    ]
+}
+
+for (var k in updateEntityTests) {
+    var items = updateEntityTests[k];
+    for (var i = 0; i < items.length; ++i) {
+        var test = items[i];
+        var passes = test['pass'];
+        test['fail'] = Object.keys(users).filter(function(uname) {
+            return passes.indexOf(uname) == -1;
+        });
+    }
+}
+
+module.exports.updateSchemaTests = updateSchemaTests;
+module.exports.updateEntityTests = updateEntityTests;

@@ -37,7 +37,9 @@
         if (isUpdate) {
             // remove reserved fields..
             // TODO: and sub objects
-            for (var rf in Object.keys(entity)) {
+            var keys = Object.keys(entity);
+            for (var i = 0; i < keys.length; ++i) {
+                var rf = keys[i];
                 if (rf[0] == '_') {
                     delete entity[rf];
                 }
@@ -54,10 +56,8 @@
                 }
             }
             if (SIS.FIELD_OWNER in entity) {
-                console.log("here..");
                 var err = this.validateOwner(entity);
                 if (err) {
-                    console.log(err);
                     return err;
                 }
                 // ensure the document is a subset of owners of the schema
@@ -71,7 +71,6 @@
                 }
             }
         } catch (ex) {
-            console.log(ex);
             return "cannot be empty or is not an object " + ex;
         }
         return null;
@@ -80,6 +79,10 @@
     EntityManager.prototype.authorize = function(evt, doc, user, mergedDoc) {
         // authorize against entity subset or schema
         if (doc[SIS.FIELD_OWNER]) {
+            if (mergedDoc && !mergedDoc[SIS.FIELD_OWNER]) {
+                // needs to use the schema owner..
+                mergedDoc[SIS.FIELD_OWNER] = this.schema[SIS.FIELD_OWNER];
+            }
             return Manager.prototype.authorize.call(this, evt, doc, user, mergedDoc);
         } else {
             // schema. so ensure we have the permission to do so

@@ -110,11 +110,15 @@ describe('Token Manager', function() {
             var usr = test[0];
             var usr2 = test[1];
             var pass = test[2];
+            var u1 = users[usr];
+            var u2 = users[usr2];
+            if (u2.super_user) {
+                // can't create persistent tokens for super users..
+                pass = false;
+            }
             var testName = util.format("%s %s create token for %s", usr, (pass ? "can" : "cannot"), usr2);
             it(testName, function(done) {
                 var tokenManager = schemaManager.auth[SIS.SCHEMA_TOKENS];
-                var u1 = users[usr];
-                var u2 = users[usr2];
                 var token = {
                     username : u2[SIS.FIELD_NAME],
                     desc : "token added by " + u1[SIS.FIELD_NAME]

@@ -64,12 +64,12 @@ ApiController.prototype.applyDefaults = function(req) {
 
 // Utils
 ApiController.prototype.sendError = function(res, err) {
-    if (typeof err == 'object' && err.stack) {
-        console.log(err.stack);
-    }
+    // if (typeof err == 'object' && err.stack) {
+    //     console.log(err.stack);
+    // }
 
     if (!(err instanceof Array) || err.length < 2) {
-        console.log(JSON.stringify(err));
+        //console.log(JSON.stringify(err));
         err = [500, err];
     }
     if (err.length == 3) {
