@@ -31,7 +31,7 @@ function ApiController(opts) {
         this.type = opts[SIS.OPT_TYPE];
     }
     if (opts[SIS.OPT_LOG_COMMTS]) {
-        this.commitManager = require("../util/history-manager")(this.sm);
+        this.commitManager = require("../util/commit-manager")(this.sm);
         if (opts[SIS.OPT_ID_FIELD]) {
             this.commitManager.idField = opts[SIS.OPT_ID_FIELD];
         }

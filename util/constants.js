@@ -171,5 +171,56 @@ module.exports = {
             }
         }
         return true;
+    },
+
+    UTIL_VALIDATE_ROLES : function(obj, isUser) {
+        if (isUser) {
+            // super users can get away with no roles..
+            if (obj[this.FIELD_SUPERUSER]) {
+                return null;
+            }
+        }
+        if (!(this.FIELD_ROLES in obj)) {
+            return "roles are missing.";
+        }
+        var roles = obj[this.FIELD_ROLES];
+        try {
+            var keys = Object.keys(roles);
+            // allow empty roles
+            if (keys.length == 0) {
+                return null;
+            }
+            for (var i = 0; i < keys.length; ++i) {
+                var k = keys[i];
+                if (roles[k] != this.ROLE_USER &&
+                    roles[k] != this.ROLE_ADMIN) {
+                    return "invalid role specified: " + roles[k];
+                }
+            }
+        } catch (ex) {
+            return "roles must be a non empty object";
+        }
+        return null;
+    },
+
+    UTIL_ENSURE_ROLE_SUBSET : function(roles, subset, adminOnly) {
+        for (var k in subset) {
+            if (!(k in roles)) {
+                return false;
+            }
+            var masterRole = roles[k];
+            var subRole = subset[k];
+            if (adminOnly) {
+                if (masterRole != this.ROLE_ADMIN) {
+                    return false;
+                }
+            } else {
+                if (masterRole == this.ROLE_USER &&
+                    subRole == this.ROLE_ADMIN) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 }

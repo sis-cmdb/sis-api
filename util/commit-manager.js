@@ -23,7 +23,7 @@
     var SIS = require('./constants');
 
     // Take in a schemaManager
-    var HistoryManager = function(schemaManager) {
+    var CommitManager = function(schemaManager) {
 
         var self = this;
 
@@ -128,7 +128,7 @@
     }
 
     module.exports = function(schemaManager) {
-        return new HistoryManager(schemaManager);
+        return new CommitManager(schemaManager);
     }
 
 })();

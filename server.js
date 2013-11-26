@@ -26,6 +26,7 @@ var routes = [
     'hiera',
     'hooks',
     'users',
+    'tokens',
     'index'
 ];
 

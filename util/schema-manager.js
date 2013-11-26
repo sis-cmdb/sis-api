@@ -35,7 +35,10 @@
         var model = this.getSisModel(SIS.SCHEMA_SCHEMAS);
         Manager.call(this, model, opts);
         if (this.authEnabled) {
-            this.auth = require("./auth")(this);
+            var auth = {};
+            auth[SIS.SCHEMA_USERS] = require("./user-manager")(this);
+            auth[SIS.SCHEMA_TOKENS] = require("./token-manager")(this);
+            this.auth = auth;
         }
     }
 

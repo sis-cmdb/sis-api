@@ -22,61 +22,8 @@
     var SIS = require("./constants");
     var Manager = require("./manager");
     var Q = require("q");
-    var crypto = require("crypto");
-    var hat = require('hat');
+    var crypto = require('crypto');
     var jsondiff = require("jsondiffpatch");
-
-    function ensureRoleSubset(roles, subset, adminOnly) {
-
-        for (var k in subset) {
-            if (!(k in roles)) {
-                return false;
-            }
-            var masterRole = roles[k];
-            var subRole = subset[k];
-            if (adminOnly) {
-                if (masterRole != SIS.ROLE_ADMIN) {
-                    return false;
-                }
-            } else {
-                if (masterRole == SIS.ROLE_USER &&
-                    subRole == SIS.ROLE_ADMIN) {
-                    return false;
-                }
-            }
-        }
-        return true;
-    }
-
-    function validateRoles(obj, isUser) {
-        if (isUser) {
-            // super users can get away with no roles..
-            if (obj[SIS.FIELD_SUPERUSER]) {
-                return null;
-            }
-        }
-        if (!(SIS.FIELD_ROLES in obj)) {
-            return "roles are missing.";
-        }
-        var roles = obj[SIS.FIELD_ROLES];
-        try {
-            var keys = Object.keys(roles);
-            // allow empty roles
-            if (keys.length == 0) {
-                return null;
-            }
-            for (var i = 0; i < keys.length; ++i) {
-                var k = keys[i];
-                if (roles[k] != SIS.ROLE_USER &&
-                    roles[k] != SIS.ROLE_ADMIN) {
-                    return "invalid role specified: " + roles[k];
-                }
-            }
-        } catch (ex) {
-            return "roles must be a non empty object";
-        }
-        return null;
-    }
 
     /////////////////////////////////
     // Users
@@ -154,7 +101,7 @@
                 if (doc[SIS.FIELD_SUPERUSER] && !user[SIS.FIELD_SUPERUSER]) {
                     return Q.reject(SIS.ERR_BAD_CREDS("Only superusers can " + evt + " superusers."));
                 }
-                if (!ensureRoleSubset(user[SIS.FIELD_ROLES], doc[SIS.FIELD_ROLES], true)) {
+                if (!SIS.UTIL_ENSURE_ROLE_SUBSET(user[SIS.FIELD_ROLES], doc[SIS.FIELD_ROLES], true)) {
                     return Q.reject(SIS.ERR_BAD_CREDS("Cannot " + evt + " user unless admin of all roles."));
                 }
                 if (doc[SIS.FIELD_NAME] == user[SIS.FIELD_NAME]) {
@@ -210,126 +157,12 @@
         if (!obj || !obj[SIS.FIELD_NAME]) {
             return "User must have a name.";
         }
-        return validateRoles(obj, true);
-    }
-    /////////////////////////////////
-
-    /////////////////////////////////
-    // Tokens
-    function TokenManager(sm) {
-        var opts = {};
-        Manager.call(this, sm.getSisModel(SIS.SCHEMA_TOKENS), opts);
-        this.sm = sm;
-        this.authEnabled = this.sm.authEnabled;
-    }
-    TokenManager.prototype.__proto__ = Manager.prototype;
-
-    // auto populate single getter
-    TokenManager.prototype.getById = function(id, callback) {
-        var p = Manager.prototype.getById.call(this, id);
-        p = p.then(this.populate.bind(this));
-        return Q.nodeify(p, callback);
-    }
-
-    // override add to use createToken
-    TokenManager.prototype.add = function(obj, user, callback) {
-        if (!callback && typeof user === 'function') {
-            callback = user;
-            user = null;
-        }
-        var err = this.validate(obj, false, user);
-        if (err) {
-            return Q.nodeify(Q.reject(SIS.ERR_BAD_REQ(err)),
-                             callback);
-        }
-        var p = this.authorize(SIS.EVENT_INSERT, obj, user)
-                    .then(this.createToken.bind(this));
-        return Q.nodeify(p, callback);
-    }
-
-    TokenManager.prototype.createToken = function(token) {
-        // save token
-        var self = this;
-        var d = Q.defer();
-        var createTokenHelper = function() {
-            token['name'] = hat();
-            var doc = new self.model(token);
-            doc.save(function(err, result) {
-                if (err) {
-                    if (err.code == 11000) {
-                        createTokenHelper();
-                    } else {
-                        d.reject(SIS.ERR_INTERNAL(err));
-                    }
-                } else {
-                    d.resolve(result);
-                }
-            })
-        }
-        createTokenHelper();
-        return d.promise;
-    }
-
-    // only the user, super user
-    TokenManager.prototype.authorize = function(evt, doc, user, mergedDoc) {
-        if (!doc[SIS.FIELD_USERNAME]) {
-            return Q.reject(SIS.ERR_BAD_REQ("Missing username in token."));
-        }
-        if (mergedDoc && mergedDoc[SIS.FIELD_USERNAME] != doc[SIS.FIELD_USERNAME]) {
-            return Q.reject(SIS.ERR_BAD_REQ("Cannot change the username of the token."));
-        }
-        if (mergedDoc && mergedDoc[SIS.FIELD_EXPIRES]) {
-            return Q.reject(SIS.ERR_BAD_REQ("Cannot change a temporary token."));
-        }
-        if (doc[SIS.FIELD_EXPIRES] && doc[SIS.FIELD_USERNAME] != user[SIS.FIELD_NAME]) {
-            return Q.reject(SIS.ERR_BAD_REQ("Cannot create a temp token for another user."));
-        }
-        if (!this.authEnabled) {
-            return Q(mergedDoc || doc);
-        }
-        if (!user) {
-            return Q.reject(SIS.ERR_BAD_CREDS("User is null."));
-        }
-        if (!user[SIS.FIELD_ROLES] && !user[SIS.FIELD_SUPERUSER]) {
-            return Q.reject(SIS.ERR_BAD_CREDS("Invalid user."));
-        }
-        // get the user
-        var username = doc[SIS.FIELD_USERNAME];
-        var d = Q.defer();
-        this.sm.auth[SIS.SCHEMA_USERS].getById(username, function(e, tokenUser) {
-            if (e) {
-                return d.reject(e);
-            }
-            if (tokenUser[SIS.FIELD_SUPERUSER] && !doc[SIS.FIELD_EXPIRES]) {
-                // super users cannot have a persistent token.  too much power
-                return d.reject(SIS.ERR_BAD_REQ("Super users cannot have persistent tokens."));
-            }
-            // super users do the rest
-            if (user[SIS.FIELD_SUPERUSER]) {
-                return d.resolve(mergedDoc || doc);
-            }
-            // can do it all as the user.
-            if (tokenUser[SIS.FIELD_NAME] == user[SIS.FIELD_NAME]) {
-                return d.resolve(mergedDoc || doc);
-            }
-            // can this user manage the roles of the token user
-            // and is admin
-            if (ensureRoleSubset(user[SIS.FIELD_ROLES], tokenUser[SIS.FIELD_ROLES], true)) {
-                // yep
-                return d.resolve(mergedDoc || doc);
-            } else {
-                return d.reject(SIS.ERR_BAD_CREDS("Only admins of the user or the user can manage the token."));
-            }
-        });
-        return d.promise;
+        return SIS.UTIL_VALIDATE_ROLES(obj, true);
     }
     /////////////////////////////////
 
     module.exports = function(sm) {
-        var auth = {};
-        auth[SIS.SCHEMA_USERS] = new UserManager(sm);
-        auth[SIS.SCHEMA_TOKENS] = new TokenManager(sm);
-        return auth;
+        return new UserManager(sm);
     }
 
 })();
