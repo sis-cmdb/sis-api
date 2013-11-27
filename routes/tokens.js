@@ -27,7 +27,8 @@
     // Token controller (user level)
     function TokenController(config) {
         var opts = { };
-        opts[SIS.OPT_LOG_COMMTS] = true;
+        // TODO - secure this when enabling.
+        //opts[SIS.OPT_LOG_COMMTS] = true;
         opts[SIS.OPT_TYPE] = SIS.SCHEMA_TOKENS;
         SIS.UTIL_MERGE_SHALLOW(opts, config);
         ApiController.call(this, opts);
@@ -45,6 +46,27 @@
             query[SIS.FIELD_USERNAME] = req[SIS.FIELD_TOKEN_USER][SIS.FIELD_NAME];
             req.query.q = query;
         }
+    }
+
+    TokenController.prototype.convertToResponseObject = function(req, o) {
+        var convertToken = function(token) {
+            if (token[SIS.FIELD_EXPIRES]) {
+                // change it to be a time in MS
+                var d = token[SIS.FIELD_EXPIRES];
+                var timeLeft = d.getTime() - Date.now();
+                if (timeLeft <= 0) {
+                    timeLeft = 0;
+                }
+                token[SIS.FIELD_EXPIRES] = timeLeft;
+            }
+            return token;
+        }
+        if (o instanceof Array) {
+            o = o.map(convertToken);
+        } else {
+            o = convertToken(o);
+        }
+        return o;
     }
 
     // override main entry points to ensure user exists..
@@ -75,7 +97,22 @@
                     } else {
                         req[SIS.FIELD_TOKEN_USER] = user;
                         fixBody(req);
-                        func.call(self, req, res);
+                        if (req.method == "GET") {
+                            // need to ensure that only admins of the user
+                            // super users, or the user himself are
+                            // getting the tokens
+                            var p = self.authenticate(req, res, SIS.SCHEMA_TOKENS);
+                            Q.nodeify(p, function(err, auth) {
+                                if (err) { return self.sendError(res, err); }
+                                if (self.manager.canAdministerTokensOf(req.user, user)) {
+                                    func.call(self, req, res);
+                                } else {
+                                    return self.sendError(res, SIS.ERR_BAD_CREDS("Cannot read tokens for user."));
+                                }
+                            });
+                        } else {
+                            func.call(self, req, res);
+                        }
                     }
                 });
             }

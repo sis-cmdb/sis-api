@@ -34,6 +34,15 @@
         var tokenManager = this.auth[SIS.SCHEMA_TOKENS];
         var userManager = this.auth[SIS.SCHEMA_USERS];
         var p = tokenManager.getById(token).then(function(t) {
+            // check if the token has expired
+            if (t[SIS.FIELD_EXPIRES]) {
+                var expires = t[SIS.FIELD_EXPIRES];
+                var timeLeft = expires.getTime() - Date.now();
+                if (timeLeft <= 0) {
+                    // no good
+                    return Q.reject(SIS.ERR_BAD_CREDS("Token has expired."));
+                }
+            }
             return userManager.getById(t[SIS.FIELD_USERNAME]);
         });
         return Q.nodeify(p, done);

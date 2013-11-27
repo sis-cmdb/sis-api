@@ -1,11 +1,44 @@
 sis-web
 =======
 
+# Configuration
+
+Configuration for sis can be found in config.js.  A sample config file contains the following:
+
+```javascript
+module.exports = {
+    // database specific configuration
+    db: {
+        // a mongo db connection string
+        url : "mongodb://localhost/sis"
+    },
+    // server specific config
+    server : {
+        // the tcp port to listen on
+        port : 3000
+    },
+    // application specific settings
+    app : {
+        // whether Role Based Access Control is enabled.  Defaults to true
+        auth : true
+        // whether the app only serves read requests (GET).  Defaults to false
+        readonly : false
+    }
+}
+```
+
 # API Description
 
 Every API method described below returns data with `Content-Type: application/json`.
 
 All POST and PUT requests must have the `content-type: application/json` header set.
+
+## Role based access control
+
+Throughout this document, users will see many objects with an `owner` field.  Please consult the
+documentation on [Role Based Access Control](./docs/rbac.md) for more information.
+
+If RBAC is enabled, all PUT/POST/DELETE requests must also include the `x-auth-token` header per the documentation.
 
 ## Schema API
 
@@ -16,8 +49,8 @@ Manage schemas of all entities in the system.  A sample schema object looks like
     // The name of the schema
     "name" : "sample",
     // an owner field, for future use / organization.
-    // (i.e. "ResOps", "ProvOps", etc.)
-    "owner" : "SIS",
+    // (i.e. an array of "ResOps", "ProvOps", etc.)
+    "owner" : ["SIS"],
     // A definition of what entities will look like
     // leveraging mongoose syntax
     "definition" : {
@@ -98,6 +131,14 @@ Manage the entities that adhere to a particular schema.  For example, an entity 
 }
 ```
 
+### Special fields
+
+* owner - The SIS [Role Based Access Control](./docs/rbac.md) allows an entity to have its own set of groups that can act on it.
+An optional `owner` field is added to every entity definition and is treated as a string array where each entry is a group.  If
+specifying owners, the entries must be a subset of the owners in the schema, otherwise an error is returned.
+
+See the SIS RBAC document for more information.
+
 ### Retrieving Entities of a particular schema
 
 * `GET /api/v1/entities/:schema_name`
@@ -144,7 +185,7 @@ For example, a hook that listens for all events on the 'sample' entities above w
 ```javascript
 {
     "name" : "hook_name",
-    "owner" : "hook_owner",
+    "owner" : ["hook_owner"],
     "entity_type" : "sample",
     "retry_count" : 5, // max number of times to retry sending the hook
     "retry_delay" : 10, // delay in seconds between retries
@@ -233,6 +274,7 @@ A Hiera object in SIS looks like:
 ```javascript
 {
     "name" : "fqdn, env, etc.",
+    "owner" : ["data_owner"],
     "hieradata" : {
         "key1" : "data1",
         "key2" : "data2",

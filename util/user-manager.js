@@ -111,7 +111,8 @@
             default: // update
                 // if changing roles, then an admin of the roles being added/removed
                 // are allowed..
-                if (doc[SIS.FIELD_SUPERUSER] && !user[SIS.FIELD_SUPERUSER]) {
+                if (doc[SIS.FIELD_SUPERUSER] && !user[SIS.FIELD_SUPERUSER] ||
+                    mergedDoc[SIS.FIELD_SUPERUSER] && !user[SIS.FIELD_SUPERUSER]) {
                     return Q.reject(SIS.ERR_BAD_CREDS("Only superusers can update superusers."));
                 }
                 if (!SIS.UTIL_ROLES_EQUAL(doc, mergedDoc)) {
@@ -128,10 +129,22 @@
                             return Q.reject(SIS.ERR_BAD_CREDS(user[SIS.FIELD_NAME] + " is not an admin of role " + k));
                         }
                     }
+                    // non role fields can't be changed here.
+                    for (var k in doc) {
+                        if (k != SIS.FIELD_ROLES) {
+                            if (k in mergedDoc && mergedDoc[k].toString() != doc[k].toString()) {
+                                // can't change this field.
+                                return Q.reject(SIS.ERR_BAD_CREDS("Only the user or a super user can change non role fields."));
+                            }
+                        }
+                    }
                 } else {
                     // not changing roles.. only fields
                     if (doc[SIS.FIELD_NAME] != user[SIS.FIELD_NAME]) {
                         return Q.reject(SIS.ERR_BAD_CREDS("Only the user or a super user can change non role fields."));
+                    }
+                    if (SIS.FIELD_VERIFIED in doc && doc[SIS.FIELD_VERIFIED] != mergedDoc[SIS.FIELD_VERIFIED]) {
+                        return Q.reject(SIS.ERR_BAD_REQ("Cannot change verified state of self."));
                     }
                 }
                 return Q(mergedDoc);

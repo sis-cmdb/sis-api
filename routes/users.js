@@ -27,7 +27,8 @@
     // User controller
     function UserController(config) {
         var opts = { };
-        opts[SIS.OPT_LOG_COMMTS] = true;
+        // TODO - secure this when enabling.
+        //opts[SIS.OPT_LOG_COMMTS] = true;
         opts[SIS.OPT_TYPE] = SIS.SCHEMA_USERS;
         SIS.UTIL_MERGE_SHALLOW(opts, config);
         ApiController.call(this, opts);

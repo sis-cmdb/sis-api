@@ -35,13 +35,6 @@
     }
     TokenManager.prototype.__proto__ = Manager.prototype;
 
-    // auto populate single getter
-    TokenManager.prototype.getById = function(id, callback) {
-        var p = Manager.prototype.getById.call(this, id);
-        p = p.then(this.populate.bind(this));
-        return Q.nodeify(p, callback);
-    }
-
     // override add to use createToken
     TokenManager.prototype.add = function(obj, user, callback) {
         if (!callback && typeof user === 'function') {
@@ -81,6 +74,18 @@
         return d.promise;
     }
 
+    // check if request user can read the tokens of user
+    TokenManager.prototype.canAdministerTokensOf = function(reqUser, user) {
+        // super users and the user himself can read tokens
+        // of the user
+        if (reqUser[SIS.FIELD_SUPERUSER] ||
+            reqUser[SIS.FIELD_NAME] == user[SIS.FIELD_NAME]) {
+            return true;
+        }
+        // admins of all roles can
+        return SIS.UTIL_ENSURE_ROLE_SUBSET(reqUser[SIS.FIELD_ROLES], user[SIS.FIELD_ROLES], true);
+    }
+
     // only the user, super user
     TokenManager.prototype.authorize = function(evt, doc, user, mergedDoc) {
         if (!doc[SIS.FIELD_USERNAME]) {
@@ -107,6 +112,7 @@
         // get the user
         var username = doc[SIS.FIELD_USERNAME];
         var d = Q.defer();
+        var self = this;
         this.sm.auth[SIS.SCHEMA_USERS].getById(username, function(e, tokenUser) {
             if (e) {
                 return d.reject(e);
@@ -115,22 +121,10 @@
                 // super users cannot have a persistent token.  too much power
                 return d.reject(SIS.ERR_BAD_REQ("Super users cannot have persistent tokens."));
             }
-            // super users do the rest
-            if (user[SIS.FIELD_SUPERUSER]) {
+            if (self.canAdministerTokensOf(user, tokenUser)) {
                 return d.resolve(mergedDoc || doc);
             }
-            // can do it all as the user.
-            if (tokenUser[SIS.FIELD_NAME] == user[SIS.FIELD_NAME]) {
-                return d.resolve(mergedDoc || doc);
-            }
-            // can this user manage the roles of the token user
-            // and is admin
-            if (SIS.UTIL_ENSURE_ROLE_SUBSET(user[SIS.FIELD_ROLES], tokenUser[SIS.FIELD_ROLES], true)) {
-                // yep
-                return d.resolve(mergedDoc || doc);
-            } else {
-                return d.reject(SIS.ERR_BAD_CREDS("Only admins of the user or the user can manage the token."));
-            }
+            return d.reject(SIS.ERR_BAD_CREDS("Only admins of the user or the user can manage the token."));
         });
         return d.promise;
     }

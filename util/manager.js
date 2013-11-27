@@ -87,44 +87,14 @@ Manager.prototype.getSingleByCondition = function(condition, name, callback) {
 Manager.prototype.authorize = function(evt, doc, user, mergedDoc) {
     // get the permissions on the doc being added/updated/deleted
     var permission = this.getPermissionsForObject(doc, user);
-    switch (evt) {
-        case SIS.EVENT_INSERT:
-        case SIS.EVENT_DELETE:
-            if (permission == SIS.PERMISSION_ADMIN) {
-                return Q(mergedDoc || doc);
-            }
-            if (permission == SIS.PERMISSION_USER_ALL_GROUPS && !this.adminRequired) {
-                return Q(doc);
-            } else {
-                return Q.reject(SIS.ERR_BAD_CREDS("Insufficient permissions."));
-            }
-            break;
-        default:
-            // update.. doc is the merged one
-            // did the owners change?
-            var mergedPermission = this.getPermissionsForObject(mergedDoc, user);
-            if (!SIS.UTIL_ARRAYS_EQUAL(mergedDoc.owner, doc.owner)) {
-                if (permission == SIS.PERMISSION_ADMIN &&
-                    mergedPermission == SIS.PERMISSION_ADMIN) {
-                    return Q(mergedDoc);
-                } else if (!this.adminOnly &&
-                           permission == SIS.PERMISSION_USER_ALL_GROUPS &&
-                           mergedPermission == SIS.PERMISSION_USER_ALL_GROUPS) {
-                    return Q(mergedDoc);
-                } else {
-                    return Q.reject(SIS.ERR_BAD_CREDS("Insufficient permissions to change owners."));
-                }
-            } else {
-                if (permission == SIS.PERMISSION_ADMIN ||
-                    (permission == SIS.PERMISSION_USER_ALL_GROUPS && !this.adminRequired)) {
-                    return Q(mergedDoc);
-                } else {
-                    return Q.reject(SIS.ERR_BAD_CREDS("Insufficient permissions."));
-                }
-            }
-            break;
+    if (permission == SIS.PERMISSION_ADMIN) {
+        return Q(mergedDoc || doc);
     }
-
+    if (permission == SIS.PERMISSION_USER_ALL_GROUPS && !this.adminRequired) {
+        return Q(doc);
+    } else {
+        return Q.reject(SIS.ERR_BAD_CREDS("Insufficient permissions."));
+    }
 }
 
 Manager.prototype.add = function(obj, user, callback) {

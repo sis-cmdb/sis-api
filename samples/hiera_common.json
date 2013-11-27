@@ -1,5 +1,6 @@
 {
     "name" : "common",
+    "owner" : ["common"],
     "hieradata" : {
         "key1" : "data1",
         "key2" : "data2"
