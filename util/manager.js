@@ -91,7 +91,7 @@ Manager.prototype.authorize = function(evt, doc, user, mergedDoc) {
         return Q(mergedDoc || doc);
     }
     if (permission == SIS.PERMISSION_USER_ALL_GROUPS && !this.adminRequired) {
-        return Q(doc);
+        return Q(mergedDoc || doc);
     } else {
         return Q.reject(SIS.ERR_BAD_CREDS("Insufficient permissions."));
     }

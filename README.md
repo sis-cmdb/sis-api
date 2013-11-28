@@ -386,6 +386,100 @@ For example, to retrieve the `my_hook` object at 11/11/11 @ 11:11:11 (utc timest
 
 Timestamps in the future will return the current object.  Timestamps in the past return 404.
 
+### Example commit log
+
+The following is a commit log for a hiera entry that was added, updated, and deleted by user1.
+
+```javascript
+[
+// initial add of object
+{
+    "_updated_at": 1385599521201,
+    "type": "sis_hiera",
+    "entity_id": "hiera_entry",
+    "action": "insert",
+    "modified_by": "user1",
+    "diff": {
+        "__v": 0,
+        "_updated_at": 1385599521199,
+        "name": "hiera_entry",
+        "hieradata": {
+            "field_n": 0,
+            "field": "v1"
+        },
+        "_id": "529692213a74002bdf000003",
+        "_created_at": 1385599521199,
+        "owner": ["group1"]
+    },
+    "old_value": null,
+    "date_modified": 1385599521199,
+    "_id": "529692213a74002bdf000004",
+    "__v": 0,
+    "_created_at": 1385599521200
+},
+// update
+{
+    "_updated_at": 1385599522221,
+    "type": "sis_hiera",
+    "entity_id": "hiera_entry",
+    "action": "update",
+    "modified_by": "user1",
+    "diff": {
+        "_updated_at": [1385599521199, 1385599522218],
+        "hieradata": {
+            "new_field": ["new"],
+            "field": ["v1", 0, 0],
+            "field_n": [0, 0, 0]
+        }
+    },
+    "old_value": {
+        "_updated_at": 1385599521199,
+        "name": "hiera_entry",
+        "hieradata": {
+            "field": "v1",
+            "field_n": 0
+        },
+        "_id": "529692213a74002bdf000003",
+        "__v": 0,
+        "_created_at": 1385599521199,
+        "owner": ["group1"]
+    },
+    "date_modified": 1385599522218,
+    "_id": "529692223a74002bdf000005",
+    "__v": 0,
+    "_created_at": 1385599522220
+},
+// deletion
+{
+    "_updated_at": 1385599523236,
+    "type": "sis_hiera",
+    "entity_id": "hiera_entry",
+    "action": "delete",
+    "modified_by": "user1",
+    "diff": null,
+    "old_value": {
+        "_updated_at": 1385599522218,
+        "name": "hiera_entry",
+        "hieradata": {
+            "field": "v1",
+            "field_n": 0
+        },
+        "_id": "529692213a74002bdf000003",
+        "__v": 0,
+        "_created_at": 1385599521199,
+        "owner": ["group1"]
+    },
+    "date_modified": 1385599523236,
+    "_id": "529692233a74002bdf000006",
+    "__v": 0,
+    "_created_at": 1385599523236
+}]
+```
+
+## Data Sharing and Organization
+
+There are many ways to manage data in SIS and organize it for collaboration and isolation.  Please see [Organizing Data in SIS](./docs/sharing.md).
+
 # Examples using resty
 
 The following example utilizes [resty](https://github.com/micha/resty), a convenient wrapper around curl.  All sample files are in the [samples](./samples) directory.

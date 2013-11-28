@@ -32,7 +32,18 @@
     var UIController = function(config) {
 
         var self = this;
-        var readMeMd = marked(fs.readFileSync(__dirname + '/../README.md', 'utf8'));
+
+        var createMdRender = function(title, path) {
+            var data = marked(fs.readFileSync(path, 'utf8'));
+            return function(req, res) {
+                res.render('index', {
+                    'title' : title,
+                    'readme' : data
+                });
+            }
+        }
+
+        var idxRender = createMdRender('SIS', __dirname + '/../README.md');
 
         // methods
         this.index = function(req, res) {
@@ -42,8 +53,10 @@
         }
 
         this.routes = {
-            "/" : self.index.bind(self),
-            "/index" : self.index.bind(self)
+            "/" : idxRender,
+            "/index" : idxRender,
+            "/docs/rbac.md" : createMdRender('Role Based Access Control', __dirname + '/../docs/rbac.md'),
+            "/docs/sharing.md" : createMdRender('Data Sharing and Organization', __dirname + '/../docs/sharing.md')
         };
     };
 

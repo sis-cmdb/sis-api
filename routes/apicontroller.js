@@ -243,7 +243,7 @@ ApiController.prototype._enableCommitApi = function(app, prefix) {
             }
             var opts = { skip : rq.offset, limit: rq.limit};
             var mgQuery = mongooseModel.find(rq.query, null, opts);
-            mgQuery = mgQuery.sort({date_modified: -1});
+            mgQuery = mgQuery.sort({date_modified: 1});
             mgQuery.exec(function(err, entities) {
                 res.setHeader("x-total-count", c);
                 self.sendObject(res, 200, entities);

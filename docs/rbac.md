@@ -212,7 +212,7 @@ identifies a user who is an admin of group `g1` and a user of group `g2`.
 
 ### Permissions Matrix
 
-|                 | Can add g1 role on user | Can add g2 role on user | Can create a user with g1 and g2 roles |
+|                 | Add g1 role on user     | Add g2 role on user     | Create a user with g1 and g2 roles |
 |:----------------|:-----------------------:|:-----------------------:|:--------------------------------------:|
 |g1_admin         |x                        |                         |                                        |
 |g2_admin         |                         |x                        |                                        |
@@ -220,6 +220,7 @@ identifies a user who is an admin of group `g1` and a user of group `g2`.
 |g2_admin_g1_admin|x                        |x                        |x                                       |
 |g1_user_g1_user  |                         |                         |                                        |
 |super_user       |x                        |x                        |x                                       |
+
 
 ## Schemas
 
@@ -247,7 +248,7 @@ The following schemas are used in the examples:
 
 ### Permissions Matrix
 
-|                 | Can create/modify sch_g1_g2 | Can create/modify sch_g1 | Add g2 as owner of sch_g1| Remove g1 as an owner of sch_g1_g2 |
+|                 | Create/modify sch_g1_g2     | Create/modify sch_g1     | Add g2 as owner of sch_g1| Remove g1 as an owner of sch_g1_g2 |
 |:----------------|:---------------------------:|:------------------------:|:------------------------:|:----------------------------------:|
 |g1_admin         |                             |x                         |x                         |                                    |
 |g2_admin         |                             |                          |                          |                                    |
@@ -280,7 +281,7 @@ to is specified in the `schema` field.
 
 ### Permissions Matrix
 
-|                 | Can create/modify e_g1_g2   | Can create/modify e_g1   | Can add g3 as an owner to e_g1 |
+|                 | Create/modify e_g1_g2       | Create/modify e_g1       | Add g3 as an owner to e_g1     |
 |:----------------|:---------------------------:|:------------------------:|:------------------------------:|
 |g1_admin         |                             |x                         |                                |
 |g2_admin         |                             |                          |                                |
