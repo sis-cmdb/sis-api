@@ -218,7 +218,7 @@ identifies a user who is an admin of group `g1` and a user of group `g2`.
 |g2_admin         |                         |x                        |                                        |
 |g2_admin_g1_user |                         |x                        |                                        |
 |g2_admin_g1_admin|x                        |x                        |x                                       |
-|g1_user_g1_user  |                         |                         |                                        |
+|g1_user_g2_user  |                         |                         |                                        |
 |super_user       |x                        |x                        |x                                       |
 
 
