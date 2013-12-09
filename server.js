@@ -33,7 +33,7 @@ var routes = [
 var allowCrossDomain = function(req,res,next) {
     res.set('Access-Control-Allow-Origin', '*');
     res.set('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE');
-    res.set('Access-Control-Allow-Headers', 'Content-Type,X-Requested-With');
+    res.set('Access-Control-Allow-Headers', 'Content-Type,X-Requested-With,x-auth-token');
     res.set('Access-Control-Expose-Headers', "x-total-count");
     next();
 }
