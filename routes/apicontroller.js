@@ -285,10 +285,16 @@ ApiController.prototype._getSendCallback = function(req, res, code) {
     var self = this;
     return function(err, result) {
         if (err) { return self.sendError(res, err); }
+        var orig = result;
+        if (req.method == SIS.METHOD_PUT && req.params.id &&
+            result instanceof Array) {
+            // update.. grab the second obj
+            result = result[1];
+        }
         self.sendObject(res, code, result);
         // dispatch hooks
         if (self.hm && req.method in SIS.METHODS_TO_EVENT) {
-            self.hm.dispatchHooks(result, self.getType(req),
+            self.hm.dispatchHooks(orig, self.getType(req),
                                   SIS.METHODS_TO_EVENT[req.method]);
         }
     }
@@ -323,7 +329,7 @@ ApiController.prototype._saveCommit = function(req) {
         var type = self.getType(req);
         self.commitManager.recordHistory(old, now, req, type, function(e, h) {
             // doesn't matter for now.
-            d.resolve(now || old);
+            d.resolve(result);
         });
         return d.promise;
     }
@@ -335,13 +341,7 @@ ApiController.prototype._finish = function(req, res, p, code) {
         p = p.then(this._saveCommit(req));
     }
     p = p.then(function(o) {
-        if (req.method == SIS.METHOD_PUT && req.params.id &&
-            o instanceof Array) {
-            // was an update on a single item from a manager.
-            // grab the update
-            o = o[1];
-        }
-        return self.convertToResponseObject(req, o);
+        return self.convertToResponseObject(req, o);    
     });
     return Q.nodeify(p, this._getSendCallback(req, res, code));
 }

@@ -101,6 +101,11 @@ var request = require('request');
             'event' : event,
             'data' : entity
         };
+        if (event == SIS.EVENT_UPDATE) {
+            // array of two
+            data['data'] = entity[1];
+            data['old_value'] = entity[0];
+        }
         var options = {
             "uri" : hook.target.url,
             "method" : hook.target.action,
