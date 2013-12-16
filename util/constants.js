@@ -44,6 +44,8 @@ module.exports = {
     FIELD_VERS : "__v",
     FIELD_CREATED_AT : "_created_at",
     FIELD_UPDATED_AT : "_updated_at",
+    FIELD_CREATED_BY : "_created_by",
+    FIELD_UPDATED_BY : "_updated_by",
     FIELD_NAME : "name",
     FIELD_EXPIRES : "expires",
     FIELD_TOKEN : "token",

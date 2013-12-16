@@ -73,7 +73,7 @@ ApiController.prototype.sendError = function(res, err) {
         err = [500, err];
     }
     if (err.length == 3) {
-        console.log(err[2].stack || err[2]);
+        //console.log(err[2].stack || err[2]);
     }
     res.jsonp(err[0], err[1]);
 }

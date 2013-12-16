@@ -226,6 +226,7 @@ describe('Authorization API', function() {
                             res = res.body;
                             should.exist(res);
                             entity.str.should.eql(res.str);
+                            res[SIS.FIELD_CREATED_BY].should.eql(userName);
                             if (tokens.length > 1) {
                                 token = tokens[1][SIS.FIELD_NAME];
                             }
@@ -269,7 +270,7 @@ describe('Authorization API', function() {
                 var testName = userName + " should NOT be able to add entity " + entityName;
                 it(testName, function(done) {
                     var tokens = userToTokens[userName];
-                    var token = tokens[0];
+                    var token = tokens[0][SIS.FIELD_NAME];
                     superTest.post("/api/v1/entities/" + schemaName)
                         .set("x-auth-token", token)
                         .set("Content-Type", "application/json")
@@ -309,10 +310,10 @@ describe('Authorization API', function() {
                                 // update it
                                 should.not.exist(e1);
                                 r1 = r1.body;
-                                var token = userToTokens[uname][0];
+                                var token = userToTokens[uname][0][SIS.FIELD_NAME];
                                 r1[SIS.FIELD_OWNER] = test[SIS.FIELD_OWNER];
                                 superTest.put("/api/v1/schemas/" + schemaName)
-                                    .set("x-auth-token", superToken)
+                                    .set("x-auth-token", token)
                                     .set("Content-Type", "application/json")
                                     .send(r1)
                                     .expect(200, function(e2, r2) {
@@ -340,10 +341,10 @@ describe('Authorization API', function() {
                                 // update it
                                 should.not.exist(e1);
                                 r1 = r1.body;
-                                var token = userToTokens[uname][0];
+                                var token = userToTokens[uname][0][SIS.FIELD_NAME];
                                 r1[SIS.FIELD_OWNER] = test[SIS.FIELD_OWNER];
                                 superTest.put("/api/v1/schemas/" + schemaName)
-                                    .set("x-auth-token", superToken)
+                                    .set("x-auth-token", token)
                                     .set("Content-Type", "application/json")
                                     .send(r1)
                                     .expect(401, function(e2, r2) {
@@ -419,14 +420,18 @@ describe('Authorization API', function() {
                                 // update it
                                 should.not.exist(e1);
                                 r1 = r1.body;
-                                var token = userToTokens[uname][0];
+                                var token = userToTokens[uname][0][SIS.FIELD_NAME];
                                 r1[SIS.FIELD_OWNER] = test[SIS.FIELD_OWNER];
+                                r1[SIS.FIELD_CREATED_BY].should.eql('superman');
                                 superTest.put("/api/v1/entities/" + schemaName + "/" + r1['_id'])
-                                    .set("x-auth-token", superToken)
+                                    .set("x-auth-token", token)
                                     .set("Content-Type", "application/json")
                                     .send(r1)
                                     .expect(200, function(e2, r2) {
                                         should.not.exist(e2);
+                                        r2 = r2.body;
+                                        r2[SIS.FIELD_CREATED_BY].should.eql('superman');
+                                        r2[SIS.FIELD_UPDATED_BY].should.eql(uname);
                                         // delete..
                                         superTest.del("/api/v1/entities/" + schemaName + "/" + r1['_id'])
                                             .set("x-auth-token", superToken)
@@ -454,7 +459,7 @@ describe('Authorization API', function() {
                                 var token = userToTokens[uname][0];
                                 r1[SIS.FIELD_OWNER] = test[SIS.FIELD_OWNER];
                                 superTest.put("/api/v1/entities/" + schemaName + "/" + r1['_id'])
-                                    .set("x-auth-token", superToken)
+                                    .set("x-auth-token", token)
                                     .set("Content-Type", "application/json")
                                     .send(r1)
                                     .expect(failCode, function(e2, r2) {

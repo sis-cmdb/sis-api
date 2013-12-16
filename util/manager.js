@@ -107,7 +107,9 @@ Manager.prototype.add = function(obj, user, callback) {
         return Q.nodeify(Q.reject(SIS.ERR_BAD_REQ(err)),
                          callback);
     }
-    var p = this.authorize(SIS.EVENT_INSERT, obj, user).then(this._save.bind(this));
+    var p = this.authorize(SIS.EVENT_INSERT, obj, user)
+        .then(this._addByFields(user, SIS.EVENT_INSERT))
+        .then(this._save.bind(this));
     return Q.nodeify(p, callback);
 }
 
@@ -133,6 +135,7 @@ Manager.prototype.update = function(id, obj, user, callback) {
                 .then(function(merged) {
                     return self.authorize(SIS.EVENT_UPDATE, old, user, merged);
                 })
+                .then(self._addByFields(user, SIS.EVENT_UPDATE))
                 .then(self._save.bind(self))
                 .then(function(updated) {
                     return Q([old, updated]);
@@ -313,6 +316,21 @@ Manager.prototype._save = function(obj, callback) {
         m.save(this._getModCallback(d));
     }
     return Q.nodeify(d.promise, callback);
+}
+
+Manager.prototype._addByFields = function(user, event) {
+    return function(doc) {
+        if (!user || !doc) {
+            return Q(doc);
+        }
+        if (event == SIS.EVENT_UPDATE) {
+            doc[SIS.FIELD_UPDATED_BY] = user[SIS.FIELD_NAME];
+        } else if (event == SIS.EVENT_INSERT) {
+            doc[SIS.FIELD_CREATED_BY] = user[SIS.FIELD_NAME];
+            doc[SIS.FIELD_UPDATED_BY] = user[SIS.FIELD_NAME];
+        }
+        return Q(doc);
+    }
 }
 
 // exports

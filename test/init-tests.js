@@ -43,4 +43,8 @@ describe('Initialize Tests', function() {
             done();
         });
     });
+
+    it("Should pass", function(done) {
+        done();
+    });
 });

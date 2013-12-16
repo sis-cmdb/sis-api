@@ -205,6 +205,8 @@
             }
             definition[SIS.FIELD_CREATED_AT] = { "type" : "Number", "default" : function() { return Date.now(); } };
             definition[SIS.FIELD_UPDATED_AT] = { "type" : "Number" };
+            definition[SIS.FIELD_CREATED_BY] = { "type" : "String" };
+            definition[SIS.FIELD_UPDATED_BY] = { "type" : "String" };
 
             var schema = this.mongoose.Schema(definition);
             var result = this.mongoose.model(name, schema);
