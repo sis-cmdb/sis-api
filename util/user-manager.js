@@ -131,10 +131,10 @@
                     }
                     // non role fields can't be changed here.
                     for (var k in doc) {
-                        if (k != SIS.FIELD_ROLES) {
+                        if (k != SIS.FIELD_ROLES && k != SIS.FIELD_UPDATED_BY) {
                             if (k in mergedDoc && mergedDoc[k].toString() != doc[k].toString()) {
                                 // can't change this field.
-                                return Q.reject(SIS.ERR_BAD_CREDS("Only the user or a super user can change non role fields."));
+                                return Q.reject(SIS.ERR_BAD_CREDS("Only the user or a super user can change non role fields. (" + k + ")"));
                             }
                         }
                     }

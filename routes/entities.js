@@ -43,6 +43,7 @@
     EntityController.prototype.__proto__ = ApiController.prototype;
 
     // overrides
+    // Get the manager to handle this query
     EntityController.prototype.getManager = function(req) {
         var name = this.getType(req);
         if (this.sm.hasEntityModel(name)) {
@@ -66,9 +67,11 @@
         });
         return d.promise;
     }
+    // The type is the schema being requested
     EntityController.prototype.getType = function(req) {
         return req.params.schema;
     }
+    // Apply the default to populate the objects returned from GET
     EntityController.prototype.applyDefaults = function(req) {
         if (req.method == "GET") {
             // need to populate..

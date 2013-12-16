@@ -19,6 +19,7 @@ var server = require("../server")
 var should = require('should');
 var request = require('supertest');
 var async = require('async');
+var SIS = require("../util/constants");
 var mongoose = null;
 var schemaManager = null;
 var app = null;
@@ -28,7 +29,7 @@ describe('History API', function() {
     before(function(done) {
         server.startServer(config, function(expressApp, httpSrv) {
             mongoose = server.mongoose;
-            schemaManager = expressApp.get("schemaManager");
+            schemaManager = expressApp.get(SIS.OPT_SCHEMA_MGR);
             app = expressApp;
             httpServer = httpSrv;
             done();

@@ -35,10 +35,6 @@
     // inherit
     HieraManager.prototype.__proto__ = Manager.prototype;
 
-    // HieraManager.prototype.delete = function(id, callback) {
-
-    // }
-
     HieraManager.prototype.validate = function(entry, isUpdate) {
         if (!entry || !entry.name || typeof entry.name != 'string') {
             return "Hiera entry has an invalid or missing name";

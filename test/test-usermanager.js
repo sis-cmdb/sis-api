@@ -35,7 +35,7 @@ describe('User Manager', function() {
         config.app[SIS.OPT_USE_AUTH] = true;
         server.startServer(config, function(expressApp, httpSrv) {
             mongoose = server.mongoose;
-            schemaManager = expressApp.get("schemaManager");
+            schemaManager = expressApp.get(SIS.OPT_SCHEMA_MGR);
             should.exist(schemaManager);
             should.exist(schemaManager.auth);
             app = expressApp;

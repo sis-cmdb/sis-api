@@ -16,8 +16,10 @@
 
 var config = require('./test-config');
 var mongoose = require('mongoose');
-var schemaManager;
 var should = require('should');
+var SIS = require("../util/constants");
+
+var schemaManager = null;
 
 describe('SchemaManager', function() {
 

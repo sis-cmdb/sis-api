@@ -89,11 +89,10 @@ var startServer = function(config, callback) {
 
                 app.use(passport.initialize());
 
-                var cfg = {
-                    'schemaManager' : schemaManager,
-                    'auth' : app.get(SIS.OPT_USE_AUTH)
-                }
-                app.set("schemaManager", schemaManager);
+                var cfg = { };
+                cfg[SIS.OPT_SCHEMA_MGR] = schemaManager;
+                cfg[SIS.OPT_USE_AUTH] = app.get(SIS.OPT_USE_AUTH);
+                app.set(SIS.OPT_SCHEMA_MGR, schemaManager);
                 // setup the routes
                 routes.map(function(routeName) {
                     var route = require("./routes/" + routeName);

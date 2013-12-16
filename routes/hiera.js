@@ -38,6 +38,7 @@
     // inherit
     HieraController.prototype.__proto__ = ApiController.prototype;
 
+    // The GET/:id request needs to send only the hiera object back
     HieraController.prototype.convertToResponseObject = function(req, obj) {
         if (req.method == "GET" && req.params.id) {
             return Q(obj['hieradata']);

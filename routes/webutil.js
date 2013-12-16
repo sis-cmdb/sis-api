@@ -25,12 +25,13 @@
     var util = require("util");
     var getBody = require('raw-body');
 
-    // authorization using sis_tokens
+    // authorization using user and pass via the user manager
     var _verifyUserPass = function(user, pass, done) {
         var userManager = this.auth[SIS.SCHEMA_USERS];
         userManager.getVerifiedUser(user, pass, done);
     };
 
+    // authorization using sis_tokens
     var _verifySisToken = function(token, done) {
         var tokenManager = this.auth[SIS.SCHEMA_TOKENS];
         var userManager = this.auth[SIS.SCHEMA_USERS];
@@ -54,6 +55,7 @@
         return new BasicStrategy({}, _verifyUserPass.bind(sm));
     }
 
+    // The passport strategy for authenticating x-auth-token
     function SisTokenStrategy(sm) {
         var opts = { realm : SIS.SCHEMA_TOKENS };
         this._verify = _verifySisToken.bind(sm);
@@ -84,8 +86,9 @@
         return new SisTokenStrategy(sm);
     }
 
-    // middleware
+    // middleware - json parser
     // from connect.js slightly modified
+    // to accept single line comments in json
     module.exports.json = function(options) {
         options = options || {};
         var limit = options.limit || '1mb';

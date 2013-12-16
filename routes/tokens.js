@@ -39,11 +39,12 @@
     // inherit
     TokenController.prototype.__proto__ = ApiController.prototype;
 
+    // Append the query parameter to be that of the user
     TokenController.prototype.applyDefaults = function(req) {
         if (req.method == "GET" && req[SIS.FIELD_TOKEN_USER]) {
             var rq = this.parseQuery(req);
             var query = rq['query'];
-            query[SIS.FIELD_USERNAME] = req[SIS.FIELD_TOKEN_USER][SIS.FIELD_NAME];
+            query[SIS.FIELD_USERNAME] = req.params.uid;
             req.query.q = query;
         }
     }
@@ -85,6 +86,8 @@
         }
     }
 
+    // Wrap the token API to ensure the user requesting it
+    // is allowed to
     TokenController.prototype.wrapApi = function() {
         var self = this;
         // takes in an api controller function(req, res), and
@@ -120,7 +123,7 @@
         var apis = ['get', 'getAll', 'update', 'add', 'delete'];
         for (var i = 0; i < apis.length; ++i) {
             var fname = apis[i];
-            this[fname] = wrapFunc(ApiController.prototype[fname]).bind(this);
+            this[fname] = wrapFunc(ApiController.prototype[fname]);
         }
     }
 

@@ -28,15 +28,52 @@
     function EntityManager(model, schema, opts) {
         this.schema = schema;
         Manager.call(this, model, opts);
+        this.references = [];
+        var schema = this.model.schema;
+        schema.eachPath(function(pathName, schemaType) {
+            if (schemaType.instance == "ObjectID" && pathName != "_id") {
+                this.references.push(pathName.split(/\./));
+            }
+        }.bind(this));
     }
 
     // inherit
     EntityManager.prototype.__proto__ = Manager.prototype;
 
+    EntityManager.prototype.fixSubObject = function(entity, reference, isUpdate) {
+        var obj = entity;
+        var last = reference.pop();
+        for (var i = 0; i < reference.length; ++i) {
+            var path = reference[i];
+            if (path in obj) {
+                obj = path[obj];
+            } else {
+                // done - it's not set
+                return null;
+            }
+        }
+        // check if we have the object and
+        // the path is in it
+        if (!obj || !(last in obj)) {
+            // nothing
+            return null;
+        }
+        var subDoc = obj[last];
+        if (typeof subDoc == 'object') {
+            if (!isUpdate) {
+                return "Unable to add reference document.  Must be an object id";
+            } else if (!(SIS.FIELD_ID in subDoc)) {
+                // nuke the entry
+                delete obj[last];
+            }
+        }
+        return null;
+    }
+
+    // validate the entity
     EntityManager.prototype.validate = function(entity, isUpdate) {
         if (isUpdate) {
             // remove reserved fields..
-            // TODO: and sub objects
             var keys = Object.keys(entity);
             for (var i = 0; i < keys.length; ++i) {
                 var rf = keys[i];
@@ -53,6 +90,13 @@
             for (var i = 0; i < keys.length; ++i) {
                 if (keys[i][0] == '_') {
                     return keys[i] + " is a reserved field";
+                }
+            }
+            // handle sub objects
+            for (var i = 0; i < this.references.length; ++i) {
+                var err = this.fixSubObject(entity, this.references[i], isUpdate);
+                if (err) {
+                    return err;
                 }
             }
             if (SIS.FIELD_OWNER in entity) {

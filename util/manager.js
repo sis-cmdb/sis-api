@@ -17,10 +17,21 @@
 var Q = require('q');
 var SIS = require('./constants');
 
+// Constructor for a Manager base
+// A manager is responsible for communicating with 
+// the DB and running ops on instances of the resource
+// it manages
+//
+// model is a mongoose model object
+// opts is a dictionary w/ the following keys
+// - id_field the id field of the resource
+// - type - the type of resource or defaults to the model name
+// - auth - whether to use auth. Defaults to SIS.DEFAULT_OPT_USE_AUTH (true)
+// - admin_required - whether only admins can modify objects of ours
 function Manager(model, opts) {
     this.model = model;
     opts = opts || { }
-    this.idField = opts[SIS.OPT_ID_FIELD] || 'name';
+    this.idField = opts[SIS.OPT_ID_FIELD] || SIS.FIELD_NAME;
     this.type = opts[SIS.OPT_TYPE] || this.model.modelName;
     this.authEnabled = SIS.OPT_USE_AUTH in opts ? opts[SIS.OPT_USE_AUTH] : SIS.DEFAULT_OPT_USE_AUTH;
     this.adminRequired = opts[SIS.OPT_ADMIN_REQUIRED] || false;
@@ -32,11 +43,16 @@ Manager.prototype.validate = function(obj, isUpdate) {
 }
 
 // can return a document or promise
+// this function receives a doc retrieved from the database
+// and the object sent in the update request
+// The default just sets the fields sent in the update
 Manager.prototype.applyUpdate = function(doc, updateObj) {
     doc.set(updateObj);
     return doc;
 }
 
+// A call that indicates the specified object has been removed
+// Returns a promise with the object removed.
 Manager.prototype.objectRemoved = function(obj) {
     // default just returns a fullfilled promise
     return Q(obj);
@@ -50,6 +66,7 @@ Manager.prototype.getAll = function(condition, options, callback) {
     return Q.nodeify(d.promise, callback);
 }
 
+// Count the number of objects specified by the query
 Manager.prototype.count = function(condition, callback) {
     var d = Q.defer();
     this.model.count(condition, function(err, c) {
@@ -62,6 +79,7 @@ Manager.prototype.count = function(condition, callback) {
     return d.promise;
 }
 
+// Populate the object/array of objects one level deep
 Manager.prototype.populate = function(toPopulate, callback) {
     var fields = this._getPopulateFields();
     if (!fields) {
@@ -78,12 +96,16 @@ Manager.prototype.getById = function(id, callback) {
     return this.getSingleByCondition(q, id, callback);
 }
 
+// Get a single object that has certain properties.
 Manager.prototype.getSingleByCondition = function(condition, name, callback) {
     var d = Q.defer();
     this.model.findOne(condition, this._getFindCallback(d, name));
     return Q.nodeify(d.promise, callback);
 }
 
+// Authorize a user to operate on a particular document
+// if evt is SIS.EVENT_UPDATE, mergedDoc is the updated object
+// otherwise doc is the object being added/deleted
 Manager.prototype.authorize = function(evt, doc, user, mergedDoc) {
     // get the permissions on the doc being added/updated/deleted
     var permission = this.getPermissionsForObject(doc, user);
@@ -97,6 +119,7 @@ Manager.prototype.authorize = function(evt, doc, user, mergedDoc) {
     }
 }
 
+// Ensures the user can add the object and then add it
 Manager.prototype.add = function(obj, user, callback) {
     if (!callback && typeof user === 'function') {
         callback = user;
@@ -113,6 +136,7 @@ Manager.prototype.add = function(obj, user, callback) {
     return Q.nodeify(p, callback);
 }
 
+// Ensures the user can update the object and then update it
 Manager.prototype.update = function(id, obj, user, callback) {
     if (!callback && typeof user === 'function') {
         callback = user;
@@ -145,7 +169,7 @@ Manager.prototype.update = function(id, obj, user, callback) {
     return Q.nodeify(p, callback);
 }
 
-
+// Ensures the user can delete the object and then delete it
 Manager.prototype.delete = function(id, user, callback) {
     if (!callback && typeof user === 'function') {
         callback = user;
@@ -226,6 +250,8 @@ Manager.prototype.getPermissionsForObject = function(obj, user) {
     }
 }
 
+// Utility method to apply a partial object to the full one
+// This supports nested documents
 Manager.prototype.applyPartial = function (full, partial) {
     if (typeof partial !== 'object' || partial instanceof Array) {
         return partial;
@@ -248,7 +274,9 @@ Manager.prototype.applyPartial = function (full, partial) {
     }
 };
 
-//private - get a mongoose callback for the find methods
+// Private methods
+// Return a promise that removes the document and returns the 
+// document removed if successful
 Manager.prototype._remove = function(doc) {
     var d = Q.defer();
     doc.remove(function(e, r) {
@@ -261,6 +289,7 @@ Manager.prototype._remove = function(doc) {
     return d.promise;
 }
 
+// Return the callback for the model getters
 Manager.prototype._getFindCallback = function(d, id) {
     var self = this;
     return function(err, result) {
@@ -272,7 +301,7 @@ Manager.prototype._getFindCallback = function(d, id) {
     }
 }
 
-//private - get a mongoose callback for save / delete
+// Return the callback for the model modifier methods
 Manager.prototype._getModCallback = function(d) {
     var self = this;
     return function(err, result) {
@@ -284,6 +313,7 @@ Manager.prototype._getModCallback = function(d) {
     }
 }
 
+// Get the fields that need populating
 Manager.prototype._getPopulateFields = function() {
     var paths = [];
     var schema = this.model.schema;
@@ -304,6 +334,8 @@ Manager.prototype._merge = function(doc, update) {
     return Q(this.applyUpdate(doc, update));
 }
 
+// Save the object and return a promise that is fulfilled
+// with the saved document
 Manager.prototype._save = function(obj, callback) {
     var d = Q.defer();
     if (!obj) {
@@ -318,6 +350,8 @@ Manager.prototype._save = function(obj, callback) {
     return Q.nodeify(d.promise, callback);
 }
 
+// Returns a function that receives a document and fills in
+// the _updated_by and _created_by fields
 Manager.prototype._addByFields = function(user, event) {
     return function(doc) {
         if (!user || !doc) {

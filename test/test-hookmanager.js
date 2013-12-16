@@ -16,8 +16,10 @@
 
 var config = require('./test-config');
 var mongoose = require('mongoose');
-var hookManager;
 var should = require('should');
+var SIS = require("../util/constants");
+
+var hookManager = null;
 
 describe('HookManager', function() {
 

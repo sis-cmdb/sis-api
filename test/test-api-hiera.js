@@ -176,7 +176,7 @@ describe('Hiera API', function() {
             var express = require('express');
             hookServer = express();
             hookServer.use(express.json());
-            var schemaManager = app.get("schemaManager");
+            var schemaManager = app.get(SIS.OPT_SCHEMA_MGR);
             hookManager = require('../util/hook-manager')(schemaManager);
             hookServer.get('/hook', function(req, res) {
                 should.exist(req.query.data);

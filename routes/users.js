@@ -38,18 +38,18 @@
     // inherit
     UserController.prototype.__proto__ = ApiController.prototype;
 
-    // modify attach to also attach the token request route
+    // extend attach to also attach the token request route
     UserController.prototype.attach = function(app, prefix) {
         ApiController.prototype.attach.call(this, app, prefix);
-        var self = this;
         app.post(prefix + "/auth_token", function(req, res) {
-            var p = self.authenticate(req, res, 'basic')
+            var p = this.authenticate(req, res, 'basic')
                 .then(this.manager.createTempToken.bind(this.manager));
-            // passport.authenticate('basic', { session: false })
+            // hacky
             return this._finish(req, res, p, 201);
         }.bind(this));
     }
 
+    // No password hashes should be returned.
     UserController.prototype.convertToResponseObject = function(req, o) {
         if (o instanceof Array) {
             for (var i = 0; i < o.length; ++i) {

@@ -17,12 +17,21 @@
 'use strict';
 
 var SIS = require("../util/constants");
-var Manager = require("../util/manager");
 var Q = require('q');
 var passport = require("passport");
 
-Q.longStackSupport = true;
-
+// Constructor for the ApiController base
+// The controller base attaches to an express app and
+// has the code for CRUD ops.  It delegates the ops
+// to a manager and handles the authorization aspects here.
+//
+// opts is a dictionary w/ the following keys
+// - 
+// - auth - boolean (default true) indicating if auth is enabled
+// - type - optional string indicating the type for hooks/commits
+// - log_commits - boolean indicating if this controller should 
+//       log creates/update/deletions
+// - fire_hooks - boolean indicating if web hooks should be fired
 function ApiController(opts) {
     this.sm = opts[SIS.OPT_SCHEMA_MGR];
     this.auth = SIS.OPT_USE_AUTH in opts ? opts[SIS.OPT_USE_AUTH] : SIS.DEFAULT_OPT_USE_AUTH;
@@ -42,6 +51,8 @@ function ApiController(opts) {
 }
 
 // overrides
+// Returns a promise that returns a Manager instance.
+// Subclasses can assign a manager to the 'manager' property.
 ApiController.prototype.getManager = function(req) {
     if (this.manager) {
         return Q(this.manager);
@@ -49,20 +60,32 @@ ApiController.prototype.getManager = function(req) {
         return Q.reject(SIS.ERR_INTERNAL("Error fetching object"));
     }
 }
+
+// Get the type of object from the request
 ApiController.prototype.getType = function(req) {
     return this.type || "invalid" ;
 }
 
+// Convert the object to an object suitable for the response.
+// Default does nothing, but subclasses may override to
+// remove fields from objects or translate it.
+// obj may be an individual object or an array of objects
 ApiController.prototype.convertToResponseObject = function(req, obj) {
     // default does nothing
     // hiera needs to return a sub field
     return Q(obj);
 }
+
+// Apply default parameters to a request
 ApiController.prototype.applyDefaults = function(req) {
     // noop
 }
 
-// Utils
+// Utils - not normal to override these
+
+// Send an error via the response object
+// The err is usually an object returned via
+// SIS.ERR_* functions/properties
 ApiController.prototype.sendError = function(res, err) {
     // if (typeof err == 'object' && err.stack) {
     //     console.log(err.stack);
@@ -78,10 +101,14 @@ ApiController.prototype.sendError = function(res, err) {
     res.jsonp(err[0], err[1]);
 }
 
+// Send a response with the specified code and data
 ApiController.prototype.sendObject = function(res, code, obj) {
     res.jsonp(code, obj);
 }
 
+// Parse the query parameters for a given req
+// Converts the q param to an object and assigns a 
+// limit and offset
 ApiController.prototype.parseQuery = function(req) {
     var query = req.query.q || { };
     // try parsing..
@@ -98,6 +125,7 @@ ApiController.prototype.parseQuery = function(req) {
     return {'query' : query, 'limit' : limit, 'offset' : offset};
 }
 
+// Returns true if the request wants sub-documents populated
 ApiController.prototype.parsePopulate = function(req) {
     if (typeof req.query.populate == 'string') {
         try {
@@ -110,6 +138,12 @@ ApiController.prototype.parsePopulate = function(req) {
     }
 }
 
+// A helper that returns a function meant for promise chaining.
+// The func parameter is a string which is a method name to
+// call on the manager.
+// The function returned takes receives a manager and 
+// calls the func method on the manager with the additional
+// arguments.
 var MgrPromise = function(func) {
     var argsToFunc = Array.prototype.slice.call(arguments, 1);
     return function(manager) {
@@ -117,7 +151,7 @@ var MgrPromise = function(func) {
     };
 }
 
-// Common stuff that shouldn't need to be overridden..
+// Handler for the getAll request (typically GET controller_base/)
 ApiController.prototype.getAll = function(req, res) {
     this.applyDefaults(req);
     var rq = this.parseQuery(req);
@@ -139,6 +173,7 @@ ApiController.prototype.getAll = function(req, res) {
     this._finish(req, res, p, 200);
 }
 
+// Handler for the get request (typically GET controller_base/:id)
 ApiController.prototype.get = function(req, res) {
     this.applyDefaults(req);
     var id = req.params.id;
@@ -151,6 +186,7 @@ ApiController.prototype.get = function(req, res) {
     this._finish(req, res, p, 200);
 }
 
+// Handler for the delete request (typically DELETE controller_base/:id)
 ApiController.prototype.delete = function(req, res) {
     this.applyDefaults(req);
     var id = req.params.id;
@@ -158,6 +194,7 @@ ApiController.prototype.delete = function(req, res) {
     this._finish(req, res, p, 200);
 }
 
+// Handler for the update request (typically PUT controller_base:/id)
 ApiController.prototype.update = function(req, res) {
     this.applyDefaults(req);
     var id = req.params.id;
@@ -166,6 +203,7 @@ ApiController.prototype.update = function(req, res) {
     this._finish(req, res, p, 200);
 }
 
+// Handler for the add request (typically POST controller_base:/)
 ApiController.prototype.add = function(req, res) {
     this.applyDefaults(req);
     var obj = req.body;
@@ -178,15 +216,20 @@ ApiController.prototype.attach = function(app, prefix) {
     app.get(prefix, this.getAll.bind(this));
     app.get(prefix + "/:id", this.get.bind(this));
     if (!app.get(SIS.OPT_READONLY)) {
-        app.put(prefix + "/:id", this._wrapAuth(this.update).bind(this));
-        app.post(prefix, this._wrapAuth(this.add).bind(this));
-        app.delete(prefix + "/:id", this._wrapAuth(this.delete).bind(this));
+        // wrap authorization around modification calls
+        app.put(prefix + "/:id", this._wrapAuth(this.update));
+        app.post(prefix, this._wrapAuth(this.add));
+        app.delete(prefix + "/:id", this._wrapAuth(this.delete));
+        // enable the commit api if we have a commitManager
         if (this.commitManager) {
             this._enableCommitApi(app, prefix);
         }
     }
 }
 
+// Returns a promise that authenticates a request
+// The type specifies which kind of authentication to use
+// and should have already been registered with passport
 ApiController.prototype.authenticate = function(req, res, type) {
     var d = Q.defer();
     var self = this;
@@ -208,7 +251,10 @@ ApiController.prototype.authenticate = function(req, res, type) {
     return d.promise;
 }
 
-// private / subclass support
+// "private"
+// Wrap a controller func with authorization
+// The returned function is a request handler
+// bound to the controller.
 ApiController.prototype._wrapAuth = function(func) {
     return function(req, res) {
         if (!this.auth) {
@@ -220,9 +266,10 @@ ApiController.prototype._wrapAuth = function(func) {
             if (err) { return self.sendError(res, err); }
             func.call(self, req, res);
         });
-    }
+    }.bind(this);
 }
 
+// Enable the commit API endpoints
 ApiController.prototype._enableCommitApi = function(app, prefix) {
     // all history
     var self = this;
@@ -281,6 +328,7 @@ ApiController.prototype._enableCommitApi = function(app, prefix) {
 
 }
 
+// Get the callback that will send the result from the controller
 ApiController.prototype._getSendCallback = function(req, res, code) {
     var self = this;
     return function(err, result) {
@@ -300,6 +348,7 @@ ApiController.prototype._getSendCallback = function(req, res, code) {
     }
 }
 
+// Save a commit to the commit log
 ApiController.prototype._saveCommit = function(req) {
     // need to return a promise that saves history
     // but returns the initial object passed to it
@@ -335,6 +384,9 @@ ApiController.prototype._saveCommit = function(req) {
     }
 }
 
+// Do the final steps of the request
+// p is the promise that receives the object from the 
+// request handler
 ApiController.prototype._finish = function(req, res, p, code) {
     var self = this;
     if (this.commitManager && req.method in SIS.METHODS_TO_EVENT) {
@@ -346,6 +398,8 @@ ApiController.prototype._finish = function(req, res, p, code) {
     return Q.nodeify(p, this._getSendCallback(req, res, code));
 }
 
+// Get a function that receives objects and returns a promise
+// to populate them
 ApiController.prototype._getPopulatePromise = function(req, m) {
     var self = this;
     return function(results) {

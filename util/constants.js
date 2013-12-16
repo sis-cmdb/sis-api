@@ -73,7 +73,7 @@ module.exports = {
     AUTH_EXPIRATION_TIME : 1000 * 60 * 60 * 8, // 8 hrs
 
     // option keys
-    OPT_SCHEMA_MGR : "schemaManager", // TODO: snake case
+    OPT_SCHEMA_MGR : "schema_manager", // TODO: snake case
     OPT_LOG_COMMTS : "log_commits",
     OPT_FIRE_HOOKS : "fire_hooks",
     OPT_READONLY : "readonly",

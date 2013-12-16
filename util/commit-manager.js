@@ -17,6 +17,7 @@
 'use strict';
 // A class used to manage the history of an object
 // inserting history into sis_history
+// Does not subclass Manager
 (function() {
 
     var jsondiff = require('jsondiffpatch');
@@ -29,10 +30,7 @@
 
         // default id field (schemas, hook, hiera)
         this.idField = 'name';
-
-        var init = function() {
-            self.model = schemaManager.getSisModel(SIS.SCHEMA_COMMITS);
-        }
+        self.model = schemaManager.getSisModel(SIS.SCHEMA_COMMITS);
 
         this.recordHistory = function(oldDoc, newDoc, req, type, callback) {
             var id = oldDoc ? oldDoc[this.idField] : newDoc[this.idField];
@@ -123,8 +121,6 @@
                 }
             });
         }
-
-        init();
     }
 
     module.exports = function(schemaManager) {

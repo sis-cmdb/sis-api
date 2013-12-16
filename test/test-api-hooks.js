@@ -19,6 +19,7 @@ var server = require("../server")
 var should = require('should');
 var request = require('supertest');
 var async = require('async');
+var SIS = require("../util/constants");
 
 var mongoose = null;
 var hookManager = null;
@@ -29,7 +30,7 @@ describe('Hook API', function() {
     before(function(done) {
         server.startServer(config, function(expressApp, httpSrv) {
             mongoose = server.mongoose;
-            var schemaManager = expressApp.get("schemaManager");
+            var schemaManager = expressApp.get(SIS.OPT_SCHEMA_MGR);
             hookManager = require('../util/hook-manager')(schemaManager);
             app = expressApp;
             httpServer = httpSrv;

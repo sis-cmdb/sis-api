@@ -52,6 +52,7 @@
             });
         }
 
+        // Routes this exposes
         this.routes = {
             "/" : idxRender,
             "/index" : idxRender,

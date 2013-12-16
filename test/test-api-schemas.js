@@ -33,7 +33,7 @@ describe('Schema API', function() {
     before(function(done) {
         server.startServer(config, function(expressApp, httpSrv) {
             mongoose = server.mongoose;
-            schemaManager = expressApp.get("schemaManager");
+            schemaManager = expressApp.get(SIS.OPT_SCHEMA_MGR);
             hookManager = require("../util/hook-manager")(schemaManager);
             app = expressApp;
             httpServer = httpSrv;

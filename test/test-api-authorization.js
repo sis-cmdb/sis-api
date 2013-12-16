@@ -37,7 +37,7 @@ describe('Authorization API', function() {
         config.app[SIS.OPT_USE_AUTH] = true;
         server.startServer(config, function(expressApp, httpSrv) {
             mongoose = server.mongoose;
-            schemaManager = expressApp.get("schemaManager");
+            schemaManager = expressApp.get(SIS.OPT_SCHEMA_MGR);
             var userManager = schemaManager.auth[SIS.SCHEMA_USERS];
             app = expressApp;
             superTest = request(app);

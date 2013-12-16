@@ -20,6 +20,7 @@ var server = require("../server")
 var should = require('should');
 var request = require('supertest');
 var async = require('async');
+var SIS = require("../util/constants");
 
 var mongoose = null;
 var schemaManager = null;
@@ -45,7 +46,7 @@ describe('API at the Edge ', function() {
         config.app['readonly'] = true;
         server.startServer(config, function(expressApp, httpSrv) {
             mongoose = server.mongoose;
-            schemaManager = expressApp.get("schemaManager");
+            schemaManager = expressApp.get(SIS.OPT_SCHEMA_MGR);
             app = expressApp;
             httpServer = httpSrv;
             // create a schema

@@ -31,7 +31,7 @@ describe('Parse single line comments out', function() {
     before(function(done) {
         server.startServer(config, function(expressApp, httpSrv) {
             mongoose = server.mongoose;
-            schemaManager = expressApp.get("schemaManager");
+            schemaManager = expressApp.get(SIS.OPT_SCHEMA_MGR);
             app = expressApp;
             httpServer = httpSrv;
             done();
