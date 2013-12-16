@@ -16,7 +16,8 @@
         "hat" : ">= 0.0.3",
         "q" : ">= 0.9.7",
         "passport" : ">= 0.1.17",
-        "passport-http" : ">= 0.2.2"
+        "passport-http" : ">= 0.2.2",
+        "raw-body" : ">= 1.1.2"
     },
     "devDependencies" : {
         "mocha"  : ">= 1.13.0",

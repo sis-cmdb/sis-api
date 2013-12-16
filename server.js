@@ -47,7 +47,7 @@ var allowCrossDomain = function(req,res,next) {
 
 var startServer = function(config, callback) {
     var passport = require("passport");
-    var authUtil = require("./routes/authutil");
+    var webUtil = require("./routes/webutil");
     var nconf = require('nconf');
     var SIS = require('./util/constants');
 
@@ -56,7 +56,7 @@ var startServer = function(config, callback) {
 
     var app = express();
 
-    app.use(express.json());
+    app.use(webUtil.json());
     app.use(allowCrossDomain);
 
     // Setup global options
@@ -84,8 +84,8 @@ var startServer = function(config, callback) {
                 if (err) {
                     throw err;
                 }
-                passport.use(authUtil.createTokenStrategy(schemaManager));
-                passport.use(authUtil.createUserPassStrategy(schemaManager));
+                passport.use(webUtil.createTokenStrategy(schemaManager));
+                passport.use(webUtil.createUserPassStrategy(schemaManager));
 
                 app.use(passport.initialize());
 

@@ -23,6 +23,7 @@
     var SIS = require("../util/constants");
     var Q = require("q");
     var util = require("util");
+    var getBody = require('raw-body');
 
     // authorization using sis_tokens
     var _verifyUserPass = function(user, pass, done) {
@@ -82,5 +83,57 @@
     module.exports.createTokenStrategy = function(sm) {
         return new SisTokenStrategy(sm);
     }
+
+    // middleware
+    // from connect.js slightly modified
+    module.exports.json = function(options) {
+        options = options || {};
+        var limit = options.limit || '1mb';
+
+        return function json(req, res, next) {
+            if (req._body) return next();
+            req.body = req.body || {};
+
+            var hasBody = 'content-length' in req.headers && req.headers['content-length'] !== '0';
+            var mimeType = req.headers['content-type'] || '';
+            if (!hasBody || mimeType != 'application/json') {
+                return next();
+            }
+
+            // flag as parsed
+            req._body = true;
+
+            // parse
+            getBody(req, {
+                limit: limit,
+                expected: req.headers['content-length']
+            }, function (err, buf) {
+                if (err) return next(err);
+                
+                buf = buf.toString('utf8').trim();
+                var lines = buf.split('\n')
+                var filtered = lines.filter(function(s) {
+                    return s.trim().indexOf("//") != 0;
+                });
+                buf = filtered.join("\n");
+
+                var first = buf[0];
+
+                if (0 == buf.length) {
+                    return next(SIS.ERR_BAD_REQ('invalid json, empty body'));
+                }
+
+                if ('{' != first && '[' != first) return next(SIS.ERR_BAD_REQ('invalid json'));
+                try {
+                    req.body = JSON.parse(buf, options.reviver);
+                } catch (err){
+                    err.body = buf;
+                    err.status = 400;
+                    return next(SIS.ERR_BAD_REQ(err));
+                }
+                next();
+            })
+        };
+    };
 
 })();
