@@ -62,9 +62,14 @@
         if (typeof subDoc == 'object') {
             if (!isUpdate) {
                 return "Unable to add reference document.  Must be an object id";
-            } else if (!(SIS.FIELD_ID in subDoc)) {
-                // nuke the entry
-                delete obj[last];
+            } else {
+                if (!(SIS.FIELD_ID in subDoc)) {
+                    // nuke the entry
+                    delete obj[last];
+                } else {
+                    // set it
+                    obj[last] = subDoc[SIS.FIELD_ID];
+                }
             }
         }
         return null;
