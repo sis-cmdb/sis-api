@@ -141,7 +141,7 @@
     };
 
     var stripOutId = function(idObj) {
-        return idObj['_id'];
+        return idObj['_id'].toString();
     }
 
     var getQueryIdsCallback = function(callback) {
@@ -239,6 +239,38 @@
         });
     }
 
+    var addIdsToFlattenedCondition = function(flattened, path, ids) {
+        if (ids.length == 0 ||
+            ((flattened[path] instanceof Array) &&
+            flattened[path].length == 0)) {
+            flattened[path] = [];
+            return;
+        }
+        if (!(path in flattened)) {
+            if (ids.length == 1) {
+                flattened[path] = ids[0];
+            } else {
+                flattened[path] = ids;
+            }
+        } else {
+            var existingIds = flattened[path];
+            if (existingIds instanceof Array) {
+                flattened[path] = existingIds.filter(function(id) {
+                    return ids.indexOf(id) != -1;
+                });
+                if (flattened[path].length == 1) {
+                    flattened[path] = flattened[path][0];
+                }
+            } else {
+                if (ids.indexOf(existingIds) == -1) {
+                    flattened[path] = [];
+                }
+            }
+            // TODO: optimize
+
+        }
+    }
+
     // "flatten" a query to deal with all joins
     // returns a promise for the flattened query
     module.exports.flattenCondition = function(condition, schemaManager, mgr) {
@@ -261,6 +293,10 @@
         var fieldToPath = {};
         for (var k = 0; k < keys.length; ++k) {
             var key = keys[k];
+            if (key[key.length - 1] == '.') {
+                // invalid query - just let it flow.
+                return Q(condition);
+            }
             // compare with the references - probably a better way to do
             // this ;)
             for (var i = 0; i < paths.length; ++i) {
@@ -268,7 +304,6 @@
                 if (key.indexOf(ref) == 0 && key != ref + "_id") {
                     fieldToPath[key] = [paths[i], condition[key]];
                     found = true;
-                    // break inner
                     break;
                 }
             }
@@ -294,14 +329,19 @@
                 if (err) {
                     d.reject(err);
                 } else {
+                    var refConds = {};
                     for (var i = 0; i < results.length; ++i) {
                         var key = fieldKeys[i];
                         var path = fieldToPath[key][0];
                         var ids = results[i];
-                        if (ids.length == 1) {
-                            flattened[path] = ids[0];
+                        addIdsToFlattenedCondition(refConds, path, ids);
+                    }
+                    for (var k in refConds) {
+                        var v = refConds[k];
+                        if (v instanceof Array) {
+                            flattened[k] = { "$in" : v }
                         } else {
-                            flattened[path] = { "$in" : ids };
+                            flattened[k] = v;
                         }
                     }
                     d.resolve(flattened);

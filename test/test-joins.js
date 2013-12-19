@@ -48,7 +48,7 @@ describe('Entity Join API', function() {
     describe("Get entities with joins", function() {
         var schemas = [];
         var numSchemas = 3;
-        var numEnts = 3;
+        var numEnts = 50;
         var appReq = null;
 
         // create 3 schemas where join_schema_1 has a ref_0 to join_schema_0
@@ -165,6 +165,62 @@ describe('Entity Join API', function() {
                     res.body.length.should.eql(1);
                     var id = res.body[0]['_id'];
                     entities[2][1]['_id'].should.eql(id);
+                    done();
+                });
+        });
+
+        it("should fetch join_ent_2_5", function(done) {
+            var query = {
+                q : {
+                    "num" : { "$gt" : 302 },
+                    "ref_1.num" : { "$gt" : 204 },
+                    "ref_1.ref_0.num" : { "$lt" : 106 }
+                }
+            }
+            appReq.get("/api/v1/entities/join_schema_2")
+                .query(query)
+                .expect(200, function(err, res) {
+                    should.exist(res.body);
+                    res.statusCode.should.eql(200);
+                    res.body.length.should.eql(1);
+                    var id = res.body[0]['_id'];
+                    entities[2][5]['_id'].should.eql(id);
+                    done();
+                });
+        });
+
+        it("should fetch nothing 0", function(done) {
+            var query = {
+                q : {
+                    "num" : { "$gt" : 302 },
+                    "ref_1.num" : { "$gt" : 204 },
+                    "ref_1.ref_1.num" : { "$lt" : 106 }
+                }
+            }
+            appReq.get("/api/v1/entities/join_schema_2")
+                .query(query)
+                .expect(200, function(err, res) {
+                    should.exist(res.body);
+                    res.statusCode.should.eql(200);
+                    res.body.length.should.eql(0);
+                    done();
+                });
+        });
+
+        it("should fetch nothing 1", function(done) {
+            var query = {
+                q : {
+                    "num" : { "$gt" : 302 },
+                    "ref_1.num" : { "$gt" : 204 },
+                    "ref_1.ref_0." : { "$lt" : 106 }
+                }
+            }
+            appReq.get("/api/v1/entities/join_schema_2")
+                .query(query)
+                .expect(200, function(err, res) {
+                    should.exist(res.body);
+                    res.statusCode.should.eql(200);
+                    res.body.length.should.eql(0);
                     done();
                 });
         });
