@@ -16,7 +16,6 @@
 
 var express = require('express');
 var mongoose = require('mongoose');
-
 var app = null;
 
 // routes we want to include
@@ -56,7 +55,8 @@ var startServer = function(config, callback) {
 
     var app = express();
 
-    app.use(webUtil.json());
+    //app.use(webUtil.json());
+    app.use(express.json());
     app.use(allowCrossDomain);
 
     // Setup global options

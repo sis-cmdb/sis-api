@@ -19,6 +19,7 @@
 var SIS = require("../util/constants");
 var Q = require('q');
 var passport = require("passport");
+var webUtil = require("./webutil");
 
 // Constructor for the ApiController base
 // The controller base attaches to an express app and
@@ -26,10 +27,10 @@ var passport = require("passport");
 // to a manager and handles the authorization aspects here.
 //
 // opts is a dictionary w/ the following keys
-// - 
+// - schema_manager - the schema manager across the system
 // - auth - boolean (default true) indicating if auth is enabled
 // - type - optional string indicating the type for hooks/commits
-// - log_commits - boolean indicating if this controller should 
+// - log_commits - boolean indicating if this controller should
 //       log creates/update/deletions
 // - fire_hooks - boolean indicating if web hooks should be fired
 function ApiController(opts) {
@@ -87,16 +88,12 @@ ApiController.prototype.applyDefaults = function(req) {
 // The err is usually an object returned via
 // SIS.ERR_* functions/properties
 ApiController.prototype.sendError = function(res, err) {
-    // if (typeof err == 'object' && err.stack) {
-    //     console.log(err.stack);
-    // }
-
-    if (!(err instanceof Array) || err.length < 2) {
-        //console.log(JSON.stringify(err));
-        err = [500, err];
+    if (typeof err == 'object' && err.stack) {
+        console.log(err.stack);
     }
-    if (err.length == 3) {
-        //console.log(err[2].stack || err[2]);
+    if (!(err instanceof Array) || err.length < 2) {
+        console.log(JSON.stringify(err));
+        err = [500, err];
     }
     res.jsonp(err[0], err[1]);
 }
@@ -107,7 +104,7 @@ ApiController.prototype.sendObject = function(res, code, obj) {
 }
 
 // Parse the query parameters for a given req
-// Converts the q param to an object and assigns a 
+// Converts the q param to an object and assigns a
 // limit and offset
 ApiController.prototype.parseQuery = function(req) {
     var query = req.query.q || { };
@@ -141,7 +138,7 @@ ApiController.prototype.parsePopulate = function(req) {
 // A helper that returns a function meant for promise chaining.
 // The func parameter is a string which is a method name to
 // call on the manager.
-// The function returned takes receives a manager and 
+// The function returned takes receives a manager and
 // calls the func method on the manager with the additional
 // arguments.
 var MgrPromise = function(func) {
@@ -160,16 +157,19 @@ ApiController.prototype.getAll = function(req, res) {
     var self = this;
     var p = this.getManager(req)
                 .then(function(mgr) {
-                    return mgr.count(condition).then(function(c) {
-                        c = c || 0;
-                        res.setHeader(SIS.HEADER_TOTAL_COUNT, c);
-                        if (!c) {
-                            return Q([]);
-                        }
-                        return mgr.getAll(condition, options)
-                            .then(self._getPopulatePromise(req, mgr));
+                    return webUtil.flattenCondition(condition,self.sm,mgr)
+                        .then(function(flattenedCondition) {
+                            return mgr.count(flattenedCondition).then(function(c) {
+                                c = c || 0;
+                                res.setHeader(SIS.HEADER_TOTAL_COUNT, c);
+                                if (!c) {
+                                    return Q([]);
+                                }
+                                return mgr.getAll(flattenedCondition, options)
+                                    .then(self._getPopulatePromise(req, mgr));
+                            });
+                        });
                     });
-                });
     this._finish(req, res, p, 200);
 }
 
@@ -385,7 +385,7 @@ ApiController.prototype._saveCommit = function(req) {
 }
 
 // Do the final steps of the request
-// p is the promise that receives the object from the 
+// p is the promise that receives the object from the
 // request handler
 ApiController.prototype._finish = function(req, res, p, code) {
     var self = this;
@@ -393,7 +393,7 @@ ApiController.prototype._finish = function(req, res, p, code) {
         p = p.then(this._saveCommit(req));
     }
     p = p.then(function(o) {
-        return self.convertToResponseObject(req, o);    
+        return self.convertToResponseObject(req, o);
     });
     return Q.nodeify(p, this._getSendCallback(req, res, code));
 }

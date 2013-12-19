@@ -225,5 +225,18 @@ module.exports = {
             }
         }
         return true;
+    },
+
+    // return an array of arrays where each inner array
+    // is a broken down path to an object id type that isn't _id
+    UTIL_GET_OID_PATHS : function(model) {
+        var schema = model.schema;
+        var paths = [];
+        schema.eachPath(function(pathName, schemaType) {
+            if (schemaType.instance == "ObjectID" && pathName != "_id") {
+                paths.push(pathName.split(/\./));
+            }
+        });
+        return paths;
     }
 }

@@ -28,13 +28,6 @@
     function EntityManager(model, schema, opts) {
         this.schema = schema;
         Manager.call(this, model, opts);
-        this.references = [];
-        var schema = this.model.schema;
-        schema.eachPath(function(pathName, schemaType) {
-            if (schemaType.instance == "ObjectID" && pathName != "_id") {
-                this.references.push(pathName.split(/\./));
-            }
-        }.bind(this));
     }
 
     // inherit

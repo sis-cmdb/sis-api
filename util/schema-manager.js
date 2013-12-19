@@ -167,6 +167,27 @@
         return this.mongoose.models[name];
     }
 
+    SchemaManager.prototype.getSisModelAsync = function(name, callback) {
+        if (this.hasEntityModel(name)) {
+            return callback(null, this.getSisModel(name));
+        }
+        var d = Q.defer();
+        var self = this;
+        this.model.findOne({name: name}, function(err, schema) {
+            if (err) {
+                d.reject(SIS.ERR_BAD_REQ("Schema not found with name " + name))
+            } else {
+                var model = self.getEntityModel(schema);
+                if (!model) {
+                    d.reject(SIS.ERR_BAD_REQ("Invalid schema found with name " + name))
+                } else {
+                    d.resolve(model);
+                }
+            }
+        });
+        return Q.nodeify(d.promise, callback);
+    }
+
     // Bootstrap mongoose by setting up entity models
     SchemaManager.prototype.bootstrapEntitySchemas = function(callback) {
         var self = this;

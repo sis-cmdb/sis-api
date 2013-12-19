@@ -18,7 +18,7 @@ var Q = require('q');
 var SIS = require('./constants');
 
 // Constructor for a Manager base
-// A manager is responsible for communicating with 
+// A manager is responsible for communicating with
 // the DB and running ops on instances of the resource
 // it manages
 //
@@ -35,6 +35,8 @@ function Manager(model, opts) {
     this.type = opts[SIS.OPT_TYPE] || this.model.modelName;
     this.authEnabled = SIS.OPT_USE_AUTH in opts ? opts[SIS.OPT_USE_AUTH] : SIS.DEFAULT_OPT_USE_AUTH;
     this.adminRequired = opts[SIS.OPT_ADMIN_REQUIRED] || false;
+    // objects this manager refers to
+    this.references = SIS.UTIL_GET_OID_PATHS(this.model);
 }
 
 // return a string if validation fails
@@ -275,7 +277,7 @@ Manager.prototype.applyPartial = function (full, partial) {
 };
 
 // Private methods
-// Return a promise that removes the document and returns the 
+// Return a promise that removes the document and returns the
 // document removed if successful
 Manager.prototype._remove = function(doc) {
     var d = Q.defer();
@@ -315,17 +317,12 @@ Manager.prototype._getModCallback = function(d) {
 
 // Get the fields that need populating
 Manager.prototype._getPopulateFields = function() {
-    var paths = [];
-    var schema = this.model.schema;
-    schema.eachPath(function(pathName, schemaType) {
-        if (schemaType.instance == "ObjectID" && pathName != "_id") {
-            paths.push(pathName);
-        }
-    });
-    if (paths.length) {
-        return paths.join(" ");
+    if (this.references.length == 0) {
+        return null;
     }
-    return null;
+    return this.references.map(function(arr) {
+        return arr.join(".");
+    }).join(" ");
 }
 
 // returns a promise function that accepts a document from
