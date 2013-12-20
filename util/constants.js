@@ -60,6 +60,7 @@ module.exports = {
     FIELD_TOKEN_USER : "sis_token_user",
     FIELD_MODIFIED_BY : "modified_by",
     FIELD_VERIFIED : "verified",
+    FIELD_LOCKED : "locked",
 
     // schema names
     SCHEMA_SCHEMAS : "sis_schemas",

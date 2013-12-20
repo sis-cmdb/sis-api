@@ -25,6 +25,7 @@ module.exports.schemas = [
         name : SIS.SCHEMA_SCHEMAS,
         definition : {
             name : { type : "String", required : true, unique : true, match : /^[a-z0-9_]+$/ },
+            locked : { type : "Boolean", required : true, "default" : false },
             owner : { type : ["String"], required : true },
             definition : { type : {}, required : true }
         }
@@ -41,8 +42,8 @@ module.exports.schemas = [
                     },
                     required : true
             },
-            retry_count : { type : "Number", min : 0, max : 20, default : 0 },
-            retry_delay : { type : "Number", min : 1, max : 60, default : 1 },
+            retry_count : { type : "Number", min : 0, max : 20, "default" : 0 },
+            retry_delay : { type : "Number", min : 1, max : 60, "default" : 1 },
             events : { type : [{ type : "String", enum : SIS.EVENTS_ENUM }], required : true },
             owner : { type : ["String"] },
             entity_type : "String"
@@ -79,8 +80,8 @@ module.exports.schemas = [
         definition : {
             name : { type : "String", required : true,  unique : true, match :  /^[a-z0-9_]+$/ },
             email : { type : "String", required : true,  match: /^([\w-\.]+@([\w-]+\.)+[\w-]{2,4})?$/ },
-            verified : { type : "Boolean", default : false },
-            super_user : { type : "Boolean", default : false },
+            verified : { type : "Boolean", "default" : false },
+            super_user : { type : "Boolean", "default" : false },
             pw : { type : "String", required : true },
             roles : { type : {} }
         }

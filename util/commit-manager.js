@@ -32,14 +32,14 @@
         this.idField = 'name';
         self.model = schemaManager.getSisModel(SIS.SCHEMA_COMMITS);
 
-        this.recordHistory = function(oldDoc, newDoc, req, type, callback) {
+        this.recordHistory = function(oldDoc, newDoc, user, type, callback) {
             var id = oldDoc ? oldDoc[this.idField] : newDoc[this.idField];
             var action = oldDoc ? (newDoc ? "update" : "delete") : "insert";
             var doc = { 'type' : type,
                         'entity_id' : id,
                         'action' : action }
-            if (req && req.user && req.user[SIS.FIELD_NAME]) {
-                doc[SIS.FIELD_MODIFIED_BY] = req.user[SIS.FIELD_NAME];
+            if (user && user[SIS.FIELD_NAME]) {
+                doc[SIS.FIELD_MODIFIED_BY] = user[SIS.FIELD_NAME];
             }
             switch (action) {
                 case 'insert':
@@ -59,7 +59,6 @@
                     doc['date_modified'] = newDoc[SIS.FIELD_UPDATED_AT];
                     break;
             }
-            // TODO: modified_by presumably using req?
             var entry = new self.model(doc);
             entry.save(function(err, res) {
                 callback(SIS.ERR_INTERNAL(err), res);

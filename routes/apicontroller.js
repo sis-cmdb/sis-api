@@ -376,7 +376,7 @@ ApiController.prototype._saveCommit = function(req) {
         }
         // save it
         var type = self.getType(req);
-        self.commitManager.recordHistory(old, now, req, type, function(e, h) {
+        self.commitManager.recordHistory(old, now, req.user, type, function(e, h) {
             // doesn't matter for now.
             d.resolve(result);
         });

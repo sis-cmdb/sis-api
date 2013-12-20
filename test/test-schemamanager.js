@@ -373,4 +373,63 @@ describe('SchemaManager', function() {
       });
     })
   });
+
+  describe("lock-schema", function() {
+    var schema = {
+      "name":"test_lock_entity",
+      "owner" : "test",
+      "definition": {
+        "str":   "String",
+        "num":   "Number",
+        "date":  "Date",
+        "bool":  "Boolean",
+        "arr": [],
+      }
+    };
+
+    var schemaDoc = null;
+
+    // create the schema and add an entity
+    before(function(done) {
+        schemaManager.add(schema, function(err, result) {
+          if (err) return done(err);
+          schemaDoc = result;
+          schemaDoc.toObject()[SIS.FIELD_LOCKED].should.eql(false);
+          done();
+        });
+    });
+    after(function(done) {
+        schemaManager.delete(schema.name, done);
+    });
+
+    it("Should lock the schema", function(done) {
+        var obj = schemaDoc.toObject();
+        obj[SIS.FIELD_LOCKED] = true;
+        schemaManager.update("test_lock_entity", obj, function(e, r) {
+            should.not.exist(e);
+            schemaDoc = r[1];
+            schemaDoc.toObject()[SIS.FIELD_LOCKED].should.eql(true);
+            done();
+        });
+    });
+
+    it("Should not delete the schema", function(done) {
+        schemaManager.delete("test_lock_entity", function(e, r) {
+            should.exist(e);
+            should.not.exist(r);
+            done();
+        });
+    });
+
+    it("Should unlock the schema", function(done) {
+        var obj = schemaDoc.toObject();
+        obj[SIS.FIELD_LOCKED] = false;
+        schemaManager.update("test_lock_entity", obj, function(e, r) {
+            should.not.exist(e);
+            schemaDoc = r[1];
+            schemaDoc.toObject()[SIS.FIELD_LOCKED].should.eql(false);
+            done();
+        });
+    });
+  });
 });

@@ -78,6 +78,15 @@
         return null;
     }
 
+    SchemaManager.prototype.authorize = function(evt, doc, user, mergedDoc) {
+        if (evt == SIS.EVENT_DELETE) {
+            if (doc[SIS.FIELD_LOCKED]) {
+                return Q.reject(SIS.ERR_BAD_CREDS("Cannot delete a locked schema."));
+            }
+        }
+        return Manager.prototype.authorize.call(this, evt, doc, user, mergedDoc);
+    }
+
     SchemaManager.prototype.applyUpdate = function(currentSchema, sisSchema) {
         // now we have the persisted schema document.
         // we will get the mongoose model to unset any fields
@@ -108,6 +117,10 @@
             self.getEntityModel(newDef);
 
             // update the document
+            currentSchema[SIS.FIELD_OWNER] = sisSchema[SIS.FIELD_OWNER];
+            if (SIS.FIELD_LOCKED in sisSchema) {
+                currentSchema[SIS.FIELD_LOCKED] = sisSchema[SIS.FIELD_LOCKED];
+            }
             currentSchema.definition = newDef;
             return Q(currentSchema);
         }
