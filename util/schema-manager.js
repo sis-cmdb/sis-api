@@ -28,6 +28,7 @@
 
     function SchemaManager(mongoose, opts) {
         this.mongoose = mongoose;
+        require('./types')(mongoose);
         var sisSchemas = require('./sis-schemas').schemas;
         for (var i = 0; i < sisSchemas.length; ++i) {
             this.getEntityModel(sisSchemas[i]);
