@@ -102,6 +102,23 @@ describe('Custom Types', function() {
                     done();
                 });
         });
+
+        it("Should fetch 10.1.1.1/24", function(done) {
+            var query = {
+                q : { "ip.ip_address" : "10.1.1.1" }
+            }
+            request(app).get("/api/v1/entities/host")
+                .query(query)
+                .expect(200, function(err, res) {
+                    should.exist(res.body);
+                    res = res.body;
+                    res.length.should.eql(1);
+                    res = res[0];
+                    should.exist(res['ip']);
+                    res['ip'].should.eql(ip10_1_1_1_24);
+                    done();
+                });
+        });
     });
 
     describe("IpAddress Multi", function() {
