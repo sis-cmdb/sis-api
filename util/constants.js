@@ -234,7 +234,8 @@ module.exports = {
         var schema = model.schema;
         var paths = [];
         schema.eachPath(function(pathName, schemaType) {
-            if (schemaType.instance == "ObjectID" && pathName != "_id") {
+            if (schemaType.instance == "ObjectID" &&
+                schemaType.options && schemaType.options.ref) {
                 paths.push(pathName.split(/\./));
             }
         });

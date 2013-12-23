@@ -125,7 +125,8 @@ describe('Entity Population API', function() {
                     if (err) { return done(err, res); }
                     res = res.body[0];
                     should.exist(res);
-                    "ps3 stuff".should.eql(res.stuff);
+                    should.exist(res.stuff);
+                    res.stuff.should.eql("ps3 stuff");
                     should.exist(res.ref_field)
                     res.ref_field.should.eql(entities[1][1]);
                     done();
@@ -139,7 +140,8 @@ describe('Entity Population API', function() {
                     if (err) { return done(err, res) }
                     res = res.body;
                     should.exist(res);
-                    "ps2_type".should.eql(res.type);
+                    should.exist(res.type);
+                    res.type.should.eql("ps2_type");
                     should.exist(res.ref_field)
                     res.ref_field.should.eql(entities[0][1]);
                     done();
@@ -171,6 +173,33 @@ describe('Entity Population API', function() {
                     res.should.eql(entities[1][1]);
                     done();
                 });
+        });
+
+        it("Should not update pop_schema_1 with a bad ref", function(done) {
+            var entity = entities[1][1];
+            // clone
+            entity = JSON.parse(JSON.stringify(entity));
+            entity['ref_field'] = entities[2][1]['_id'];
+            // try to update
+            request(app).put("/api/v1/entities/pop_schema_2/" + entity['_id'])
+                .set("Content-Type", "application/json")
+                .send(entity)
+                .expect(400, function(err, res) {
+                    res.status.should.eql(400);
+                    done();
+                });
+        });
+
+        it("Should not add pop_schema_1 with a bad ref", function(done) {
+            var entity = {"ps2_name" : "ps2.bad", "type" : "ps2_type.bad"}
+            entity['ref_field'] = entities[2][1]['_id'];
+            request(app).post("/api/v1/entities/pop_schema_2")
+                        .set("Content-Type", "application/json")
+                        .send(entity)
+                        .expect(400, function(err, res) {
+                            res.status.should.eql(400);
+                            done();
+                        });
         });
 
     });

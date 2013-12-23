@@ -22,12 +22,14 @@
     var Manager = require("./manager");
     var Q = require("q");
     var SIS = require("./constants");
+    var async = require("async");
 
     //////////
     // Entity manager
     function EntityManager(model, schema, opts) {
         this.schema = schema;
         Manager.call(this, model, opts);
+        this.sm = opts[SIS.OPT_SCHEMA_MGR];
     }
 
     // inherit
@@ -35,6 +37,8 @@
 
     EntityManager.prototype.fixSubObject = function(entity, reference, isUpdate) {
         var obj = entity;
+        // operate on a copy
+        reference = reference.slice(0);
         var last = reference.pop();
         for (var i = 0; i < reference.length; ++i) {
             var path = reference[i];
@@ -150,6 +154,67 @@
             }
         }
         return result;
+    }
+
+    EntityManager.prototype.getEnsureReference = function(obj) {
+        return function(ref, callback) {
+            var currObj = obj;
+            var path = null;
+            for (var i = 0; i < ref.length; ++i) {
+                path = ref[i];
+                if (!(path in currObj)) {
+                    return callback(null, true);
+                }
+                currObj = currObj[path];
+            }
+            if (!currObj) {
+                return callback(null, true);
+            }
+            path = ref.join(".");
+            var schema = this.model.schema;
+            ref = schema.path(path);
+            var refModelName = ref.options.ref;
+            this.sm.getSisModelAsync(refModelName, function(err, model) {
+                if (err) { return callback(err, false); }
+                model.findOne({'_id' : currObj}, function(e, r) {
+                    if (e) {
+                        callback(SIS.ERR_INTERNAL(e), false);
+                    } else if (!r) {
+                        callback(SIS.ERR_BAD_REQ("Reference with id " + currObj + " does not exist."), false);
+                    } else {
+                        callback(null, true);
+                    }
+                });
+            });
+        }.bind(this);
+    }
+
+    EntityManager.prototype.ensureReferences = function(obj) {
+        if (this.references.length == 0 || !obj) {
+            return Q(obj);
+        }
+        // convert to POJO
+        var result = obj;
+        if (obj.toObject) {
+            obj = obj.toObject();
+        }
+        // ensure the references exist
+        var d = Q.defer();
+        async.map(this.references, this.getEnsureReference(obj), function(err, ignored) {
+            if (err) {
+                d.reject(err);
+            } else {
+                d.resolve(result);
+            }
+        });
+        return d.promise;
+    }
+
+    EntityManager.prototype._save = function(obj, callback) {
+        // ensure references
+        var p = this.ensureReferences(obj)
+            .then(Manager.prototype._save.bind(this));
+        return Q.nodeify(p, callback);
     }
     //////////
 
