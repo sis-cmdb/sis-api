@@ -25,7 +25,7 @@ module.exports.schemas = [
         name : SIS.SCHEMA_SCHEMAS,
         definition : {
             name : { type : "String", required : true, unique : true, match : /^[a-z0-9_]+$/ },
-            locked : { type : "Boolean", required : true, "default" : false },
+            sis_locked : { type : "Boolean", required : true, "default" : false },
             owner : { type : ["String"], required : true },
             definition : { type : {}, required : true }
         }

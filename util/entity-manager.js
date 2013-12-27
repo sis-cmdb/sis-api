@@ -124,7 +124,7 @@
 
     EntityManager.prototype.authorize = function(evt, doc, user, mergedDoc) {
         // authorize against entity subset or schema
-        if (doc[SIS.FIELD_OWNER]) {
+        if (doc[SIS.FIELD_OWNER] && doc[SIS.FIELD_OWNER].length > 0) {
             if (mergedDoc && !mergedDoc[SIS.FIELD_OWNER]) {
                 // needs to use the schema owner..
                 mergedDoc[SIS.FIELD_OWNER] = this.schema[SIS.FIELD_OWNER];
