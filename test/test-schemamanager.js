@@ -374,16 +374,76 @@ describe('SchemaManager', function() {
     })
   });
 
+  describe("schema diff", function() {
+    var s = {
+        definition : {
+            "str":   "String",
+            "num":   "Number",
+            "date":  "Date",
+            "bool":  "Boolean",
+            "arr": []
+        }
+    };
+
+    beforeEach(function(done){
+        s.definition = {
+            "str":   "String",
+            "num":   "Number",
+            "date":  "Date",
+            "bool":  "Boolean",
+            "arr": []
+        };
+        done();
+    });
+
+    it("should match the schemas", function(done) {
+        var s1 = schemaManager._getMongooseSchema(s);
+        var s2 = schemaManager._getMongooseSchema(s);
+        var diff = schemaManager._diffSchemas(s1, s2);
+        for (var i = 0; i < diff.length; ++i) {
+            diff[i].length.should.eql(0)
+        }
+        done();
+    });
+
+    it("should see str was removed", function(done) {
+        var s1 = schemaManager._getMongooseSchema(s);
+        delete s.definition.str;
+        var s2 = schemaManager._getMongooseSchema(s);
+        var diff = schemaManager._diffSchemas(s1, s2);
+        diff[1].length.should.eql(1);
+        diff[1][0].should.eql('str');
+        done();
+    });
+
+    it("should see str was removed, q added, num updated", function(done) {
+        var s1 = schemaManager._getMongooseSchema(s);
+        delete s.definition.str;
+        s.definition['q'] = "String";
+        s.definition['num'] = "String";
+        var s2 = schemaManager._getMongooseSchema(s);
+        var diff = schemaManager._diffSchemas(s1, s2);
+        diff[1].length.should.eql(1);
+        diff[1][0].should.eql('str');
+        diff[0].length.should.eql(1);
+        diff[0][0].should.eql('q');
+        diff[2].length.should.eql(1);
+        diff[2][0].should.eql('num');
+        done();
+    });
+  });
+
   describe("lock-schema", function() {
     var schema = {
       "name":"test_lock_entity",
       "owner" : "test",
+      "locked_fields" : ["str", "num"],
       "definition": {
         "str":   "String",
         "num":   "Number",
         "date":  "Date",
         "bool":  "Boolean",
-        "arr": [],
+        "arr": []
       }
     };
 
@@ -428,6 +488,36 @@ describe('SchemaManager', function() {
             should.not.exist(e);
             schemaDoc = r[1];
             schemaDoc.toObject()[SIS.FIELD_LOCKED].should.eql(false);
+            done();
+        });
+    });
+
+    it("Should prevent updating the schema", function(done) {
+        var obj = schemaDoc.toObject();
+        delete obj.definition.str;
+        schemaManager.update("test_lock_entity", obj, function(e, r) {
+            should.exist(e);
+            should.not.exist(r);
+            done();
+        });
+    });
+
+    it("Should delete the date field", function(done) {
+        var obj = schemaDoc.toObject();
+        delete obj.definition.date;
+        schemaManager.update("test_lock_entity", obj, function(e, r) {
+            should.exist(r);
+            should.not.exist(e);
+            done();
+        });
+    });
+    it("Should delete the str field", function(done) {
+        var obj = schemaDoc.toObject();
+        delete obj.definition.str;
+        obj[SIS.FIELD_LOCKED_FIELDS] = ["num"];
+        schemaManager.update("test_lock_entity", obj, function(e, r) {
+            should.exist(r);
+            should.not.exist(e);
             done();
         });
     });

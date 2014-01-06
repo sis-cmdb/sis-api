@@ -27,7 +27,8 @@ module.exports.schemas = [
             name : { type : "String", required : true, unique : true, match : /^[a-z0-9_]+$/ },
             sis_locked : { type : "Boolean", required : true, "default" : false },
             owner : { type : ["String"], required : true },
-            definition : { type : {}, required : true }
+            definition : { type : {}, required : true },
+            locked_fields : { type : ["String"] }
         }
     },
     // sis_hooks
