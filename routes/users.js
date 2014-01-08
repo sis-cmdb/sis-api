@@ -52,11 +52,17 @@
     // No password hashes should be returned.
     UserController.prototype.convertToResponseObject = function(req, o) {
         if (o instanceof Array) {
+            var result = [];
             for (var i = 0; i < o.length; ++i) {
-                delete o[i][SIS.FIELD_PW];
+                var u = o[i].toObject();
+                delete u.pw;
+                result.push(u);
             }
+            o = u;
         } else {
-            delete o[SIS.FIELD_PW];
+            var u = o.toObject();
+            delete u.pw;
+            o = u;
         }
         return o;
     }

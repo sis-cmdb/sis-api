@@ -122,24 +122,33 @@
         return null;
     }
 
+    function getOwnerSubset(user, schema) {
+        var schemaOwners = schema[SIS.FIELD_OWNER];
+        var userRoles = Object.keys(user[SIS.FIELD_ROLES])
+        return userRoles.filter(function(owner) {
+            return schemaOwners.indexOf(owner) != -1;
+        });
+    }
+
     EntityManager.prototype.authorize = function(evt, doc, user, mergedDoc) {
-        // authorize against entity subset or schema
-        if (doc[SIS.FIELD_OWNER] && doc[SIS.FIELD_OWNER].length > 0) {
-            if (mergedDoc && !mergedDoc[SIS.FIELD_OWNER]) {
-                // needs to use the schema owner..
-                mergedDoc[SIS.FIELD_OWNER] = this.schema[SIS.FIELD_OWNER];
-            }
-            return Manager.prototype.authorize.call(this, evt, doc, user, mergedDoc);
-        } else {
-            // schema. so ensure we have the permission to do so
-            var permission = this.getPermissionsForObject(this.schema, user);
-            if (permission == SIS.PERMISSION_ADMIN ||
-                permission == SIS.PERMISSION_USER_ALL_GROUPS) {
-                return Q(mergedDoc || doc);
-            } else {
-                return Q.reject("Insufficient privileges to operate on entities in this schema.");
-            }
+        if (!this.authEnabled) {
+            return Q(mergedDoc || doc);
         }
+        if (user[SIS.FIELD_SUPERUSER]) {
+            return Q(mergedDoc || doc);
+        }
+        // authorize against entity subset or schema
+        var ownerSubset = getOwnerSubset(user, this.schema);
+        if (ownerSubset.length == 0) {
+            return Q.reject(SIS.ERR_BAD_CREDS("Insufficient privileges to operate on entities in this schema."));
+        }
+        if (!doc[SIS.FIELD_OWNER] || doc[SIS.FIELD_OWNER].length == 0) {
+            doc[SIS.FIELD_OWNER] = ownerSubset;
+        }
+        if (mergedDoc && !mergedDoc[SIS.FIELD_OWNER]) {
+            mergedDoc[SIS.FIELD_OWNER] = ownerSubset;
+        }
+        return Manager.prototype.authorize.call(this, evt, doc, user, mergedDoc);
     }
 
     EntityManager.prototype.applyUpdate = function(result, entity) {

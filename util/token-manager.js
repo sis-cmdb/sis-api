@@ -89,6 +89,9 @@
             reqUser[SIS.FIELD_NAME] == user[SIS.FIELD_NAME]) {
             return true;
         }
+        if (user[SIS.FIELD_SUPERUSER] && !reqUser[SIS.FIELD_SUPERUSER]) {
+            return false;
+        }
         // admins of all roles can
         return SIS.UTIL_ENSURE_ROLE_SUBSET(reqUser[SIS.FIELD_ROLES], user[SIS.FIELD_ROLES], true);
     }
