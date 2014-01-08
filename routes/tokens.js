@@ -58,6 +58,7 @@
                 if (timeLeft <= 0) {
                     timeLeft = 0;
                 }
+                token = token.toObject();
                 token[SIS.FIELD_EXPIRES] = timeLeft;
             }
             return token;
@@ -80,7 +81,7 @@
         if (req.method == "PUT" || req.method == "POST") {
             var obj = req.body;
             if (obj) {
-                obj[SIS.FIELD_TOKEN_USER] = req[SIS.FIELD_TOKEN_USER][SIS.FIELD_NAME];
+                obj[SIS.FIELD_USERNAME] = req[SIS.FIELD_TOKEN_USER][SIS.FIELD_NAME];
                 delete obj[SIS.FIELD_EXPIRES];
             }
         }
@@ -100,22 +101,18 @@
                     } else {
                         req[SIS.FIELD_TOKEN_USER] = user;
                         fixBody(req);
-                        if (req.method == "GET") {
-                            // need to ensure that only admins of the user
-                            // super users, or the user himself are
-                            // getting the tokens
-                            var p = self.authenticate(req, res, SIS.SCHEMA_TOKENS);
-                            Q.nodeify(p, function(err, auth) {
-                                if (err) { return self.sendError(res, err); }
-                                if (self.manager.canAdministerTokensOf(req.user, user)) {
-                                    func.call(self, req, res);
-                                } else {
-                                    return self.sendError(res, SIS.ERR_BAD_CREDS("Cannot read tokens for user."));
-                                }
-                            });
-                        } else {
-                            func.call(self, req, res);
-                        }
+                        // need to ensure that only admins of the user
+                        // super users, or the user himself are
+                        // getting the tokens
+                        var p = self.authenticate(req, res, SIS.SCHEMA_TOKENS);
+                        Q.nodeify(p, function(err, auth) {
+                            if (err) { return self.sendError(res, err); }
+                            if (self.manager.canAdministerTokensOf(req.user, user)) {
+                                func.call(self, req, res);
+                            } else {
+                                return self.sendError(res, SIS.ERR_BAD_CREDS("Cannot read tokens for user."));
+                            }
+                        });
                     }
                 });
             }
