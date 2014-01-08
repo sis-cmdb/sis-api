@@ -51,6 +51,13 @@
         return Q.nodeify(p, callback);
     }
 
+    TokenManager.prototype.validate = function(obj, isUpdate, user) {
+        if (!obj[SIS.FIELD_USERNAME]) {
+            obj[SIS.FIELD_USERNAME] = user[SIS.FIELD_NAME];
+        }
+        return null;
+    }
+
     TokenManager.prototype.createToken = function(token) {
         // save token
         var self = this;
