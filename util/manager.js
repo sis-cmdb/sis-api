@@ -197,6 +197,9 @@ Manager.prototype.delete = function(id, user, callback) {
 // a validate routine and changes the owner to an array
 // if it is a string
 Manager.prototype.validateOwner = function(obj) {
+    if (!this.authEnabled) {
+        return null;
+    }
     if (!obj || !obj[SIS.FIELD_OWNER]) {
         return SIS.FIELD_OWNER + " field is required.";
     }
