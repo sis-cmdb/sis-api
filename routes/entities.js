@@ -49,7 +49,7 @@
         if (this.sm.hasEntityModel(name)) {
             var smModel = this.sm.getEntityModelByName(name);
             var current = this.managerCache[name];
-            if (current == smModel) {
+            if (current && current.model == smModel) {
                 return Q(current);
             }
         }
