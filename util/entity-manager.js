@@ -94,13 +94,13 @@
                     return keys[i] + " is a reserved field";
                 }
             }
-            // handle sub objects
-            for (var i = 0; i < this.references.length; ++i) {
-                var err = this.fixSubObject(entity, this.references[i], isUpdate);
-                if (err) {
-                    return err;
-                }
-            }
+            // // handle sub objects
+            // for (var i = 0; i < this.references.length; ++i) {
+            //     var err = this.fixSubObject(entity, this.references[i], isUpdate);
+            //     if (err) {
+            //         return err;
+            //     }
+            // }
             if (SIS.FIELD_OWNER in entity) {
                 var err = this.validateOwner(entity);
                 if (err) {
@@ -169,8 +169,9 @@
         return function(ref, callback) {
             var currObj = obj;
             var path = null;
-            for (var i = 0; i < ref.length; ++i) {
-                path = ref[i];
+            var refPaths = ref.splits;
+            for (var i = 0; i < refPaths.length; ++i) {
+                path = refPaths[i];
                 if (!(path in currObj)) {
                     return callback(null, true);
                 }
@@ -179,22 +180,69 @@
             if (!currObj) {
                 return callback(null, true);
             }
-            path = ref.join(".");
+            path = ref.path;
             var schema = this.model.schema;
+            var refModelName = ref.ref;
             ref = schema.path(path);
-            var refModelName = ref.options.ref;
-            this.sm.getSisModelAsync(refModelName, function(err, model) {
-                if (err) { return callback(err, false); }
-                model.findOne({'_id' : currObj}, function(e, r) {
-                    if (e) {
-                        callback(SIS.ERR_INTERNAL(e), false);
-                    } else if (!r) {
-                        callback(SIS.ERR_BAD_REQ("Reference with id " + currObj + " does not exist."), false);
+            if (ref.type == 'oid') {
+                if (typeof currObj === 'object') {
+                    if (SIS.FIELD_ID in currObj) {
+                        currObj = currObj[SIS.FIELD_ID];
                     } else {
-                        callback(null, true);
+                        return callback(SIS.ERR_BAD_REQ("Reference Object has no _id"), null);
                     }
+                }
+                this.sm.getSisModelAsync(refModelName, function(err, model) {
+                    if (err) { return callback(err, false); }
+                    if (!model) {
+                        return callback(SIS.ERR_BAD_REQ("No schema named " + refModelName));
+                    }
+                    model.findOne({'_id' : currObj}, '_id', function(e, r) {
+                        if (e) {
+                            callback(SIS.ERR_INTERNAL(e), false);
+                        } else if (!r) {
+                            callback(SIS.ERR_BAD_REQ("Reference with id " + currObj + " does not exist."), false);
+                        } else {
+                            callback(null, true);
+                        }
+                    });
                 });
-            });
+            } else {
+                // array of oids
+                if (!(currObj instanceof Array)) {
+                    currObj = [currObj];
+                }
+                var errored = false;
+                currObj.map(function(obj) {
+                    if (typeof obj === 'object') {
+                        if (SIS.FIELD_ID in obj) {
+                            return obj[SIS.FIELD_ID];
+                        } else {
+                            errored = true;
+                        }
+                    }
+                    return obj;
+                });
+                if (errored) {
+                    return callback(SIS.ERR_BAD_REQ("Reference Object has no _id field"));
+                }
+                this.sm.getSisModelAsync(refModelName, function(err, model) {
+                    if (err) { return callback(err, false); }
+                    if (!model) {
+                        return callback(SIS.ERR_BAD_REQ("No schema named " + refModelName));
+                    }
+                    model.find({ '_id' : { "$in" : currObj }}, '_id', function(e, r) {
+                        if (e) {
+                            callback(SIS.ERR_INTERNAL(e), false);
+                        } else if (!r || r.length != currObj.length) {
+                            callback(SIS.ERR_BAD_REQ("Some IDs do not exist in " + JSON.stringify(currObj)), false);
+                        } else {
+                            callback(null, true);
+                        }
+                    });
+                });
+            }
+
         }.bind(this);
     }
 

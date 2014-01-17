@@ -201,6 +201,5 @@ describe('Entity Population API', function() {
                             done();
                         });
         });
-
     });
 });

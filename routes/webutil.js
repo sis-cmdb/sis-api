@@ -188,8 +188,10 @@
                 sisModel.find(getFindCond(remainingPath, condition), '_id', getQueryIdsCallback(callback));
             } else {
                 // need to see if we're looking to join another set of object ids
-                var references = SIS.UTIL_GET_OID_PATHS(sisModel).map(function(arr) {
-                    return arr.join(".");
+                var references = SIS.UTIL_GET_OID_PATHS(sisModel).filter(function(ref) {
+                    return ref.type != 'arr';
+                }).map(function(ref) {
+                    return ref.path;
                 });
                 if (references.length == 0) {
                     // no object ids referenced by this nested model, so the
@@ -282,8 +284,10 @@
         if (keys.length == 0) {
             return Q(condition);
         }
-        var paths = mgr.references.map(function(arr) {
-            return arr.join(".");
+        var paths = mgr.references.filter(function(ref) {
+            return ref.type != 'arr';
+        }).map(function(ref) {
+            return ref.path;
         });
 
         var found = false;

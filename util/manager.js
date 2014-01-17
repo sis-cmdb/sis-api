@@ -328,8 +328,8 @@ Manager.prototype._getPopulateFields = function() {
     if (this.references.length == 0) {
         return null;
     }
-    return this.references.map(function(arr) {
-        return arr.join(".");
+    return this.references.map(function(ref) {
+        return ref.path;
     }).join(" ");
 }
 

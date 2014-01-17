@@ -237,7 +237,22 @@ module.exports = {
         schema.eachPath(function(pathName, schemaType) {
             if (schemaType.instance == "ObjectID" &&
                 schemaType.options && schemaType.options.ref) {
-                paths.push(pathName.split(/\./));
+                paths.push({
+                    'path' : pathName,
+                    'splits' : pathName.split(/\./),
+                    'type' : 'oid',
+                    'ref' : schemaType.options.ref
+                })
+            } else if (schemaType.constructor.name.indexOf('Array') != -1 &&
+                       schemaType.caster.instance == "ObjectID" &&
+                       schemaType.caster.options.ref) {
+                schemaType = schemaType.caster
+                paths.push({
+                    'path' : pathName,
+                    'splits' : pathName.split(/\./),
+                    'type' : 'arr',
+                    'ref' : schemaType.options.ref
+                })
             }
         });
         return paths;
