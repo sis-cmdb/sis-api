@@ -33,31 +33,26 @@
 
         var self = this;
 
-        var createMdRender = function(title, path) {
+        var createMdRender = function(title, path, prefix) {
             var data = marked(fs.readFileSync(path, 'utf8'));
+            prefix = prefix || './';
             return function(req, res) {
                 res.render('index', {
                     'title' : title,
-                    'readme' : data
+                    'readme' : data,
+                    'prefix' : prefix
                 });
             }
         }
 
         var idxRender = createMdRender('SIS', __dirname + '/../README.md');
 
-        // methods
-        this.index = function(req, res) {
-            res.render('index', {
-                'readme' : readMeMd
-            });
-        }
-
         // Routes this exposes
         this.routes = {
             "/" : idxRender,
             "/index" : idxRender,
-            "/docs/rbac.md" : createMdRender('Role Based Access Control', __dirname + '/../docs/rbac.md'),
-            "/docs/sharing.md" : createMdRender('Data Sharing and Organization', __dirname + '/../docs/sharing.md')
+            "/docs/rbac.md" : createMdRender('Role Based Access Control', __dirname + '/../docs/rbac.md', '../'),
+            "/docs/sharing.md" : createMdRender('Data Sharing and Organization', __dirname + '/../docs/sharing.md', '../')
         };
     };
 
