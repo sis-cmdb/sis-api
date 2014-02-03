@@ -148,7 +148,7 @@ describe('Token Manager', function() {
                 userManager.delete(u2[SIS.FIELD_NAME], u1, function(e, u) {
                     should.not.exist(e);
                     should.exist(u);
-                    tokenManager.getAll({username : u[SIS.FIELD_NAME]}, null, function(e, res) {
+                    tokenManager.getAll({username : u[SIS.FIELD_NAME]}, null, null, function(e, res) {
                         should.not.exist(e);
                         res.length.should.eql(0);
                         done();

@@ -307,7 +307,7 @@ The response is the hiera object along with two additional fields assigned by mo
 
 * `PUT /api/v1/hiera/:name`
 
-The request body must be a valid entry object.  The `name` in the entity object must match the `name` in the path parameter.
+The request body must be a valid entry object.  The `name` in the object must match the `name` in the path parameter.
 
 The response is the updated hiera entry object.
 
@@ -569,3 +569,7 @@ From the sis-web dir run `mocha --timeout 4000`
 
 Tests require a mongo instance to be running.  See test/test-config.js.  Additionally, the connection url may be specified as the `db__url` environment variable.
 
+### Tests TODO
+
+- field selection
+- token management HTTP API

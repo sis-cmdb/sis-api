@@ -119,7 +119,13 @@ ApiController.prototype.parseQuery = function(req) {
     var limit = parseInt(req.query.limit) || SIS.MAX_RESULTS;
     if (limit > SIS.MAX_RESULTS) { limit = SIS.MAX_RESULTS };
     var offset = parseInt(req.query.offset) || 0;
-    return {'query' : query, 'limit' : limit, 'offset' : offset};
+    var fields = req.query.fields;
+    if (fields) {
+        if (typeof fields !== 'string') {
+            fields = null;
+        }
+    }
+    return {'query' : query, 'limit' : limit, 'offset' : offset, 'fields' : fields};
 }
 
 // Returns true if the request wants sub-documents populated
@@ -153,6 +159,7 @@ ApiController.prototype.getAll = function(req, res) {
     this.applyDefaults(req);
     var rq = this.parseQuery(req);
     var options = { skip : rq.offset, limit: rq.limit};
+    var fields = rq.fields;
     var condition = rq.query;
     var self = this;
     var p = this.getManager(req)
@@ -165,7 +172,7 @@ ApiController.prototype.getAll = function(req, res) {
                                 if (!c) {
                                     return Q([]);
                                 }
-                                return mgr.getAll(flattenedCondition, options)
+                                return mgr.getAll(flattenedCondition, options, fields)
                                     .then(self._getPopulatePromise(req, mgr));
                             });
                         });
@@ -289,8 +296,8 @@ ApiController.prototype._enableCommitApi = function(app, prefix) {
                 return self.sendObject(res, 200, []);
             }
             var opts = { skip : rq.offset, limit: rq.limit};
-            var mgQuery = mongooseModel.find(rq.query, null, opts);
-            mgQuery = mgQuery.sort({date_modified: 1});
+            var mgQuery = mongooseModel.find(rq.query, rq.fields, opts);
+            mgQuery = mgQuery.sort({date_modified: -1});
             mgQuery.exec(function(err, entities) {
                 res.setHeader("x-total-count", c);
                 self.sendObject(res, 200, entities);

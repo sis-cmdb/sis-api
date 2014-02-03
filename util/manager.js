@@ -62,9 +62,9 @@ Manager.prototype.objectRemoved = function(obj) {
 
 /** Common methods - rare to override these **/
 // get all the objects belonging to the model.
-Manager.prototype.getAll = function(condition, options, callback) {
+Manager.prototype.getAll = function(condition, options, fields, callback) {
     var d = Q.defer();
-    this.model.find(condition, null, options, this._getFindCallback(d, null));
+    this.model.find(condition, fields, options, this._getFindCallback(d, null));
     return Q.nodeify(d.promise, callback);
 }
 
