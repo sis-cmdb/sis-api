@@ -235,6 +235,9 @@ Manager.prototype.getPermissionsForObject = function(obj, user) {
     if (user[SIS.FIELD_SUPERUSER]) {
         return SIS.PERMISSION_ADMIN;
     }
+    if (!user[SIS.FIELD_ROLES]) {
+        return SIS.PERMISSION_NONE;
+    }
     var owners = obj[SIS.FIELD_OWNER];
     var roles = user[SIS.FIELD_ROLES];
     var userRoleCount = 0;

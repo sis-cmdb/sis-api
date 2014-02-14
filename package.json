@@ -18,7 +18,8 @@
         "passport" : ">= 0.1.17",
         "passport-http" : ">= 0.2.2",
         "raw-body" : ">= 1.1.2",
-        "ipv6" : ">= 3.0.0"
+        "ipv6" : ">= 3.0.0",
+        "ldapjs" : ">= 0.7.0"
     },
     "devDependencies" : {
         "mocha"  : ">= 1.13.0",

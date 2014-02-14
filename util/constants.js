@@ -71,8 +71,10 @@ module.exports = {
     SCHEMA_USERS : "sis_users",
     SCHEMA_TOKENS : "sis_tokens",
 
-    AUTH_TYPES : ["sis_users", "sis_services"],
     AUTH_EXPIRATION_TIME : 1000 * 60 * 60 * 8, // 8 hrs
+    AUTH_TYPE_SIS : "sis",
+    AUTH_TYPE_LDAP : "ldap",
+    AUTH_TYPES : ["sis", "ldap"],
 
     // option keys
     OPT_SCHEMA_MGR : "schema_manager", // TODO: snake case
@@ -82,6 +84,7 @@ module.exports = {
     OPT_ID_FIELD : "id_field",
     OPT_TYPE : "type",
     OPT_USE_AUTH : "auth",
+    OPT_AUTH_CONFIG : "auth_config",
     OPT_ADMIN_REQUIRED : "admin_required",
 
     ROLE_USER : "user",
@@ -209,6 +212,12 @@ module.exports = {
     },
 
     UTIL_ENSURE_ROLE_SUBSET : function(roles, subset, adminOnly) {
+        if (!roles) {
+            return false;
+        }
+        if (!subset) {
+            return true;
+        }
         for (var k in subset) {
             if (!(k in roles)) {
                 return false;

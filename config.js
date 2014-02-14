@@ -23,6 +23,9 @@ module.exports = {
         port : 3000
     },
     app : {
-        auth : true
+        auth : true,
+        auth_config : {
+            type : 'sis'
+        }
     }
 }

@@ -32,6 +32,41 @@
         userManager.getVerifiedUser(user, pass, done);
     };
 
+    var getLdapVerificationFunc = function(sm, auth_config) {
+        if (!auth_config) {
+            throw new Error("LDAP authentication requires configuration.");
+        }
+        var ldap = require('ldapjs');
+        var userManager = sm.auth[SIS.SCHEMA_USERS];
+        var url = auth_config.url;
+        var ud = auth_config.user_domain;
+        var ed = auth_config.email_domain;
+        if (!url || !ud || !ed) {
+            throw new Error("LDAP authentication requires url, user_domain, and email_domain");
+        }
+        var client = ldap.createClient({
+            url : url
+        });
+        // "user" that is in the created by fields - a super user
+        var ldapSisUser = {
+            name : "_sis_ldap_auth_",
+            super_user : true
+        };
+        return function(user, pass, done) {
+            var ldapUser = user + '@' + ud;
+            client.bind(ldapUser, pass, function(err) {
+                if (err) {
+                    return done(SIS.ERR_BAD_CREDS("LDAP authentication failed : " + err), null);
+                }
+                var userObj = {
+                    name : user,
+                    email : user + '@' + ed
+                };
+                return userManager.getOrCreateEmptyUser(userObj, ldapSisUser, done);
+            });
+        }
+    }
+
     // authorization using sis_tokens
     var _verifySisToken = function(token, done) {
         var tokenManager = this.auth[SIS.SCHEMA_TOKENS];
@@ -51,9 +86,22 @@
         return Q.nodeify(p, done);
     };
 
+    var getAuthType = function(config) {
+        if (!config.auth_config || !config.auth_config.type ||
+            SIS.AUTH_TYPES.indexOf(config.auth_config.type) == -1) {
+            return SIS.AUTH_TYPE_SIS;
+        }
+        return config.auth_config.type;
+    }
+
     // need a schema manager for the strategies
-    module.exports.createUserPassStrategy = function(sm) {
-        return new BasicStrategy({}, _verifyUserPass.bind(sm));
+    module.exports.createUserPassStrategy = function(sm, config) {
+        var type = getAuthType(config);
+        var verifyFunc = _verifyUserPass.bind(sm);
+        if (type == SIS.AUTH_TYPE_LDAP) {
+            verifyFunc = getLdapVerificationFunc(sm, config.auth_config);
+        }
+        return new BasicStrategy({}, verifyFunc);
     }
 
     // The passport strategy for authenticating x-auth-token

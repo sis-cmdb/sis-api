@@ -80,6 +80,32 @@
         return Q.nodeify(p, callback);
     }
 
+    UserManager.prototype.getOrCreateEmptyUser = function(userObj, superUser, callback) {
+        var self = this;
+        if (!userObj || !userObj.name || !userObj.email) {
+            return callback(SIS.ERR_INTERNAL("Invalid user specified in getOrCreate"), null);
+        }
+        var username = userObj.name;
+        this.model.findOne({name : username}, function(err, user) {
+            if (err) {
+                return callback(SIS.ERR_INTERNAL("Error talking to DB: " + err), null);
+            }
+            if (!user) {
+                // create it
+                user = {
+                    name : username,
+                    email : userObj.email,
+                    roles : { },
+                    super_user : false
+                };
+                return self.add(user, superUser, callback);
+            } else {
+                // found
+                return callback(null, user);
+            }
+        });
+    }
+
     UserManager.prototype.authorize = function(evt, doc, user, mergedDoc) {
         if (!this.authEnabled) {
             return Q(mergedDoc || doc);
@@ -92,7 +118,7 @@
             return Q(mergedDoc || doc);
         }
         if (!user[SIS.FIELD_ROLES]) {
-            return Q.reject(SIS.ERR_BAD_CREDS("Invalid user."));
+            return Q.reject(SIS.ERR_BAD_CREDS("User has no roles."));
         }
         // doc is a user object
         switch (evt) {

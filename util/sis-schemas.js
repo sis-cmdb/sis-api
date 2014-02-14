@@ -83,8 +83,8 @@ module.exports.schemas = [
             email : { type : "String", required : true,  match: /^([\w-\.]+@([\w-]+\.)+[\w-]{2,4})?$/ },
             verified : { type : "Boolean", "default" : false },
             super_user : { type : "Boolean", "default" : false },
-            pw : { type : "String", required : true },
-            roles : { type : {} }
+            pw : { type : "String" },
+            roles : { type : {}, "default" : { } }
         }
     },
     // sis_tokens

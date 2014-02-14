@@ -123,6 +123,9 @@
     }
 
     function getOwnerSubset(user, schema) {
+        if (!user[SIS.FIELD_ROLES]) {
+            return [];
+        }
         var schemaOwners = schema[SIS.FIELD_OWNER];
         var userRoles = Object.keys(user[SIS.FIELD_ROLES])
         return userRoles.filter(function(owner) {
