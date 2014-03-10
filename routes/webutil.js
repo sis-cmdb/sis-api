@@ -23,7 +23,6 @@
     var SIS = require("../util/constants");
     var Q = require("q");
     var util = require("util");
-    var getBody = require('raw-body');
     var async = require('async');
 
     // authorization using user and pass via the user manager
@@ -139,6 +138,7 @@
     // from connect.js slightly modified
     // to accept single line comments in json
     module.exports.json = function(options) {
+        var getBody = require('raw-body');
         options = options || {};
         var limit = options.limit || '1mb';
 

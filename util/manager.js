@@ -111,7 +111,7 @@ Manager.prototype.getSingleByCondition = function(condition, name, callback) {
 Manager.prototype.authorize = function(evt, doc, user, mergedDoc) {
     if (evt == SIS.EVENT_DELETE) {
         if (doc[SIS.FIELD_LOCKED]) {
-            return Q.reject(SIS.ERR_BAD_CREDS("Cannot delete a locked schema."));
+            return Q.reject(SIS.ERR_BAD_CREDS("Cannot delete a locked object."));
         }
     }
     // get the permissions on the doc being added/updated/deleted
