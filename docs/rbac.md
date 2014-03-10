@@ -1,3 +1,32 @@
+Table of Contents
+=================
+
+- [SIS Role Base Access Control](#sis-role-base-access-control)
+- [Users](#users)
+	- [User objects](#user-objects)
+	- [Groups](#groups)
+	- [User permissions](#user-permissions)
+	- [User API](#user-api)
+		- [Retrieving users](#retrieving-users)
+		- [Creating a new user](#creating-a-new-user)
+		- [Updating a user](#updating-a-user)
+		- [Deleting a user](#deleting-a-user)
+- [Tokens](#tokens)
+	- [Token Objects](#token-objects)
+	- [Token API](#token-api)
+		- [Retrieving tokens](#retrieving-tokens)
+		- [Creating a new temporary token](#creating-a-new-temporary-token)
+		- [Creating a new persistent token](#creating-a-new-persistent-token)
+		- [Updating a token](#updating-a-token)
+		- [Deleting a token](#deleting-a-token)
+- [RBAC Examples](#rbac-examples)
+	- [Users](#users-1)
+		- [Permissions Matrix](#permissions-matrix)
+	- [Schemas](#schemas)
+		- [Permissions Matrix](#permissions-matrix-1)
+	- [Entities](#entities)
+		- [Permissions Matrix](#permissions-matrix-2)
+
 SIS Role Base Access Control
 ============================
 
@@ -9,25 +38,48 @@ For a successful RBAC deployment, the SIS API must be accessed via SSL.
 
 # Users
 
-A user in SIS is anybody who is using the API.  A user in SIS is represeented
-by the following JSON:
+A SIS user object contains authorization information for a particular user.  If the SIS authentication backend is used, it also contains teh password hash for authentication.
+
+## User objects
+
+User objects in SIS have the following schema definition:
 
 ```javascript
 {
-    // username of user. required, unique, lowercase alphanumeric with _.
-    "name" : "username",
-    // required email address
+    // The username.  Required, unique, and lowercase alphanumeric w/ underscores
+    "name" : { "type" : "String", "required" : true,  "unique" : true, "match" :  "/^[a-z0-9_]+$/"" },
+
+    // The email address of the user.  Required
+    "email" : { "type" : "String", "required" : true,  "match": /^([\w-\.]+@([\w-]+\.)+[\w-]{2,4})?$/ },
+
+    // Future use.  Intended to mean the user's email has been verified
+    "verified" : { "type" : "Boolean", "default" : false },
+
+    // Whether the user is a super user
+    "super_user" : { "type" : "Boolean", "default" : false },
+
+    // Password hash of a user.  Only used if SIS authentication backend
+    // is used
+    "pw" : { "type" : "String" },
+
+    // The roles object of a user.  See groups and permissions below
+    "roles" : { "type" : "Mixed", "default" : { } }
+}
+```
+
+The following is an example user with username `user_of_sis`:
+
+```javascript
+{
+    "name" : "user_of_sis",
     "email" : "user@domain.com",
-    // a bool indicating if the email address was verified.  future use only.
-    // defaults to false
     "verified" : false,
-    // a bool indicating if the user is a super user.  see privileges below.
-    // defaults to false
+
+    // not a super user
     "super_user" : false,
-    // required password hash.  When updating the user's pw,
-    // the password is sent unhashed.
     "pw" : "hash_of_password",
-    // roles of the user.  see privileges below.
+
+    // user of "some_group", admin of "some_other_group"
     "roles" : { "some_group" : "user",
                 "some_other_group" : "admin"
               }
@@ -127,18 +179,31 @@ have any persistent tokens.
 All tokens are tied back to a user and assume the privileges of that user.
 A token in SIS is represented by the following JSON:
 
+## Token Objects
+
+Tokens in SIS have the following schema definition:
+
 ```javascript
 {
-    // the token itself - unique.  This is what is placed in the
-    // x-auth-token header.
+    // Unique token name.  This is the field that is sent in the `x-auth-token` header.
+    name : { type : "String", unique : true },
+    // An optional description of the token.  Useful for permanent tokens meant for services.
+    desc : "String",
+    // Number of milliseconds left before the token expires.  Only applicable to
+    // temporary tokens
+    expires : { type : "Date", expires : 0 },
+    // The username this token belongs to
+    username : { type: "String", required : true }
+}
+```
+
+A temporary token for "user_of_sis" might look like the following:
+
+```javascript
+{
     "name" : "token_identifier"
-    // optional description
-    "desc" : "Something about the token",
-    // if the token is a temporary token, this field indicates the
-    // number of milliseconds left before the token expires.
     "expires" : 10000,
-    // required username of the user this token maps to
-    username : "username"
+    username : "user_of_sis"
 }
 ```
 

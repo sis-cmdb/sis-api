@@ -1,3 +1,60 @@
+Table of Contents
+=================
+
+- [sis-web](#sis-web)
+- [Configuration](#configuration)
+- [API Description](#api-description)
+	- [Role based access control](#role-based-access-control)
+	- [Authentication Backends](#authentication-backends)
+		- [Default backend configuration](#default-backend-configuration)
+		- [Authentication using Active Directory via LDAP](#authentication-using-active-directory-via-ldap)
+	- [Common Headers](#common-headers)
+	- [Schema API](#schema-api)
+		- [Schema Definitions](#schema-definitions)
+			- [Reserved fields](#reserved-fields)
+		- [Schema Objects](#schema-objects)
+		- [Retrieving schemas](#retrieving-schemas)
+		- [Creating a new schema](#creating-a-new-schema)
+		- [Updating a schema](#updating-a-schema)
+		- [Deleting a schema](#deleting-a-schema)
+	- [Entity API](#entity-api)
+		- [Entity objects](#entity-objects)
+		- [Entity Owner Field](#entity-owner-field)
+		- [Retrieving Entities of a particular schema](#retrieving-entities-of-a-particular-schema)
+		- [Creating a new entity](#creating-a-new-entity)
+		- [Updating an entity](#updating-an-entity)
+		- [Deleting an entity](#deleting-an-entity)
+	- [Hooks API](#hooks-api)
+		- [Hook Objects](#hook-objects)
+		- [Hook payloads](#hook-payloads)
+		- [Retrieving hooks](#retrieving-hooks)
+		- [Creating a new hook](#creating-a-new-hook)
+		- [Updating a hook](#updating-a-hook)
+		- [Deleting a hook](#deleting-a-hook)
+	- [Hiera API](#hiera-api)
+		- [Hiera Objects](#hiera-objects)
+		- [Retrieving Hiera data](#retrieving-hiera-data)
+		- [Adding a new hiera entry](#adding-a-new-hiera-entry)
+		- [Updating a hiera entry](#updating-a-hiera-entry)
+		- [Deleting a hiera entry](#deleting-a-hiera-entry)
+	- [Pagination and searching](#pagination-and-searching)
+		- [Pagination](#pagination)
+		- [Search](#search)
+			- [Joins](#joins)
+	- [Revisions and Commit Log support](#revisions-and-commit-log-support)
+		- [Commit Objects](#commit-objects)
+		- [Retrieving the commits of an object](#retrieving-the-commits-of-an-object)
+		- [Retrieving an individual commit of an object](#retrieving-an-individual-commit-of-an-object)
+		- [Retrieving an object at a particular time](#retrieving-an-object-at-a-particular-time)
+		- [Example commit log](#example-commit-log)
+	- [Data Sharing and Organization](#data-sharing-and-organization)
+- [API Examples using resty](#api-examples-using-resty)
+- [Developer Info](#developer-info)
+	- [Frameworks](#frameworks)
+	- [Project Layout](#project-layout)
+	- [Running tests](#running-tests)
+		- [Tests TODO](#tests-todo)
+
 sis-web
 =======
 
@@ -519,7 +576,7 @@ For instance:
 
 Fields in the query objects may also apply to referencing another schema as if they were a nested document.  For instance, consider the following schema definitions (only name and definition provided):
 
-```
+```javascript
 {
     "name" : "entity_1",
     "definition" : {
@@ -784,3 +841,8 @@ Tests require a mongo instance to be running.  See test/test-config.js.  Additio
 
 - field selection
 - token management HTTP API
+
+## Acknowledgements
+
+[doctoc](https://github.com/thlorenz/doctoc) was used to generate the Table of Contents.
+

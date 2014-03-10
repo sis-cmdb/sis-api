@@ -19,6 +19,9 @@
 (function() {
 
     var marked = require('marked');
+    marked.setOptions({
+        breaks : true
+    });
     var hljs = require('highlight.js');
     var fs = require('fs');
 
