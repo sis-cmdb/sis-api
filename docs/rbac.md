@@ -1,7 +1,6 @@
 Table of Contents
 =================
 
-- [SIS Role Base Access Control](#sis-role-base-access-control)
 - [Users](#users)
 	- [User objects](#user-objects)
 	- [Groups](#groups)
@@ -15,8 +14,8 @@ Table of Contents
 	- [Token Objects](#token-objects)
 	- [Token API](#token-api)
 		- [Retrieving tokens](#retrieving-tokens)
-		- [Creating a new temporary token](#creating-a-new-temporary-token)
-		- [Creating a new persistent token](#creating-a-new-persistent-token)
+		- [Creating a temporary token](#creating-a-new-temporary-token)
+		- [Creating a persistent token](#creating-a-new-persistent-token)
 		- [Updating a token](#updating-a-token)
 		- [Deleting a token](#deleting-a-token)
 - [RBAC Examples](#rbac-examples)
@@ -346,18 +345,18 @@ to is specified in the `schema` field.
 
 ### Permissions Matrix
 
-|                 | Create/modify e_g1_g2       | Create/modify e_g1       | Add g3 as an owner to e_g1     |
-|:----------------|:---------------------------:|:------------------------:|:------------------------------:|
-|g1_admin         |                             |x                         |                                |
-|g2_admin         |                             |                          |                                |
-|g1_user          |                             |x                         |                                |
-|g2_user          |                             |                          |                                |
-|g2_admin_g1_user |x                            |x                         |                                |
-|g2_admin_g1_admin|x                            |x                         |                                |
-|g2_user_g1_admin |x                            |x                         |                                |
-|g2_admin_g1_admin|x                            |x                         |                                |
-|g2_user_g1_user  |x                            |x                         |                                |
-|super_user       |x                            |x                         |                                |
+|                 | Create/modify e_g1_g2       | Create/modify e_g1       |
+|:----------------|:---------------------------:|:------------------------:|
+|g1_admin         |                             |x                         |
+|g2_admin         |                             |                          |
+|g1_user          |                             |x                         |
+|g2_user          |                             |                          |
+|g2_admin_g1_user |x                            |x                         |
+|g2_admin_g1_admin|x                            |x                         |
+|g2_user_g1_admin |x                            |x                         |
+|g2_admin_g1_admin|x                            |x                         |
+|g2_user_g1_user  |x                            |x                         |
+|super_user       |x                            |x                         |
 
 
 Note that that `g3` cannot be an owner of `e_g1` because the schema `sch_g1_g2` does not have `g3` as an owner.

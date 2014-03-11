@@ -1,13 +1,12 @@
 Table of Contents
 =================
 
-- [sis-web](#sis-web)
 - [Configuration](#configuration)
 - [API Description](#api-description)
 	- [Role based access control](#role-based-access-control)
 	- [Authentication Backends](#authentication-backends)
 		- [Default backend configuration](#default-backend-configuration)
-		- [Authentication using Active Directory via LDAP](#authentication-using-active-directory-via-ldap)
+		- [Active Directory via LDAP](#authentication-using-active-directory-via-ldap)
 	- [Common Headers](#common-headers)
 	- [Schema API](#schema-api)
 		- [Schema Definitions](#schema-definitions)
@@ -20,7 +19,7 @@ Table of Contents
 	- [Entity API](#entity-api)
 		- [Entity objects](#entity-objects)
 		- [Entity Owner Field](#entity-owner-field)
-		- [Retrieving Entities of a particular schema](#retrieving-entities-of-a-particular-schema)
+		- [Retrieving Entities](#retrieving-entities-of-a-particular-schema)
 		- [Creating a new entity](#creating-a-new-entity)
 		- [Updating an entity](#updating-an-entity)
 		- [Deleting an entity](#deleting-an-entity)
@@ -44,7 +43,7 @@ Table of Contents
 	- [Revisions and Commit Log support](#revisions-and-commit-log-support)
 		- [Commit Objects](#commit-objects)
 		- [Retrieving the commits of an object](#retrieving-the-commits-of-an-object)
-		- [Retrieving an individual commit of an object](#retrieving-an-individual-commit-of-an-object)
+		- [Retrieving an individual commit](#retrieving-an-individual-commit-of-an-object)
 		- [Retrieving an object at a particular time](#retrieving-an-object-at-a-particular-time)
 		- [Example commit log](#example-commit-log)
 	- [Data Sharing and Organization](#data-sharing-and-organization)

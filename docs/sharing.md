@@ -1,9 +1,8 @@
 Table of Contents
 =================
 
-- [Organizing Data in SIS](#organizing-data-in-sis)
 - [Referencing common objects](#referencing-common-objects)
-- [Using owner subsets on the same schema](#using-owner-subsets-on-the-same-schema)
+- [Using owner subsets](#using-owner-subsets-on-the-same-schema)
 - [Duplicating Schema definitions](#duplicating-schema-definitions)
 
 Organizing Data in SIS
