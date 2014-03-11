@@ -3,10 +3,11 @@ $(function() {
     if (toc) {
         // apply it
         var ul = toc.next('ul');
-        ul.addClass('nav');
-        ul.addClass('nav-stacked');
+        ul.addClass('nav affix');
+        ul.attr("role", "complementary")
+        ul.children('li').children('ul').addClass('expand');
 
-        var div = $('<div class="col-md-3">');
+        var div = $('<div class="col-md-3 nav-toc">');
         div.append(ul);
         toc.remove();
 
@@ -16,11 +17,21 @@ $(function() {
         var newroot = $("<div class='container'>");
         var row = $("<div class='row'>");
         newroot.append(row)
-        row.append(div);
         row.append(root);
+        row.append(div);
 
         root.find('table').addClass('table');
 
         $("body").append(newroot);
+
+        function updateToc() {
+            ul.find('li > ul').not('.expand').addClass('collapse');
+            ul.find('li.active > ul').removeClass('collapse');
+        }
+
+        $('body').on('activate.bs.scrollspy', function () {
+          updateToc();
+        });
+        updateToc();
     }
 });

@@ -362,7 +362,10 @@ A hook can be represented by the following schema definition:
 {
     // The name of the schema.  Required and Unique across all schemas.
     // Must be all lowercase alphanumeric and underscores
-    "name" : { "type" : "String", "required" : true, "unique" : true, "match" : "/^[a-z0-9_]+$/" },
+    "name" : {
+        "type" : "String", "required" : true,
+        "unique" : true, "match" : "/^[a-z0-9_]+$/"
+    },
     // Defines the target URL that SIS calls out to
     // It is an object with three fields
     // - url - required string that is the URL to call out to
@@ -370,7 +373,10 @@ A hook can be represented by the following schema definition:
     "target" : {
             "type" : {
                 "url" : { "type" : "String", "required" : true },
-                "action" : { "type" : "String", "required" : true, "enum" : ["GET", "POST", "PUT"]}
+                "action" : {
+                             "type" : "String", "required" : true,
+                             "enum" : ["GET", "POST", "PUT"]
+                           }
             },
             "required" : true
     },
@@ -382,9 +388,13 @@ A hook can be represented by the following schema definition:
     // Defaults to 1 second
     "retry_delay" : { "type" : "Number", "min" : 1, "max" : 60, "default" : 1 },
 
-    // The events that trigger this hook.  Any combination of "insert", "update", or "delete".  Determines
-    // if the hook should be fired when an object is created, updated, or deleted.
-    "events" : { "type" : [{ "type" : "String", "enum" : ["insert", "update", "delete"] }], "required" : true },
+    // The events that trigger this hook.  Any combination of "insert",
+    // "update", or "delete".  Determines if the hook should be fired
+    // when an object is created, updated, or deleted.
+    "events" : {
+        "type" : [{ "type" : "String", "enum" : ["insert", "update", "delete"] }],
+        "required" : true
+    },
 
     // The entity type that the hook is interested in.  May be a schema name or one of:
     // - sis_schemas - type for schemas
@@ -611,13 +621,28 @@ A commit object has the following schema definition:
 {
     // The type of object
     "type" : "String",
+
     // The id of the object (depends on the type)
     "entity_id" : "String",
+
+    // The type of action this commit logs.  One of update, insert, or delete
     "action" : {"type" : "String", "required" : true, enum : ["update", "insert", "delete"]},
-    "diff" : "Mixed", // the diff object from [JsonDiffPatch](https://github.com/benjamine/JsonDiffPatch) if action is update, the new object if insert, null if delete
-    "old_value" : "Mixed", // old value if update, null if insert, old value if delete
-    "date_modified" : { "type" : "Number" }, // same as the _updated_at value of the entity that was saved
-    "modified_by" : "String" // username of the user who modified it
+
+    // If insert, the new object
+    // If update, the patch from [JsonDiffPatch](https://github.com/benjamine/JsonDiffPatch)
+    // If delete, null
+    "diff" : "Mixed",
+
+    // If insert, null
+    // If update, the old value that the patch can be applied to
+    // If delete, the value being deleted
+    "old_value" : "Mixed",
+
+    // same as the _updated_at value of the entity that was saved
+    "date_modified" : { "type" : "Number" },
+
+    // username of the user who modified it
+    "modified_by" : "String"
 }
 ```
 

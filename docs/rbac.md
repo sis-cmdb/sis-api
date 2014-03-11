@@ -46,10 +46,19 @@ User objects in SIS have the following schema definition:
 ```javascript
 {
     // The username.  Required, unique, and lowercase alphanumeric w/ underscores
-    "name" : { "type" : "String", "required" : true,  "unique" : true, "match" :  "/^[a-z0-9_]+$/"" },
+    "name" : {
+        "type" : "String",
+        "required" : true,
+        "unique" : true,
+        "match" :  "/^[a-z0-9_]+$/""
+    },
 
     // The email address of the user.  Required
-    "email" : { "type" : "String", "required" : true,  "match": /^([\w-\.]+@([\w-]+\.)+[\w-]{2,4})?$/ },
+    "email" : {
+        "type" : "String",
+        "required" : true,
+        "match": /^([\w-\.]+@([\w-]+\.)+[\w-]{2,4})?$/
+    },
 
     // Future use.  Intended to mean the user's email has been verified
     "verified" : { "type" : "Boolean", "default" : false },
@@ -140,9 +149,6 @@ The name must contain only lowercase ascii characters, digits, or underscores.
 The request body must be a valid user object.  This method will error if a user with the same name exists.
 
 The response is the user object along with two additional fields assigned by mongoose:
-
-* `_id` - the database assigned ID of the user.  Not used in this API
-* `__v` - the version number of the user.
 
 ### Updating a user
 
