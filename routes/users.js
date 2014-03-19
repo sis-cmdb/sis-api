@@ -62,6 +62,16 @@
         } else {
             var u = o.toObject();
             delete u.pw;
+            // hack to convert a token
+            if (SIS.FIELD_EXPIRES in u) {
+                var d = o[SIS.FIELD_EXPIRES];
+                var timeLeft = d.getTime() - Date.now();
+                if (timeLeft <= 0) {
+                    timeLeft = 0;
+                }
+                u = o.toObject();
+                u[SIS.FIELD_EXPIRES] = timeLeft;
+            }
             o = u;
         }
         return o;

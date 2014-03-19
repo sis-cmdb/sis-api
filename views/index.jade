@@ -1,15 +1,37 @@
 doctype html
-html(lang="en")
+html(lang="en", ng-app="sisui")
     head
         title= title
         link(rel="stylesheet", href=prefix + "public/css/bootstrap.min.css")
-        script(src="http://code.jquery.com/jquery-1.11.0.min.js")
+        script(src="http://code.jquery.com/jquery-1.11.0.js")
         script(src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js")
-        script(src=prefix + 'public/js/doc.js')
-    body(data-spy="scroll", data-target=".nav-toc")
+        script(src="//ajax.googleapis.com/ajax/libs/angularjs/1.2.14/angular.min.js")
+        script(src="//ajax.googleapis.com/ajax/libs/angularjs/1.2.14/angular-route.min.js")
+
+        script(src=prefix + 'public/js/sis-js.js')
+        script(src=prefix + 'public/app/js/app.js')
+        script(src=prefix + 'public/app/js/controllers/login.js')
+        script(src=prefix + 'public/app/js/controllers/schemas.js')
+        script(src=prefix + 'public/app/js/controllers/sidebar.js')
+    body(data-target=".nav-toc")
         header(class='navbar navbar-default navbar-static-top')
             div(class="container")
                 div(class="navbar-header")
                     a(href=prefix, class="navbar-brand") SIS
-        div(id='_root_div_')
-            != readme
+                div(class="collapse navbar-collapse")
+                    ul(class="nav navbar-nav")
+                        li: a(href=prefix + 'docs') API
+        div(class="container")
+            div(class="row")
+                div(class="col-md-9", ng-view)
+                div(class="col-md-3 nav-toc",
+                    ng-controller="SidebarController")
+                    ul(class="nav affix", role="complementary")
+                        li
+                            a(href='#/schemas') Schemas
+                        li
+                            a(href='#/hooks') Hooks
+                        li
+                            a(href='#/hiera') Hiera
+                        li(ng-show="loggedIn")
+                            a(href='#/logout', ng-click="logout()") Logout

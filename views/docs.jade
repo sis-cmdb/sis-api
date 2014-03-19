@@ -1,0 +1,18 @@
+doctype html
+html(lang="en")
+    head
+        title= title
+        link(rel="stylesheet", href=prefix + "public/css/bootstrap.min.css")
+        script(src="http://code.jquery.com/jquery-1.11.0.min.js")
+        script(src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js")
+        script(src=prefix + 'public/js/doc.js')
+    body(data-spy="scroll", data-target=".nav-toc")
+        header(class='navbar navbar-default navbar-static-top')
+            div(class="container")
+                div(class="navbar-header")
+                    a(href=prefix, class="navbar-brand") SIS
+                div(class="collapse navbar-collapse")
+                    ul(class="nav navbar-nav")
+                        li.active: a(href=prefix + 'docs') API
+        div(id='_root_div_')
+            != readme

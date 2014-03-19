@@ -40,7 +40,7 @@
             var data = marked(fs.readFileSync(path, 'utf8'));
             prefix = prefix || './';
             return function(req, res) {
-                res.render('index', {
+                res.render('docs', {
                     'title' : title,
                     'readme' : data,
                     'prefix' : prefix
@@ -48,12 +48,17 @@
             }
         }
 
-        var idxRender = createMdRender('SIS', __dirname + '/../README.md');
+        var idxRender = function(req, res) {
+            res.render('index', {
+                'prefix' : './'
+            });
+        }
 
         // Routes this exposes
         this.routes = {
             "/" : idxRender,
             "/index" : idxRender,
+            "/docs" : createMdRender('SIS', __dirname + '/../README.md'),
             "/docs/rbac.md" : createMdRender('Role Based Access Control', __dirname + '/../docs/rbac.md', '../'),
             "/docs/sharing.md" : createMdRender('Data Sharing and Organization', __dirname + '/../docs/sharing.md', '../')
         };
