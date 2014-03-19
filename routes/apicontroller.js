@@ -123,9 +123,27 @@ ApiController.prototype.parseQuery = function(req) {
     if (fields) {
         if (typeof fields !== 'string') {
             fields = null;
+        } else {
+            fields = fields.split(',').join(' ');
         }
     }
-    return {'query' : query, 'limit' : limit, 'offset' : offset, 'fields' : fields};
+    var result = {'query' : query, 'limit' : limit, 'offset' : offset, 'fields' : fields};
+    var sort = req.query.sort;
+    if (sort) {
+        var sortFields = sort.split(',');
+        var sortOpt = sortFields.reduce(function(c, field) {
+            // default asc
+            var opt = 1;
+            if (field[0] == '+' || field[0] == '-') {
+                opt = field[0] == '+' ? 1 : -1;
+                field = field.substr(1);
+            }
+            c[field] = opt;
+            return c;
+        }, { });
+        result['sort'] = sortOpt;
+    }
+    return result;
 }
 
 // Returns true if the request wants sub-documents populated
@@ -159,6 +177,9 @@ ApiController.prototype.getAll = function(req, res) {
     this.applyDefaults(req);
     var rq = this.parseQuery(req);
     var options = { skip : rq.offset, limit: rq.limit};
+    if (rq.sort) {
+        options['sort'] = rq.sort;
+    }
     var fields = rq.fields;
     var condition = rq.query;
     var self = this;
