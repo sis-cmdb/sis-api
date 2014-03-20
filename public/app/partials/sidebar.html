@@ -1,0 +1,9 @@
+<div class="col-md-3 nav-toc" ng-controller="SidebarController">
+    <ul class="nav affix" role="complementary">
+        <li ng-show="!loggedIn" ng-class="{active:isActive('login')}"><a href="#/">Login</a></li>
+        <li ng-show="loggedIn" ng-class="{active:isActive('schemas')}"><a href="#/schemas">Schemas</a></li>
+        <li ng-show="loggedIn" ng-class="{active:isActive('hooks')}"><a href="#/hooks">Hooks</a></li>
+        <li ng-show="loggedIn" ng-class="{active:isActive('hiera')}"><a href="#/hiera">Hiera</a></li>
+        <li ng-show="loggedIn" ng-click="logout()"><a href="#/logout">Logout</a></li>
+    </ul>
+</div>

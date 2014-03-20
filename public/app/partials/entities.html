@@ -1,4 +1,8 @@
 <div class="row sisui-bottom-buffer">
+    <h3>Show Schema Def</h3>
+</div>
+<div class="row sisui-bottom-buffer">
+    <h3>Entities</h3>
     <form class="form-inline" role="form">
       <div class="form-group">
         <label class="sr-only" for="filter">Filter</label>
@@ -16,17 +20,17 @@
             </tr>
         </thead>
         <tbody>
-            <tr ng-repeat="schema in schemas | filter:filterText">
-                <td><a href="#/entities/{{schema.name}}">{{schema.name}}</a></td>
-                <td><span style="margin-right: 1px;" ng-repeat="owner in schema.owner" class="label label-default">{{owner}}</span></td>
+            <tr ng-repeat="entity in entities | filter:filterText">
+                <td><a href="#/entities/{{$parent.schema.name}}/{{entity._id}}">{{entity[$parent.idField]}}</a></td>
+                <td><span style="margin-right: 1px;" ng-repeat="owner in entity.owner" class="label label-default">{{owner}}</span></td>
                 <td>
-                    <a ng-show="!schema.canManage" class="btn btn-xs btn-default" disabled="disabled">
+                    <a ng-show="!entity.canManage" class="btn btn-xs btn-default" disabled="disabled">
                         <span class="glyphicon glyphicon-lock"></span>
                     </a>
-                    <a ng-show="schema.canManage" class="btn btn-xs btn-primary" href="#/schemas/{{schema.name}}">
+                    <a ng-show="entity.canManage" class="btn btn-xs btn-primary" href="#/entities/{{schema.name}}/{{entity._id}}/edit">
                         <span class="glyphicon glyphicon-edit">Edit</span>
                     </a>
-                    <a ng-show="schema.canManage" class="btn btn-xs btn-danger" ng-click="$parent.remove(schema)">
+                    <a ng-show="entity.canManage" class="btn btn-xs btn-danger" ng-click="$parent.remove(entity)">
                         <span class="glyphicon glyphicon-trash">Remove</span>
                     </a>
                 </td>

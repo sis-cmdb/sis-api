@@ -11,6 +11,10 @@ var sisapp = angular.module('sisui', ['ngRoute'])
             templateUrl : "public/app/partials/schemas.html",
             controller : "SchemasController"
         })
+        .when("/entities/:schema", {
+            templateUrl : "public/app/partials/entities.html",
+            controller : "EntitiesController"
+        })
         .otherwise({
             redirectTo: '/'
         })
@@ -72,10 +76,10 @@ sisapp.factory("currentUserService", function(SisClient, $q, $rootScope) {
             }
             return result;
         },
-        getUserName : function() {
+        getCurrentUser : function() {
             var data = localStorage[USER_KEY];
             if (data) {
-                return angular.fromJson(data).username;
+                return angular.fromJson(data);
             }
             return null;
         },
@@ -85,7 +89,7 @@ sisapp.factory("currentUserService", function(SisClient, $q, $rootScope) {
                 d.resolve(true);
                 return d.promise;
             }
-            var username = this.getUserName();
+            var username = this.getCurrentUser().username;
             SisClient.tokens(username).delete(SisClient.authToken, function(e, r) {
                 // ignore errors
                 SisClient.auth_token = null;
@@ -102,13 +106,18 @@ sisapp.factory("currentUserService", function(SisClient, $q, $rootScope) {
                     if (e || !token) {
                         return d.reject("Authentication failed.");
                     }
-                    var user = {
-                        username : username,
-                        expirationTime : Date.now() + token.expires
-                    }
-                    localStorage[USER_KEY] = angular.toJson(user);
-                    d.resolve(username);
-                    $rootScope.$broadcast("loggedIn", true);
+                    // get the user details
+                    SisClient.users.get(username, function(e, user) {
+                        var data = {
+                            username : username,
+                            super_user : user.super_user,
+                            roles : user.roles,
+                            expirationTime : Date.now() + token.expires
+                        }
+                        localStorage[USER_KEY] = angular.toJson(data);
+                        d.resolve(data);
+                        $rootScope.$broadcast("loggedIn", true);
+                    });
                 });
             });
             return d.promise;

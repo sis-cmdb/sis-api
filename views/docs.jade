@@ -2,10 +2,11 @@ doctype html
 html(lang="en")
     head
         title= title
-        link(rel="stylesheet", href=prefix + "public/css/bootstrap.min.css")
         script(src="http://code.jquery.com/jquery-1.11.0.min.js")
         script(src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js")
         script(src=prefix + 'public/js/doc.js')
+        link(rel="stylesheet", href="//netdna.bootstrapcdn.com/bootswatch/3.1.1/flatly/bootstrap.min.css")
+        link(rel="stylesheet", href=prefix + "public/css/docs.css")
     body(data-spy="scroll", data-target=".nav-toc")
         header(class='navbar navbar-default navbar-static-top')
             div(class="container")
