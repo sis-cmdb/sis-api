@@ -1,6 +1,6 @@
 'use strict';
 
-var sisapp = angular.module('sisui', ['ngRoute'])
+var sisapp = angular.module('sisui', ['ngRoute', 'ui.bootstrap'])
 .config(function($routeProvider) {
     $routeProvider
         .when("/", {

@@ -1,5 +1,8 @@
 <div class="row sisui-bottom-buffer">
-    <h3>Show Schema Def</h3>
+    <h3><strong>{{ schema.name }}</strong> Information</h3>
+    <div ng-controller="SchemaDefinitionController">
+        <div ng-include src="'public/app/partials/schema-definition.html'"/>
+    </div>
 </div>
 <div class="row sisui-bottom-buffer">
     <h3>Entities</h3>

@@ -1,0 +1,12 @@
+<accordion close-others="true">
+    <accordion-group heading="Definition Fields">
+        <div class="schema-tab">
+            <li ng-repeat="descriptor in descriptors" ng-include="'public/app/partials/schema-descriptor.html'"></li>
+        </div>
+    </accordion-group>
+    <accordion-group heading="Json">
+        <pre class="schema-tab">
+{{ schema | json }}
+        </pre>
+    </accordion-group>
+</accordion>

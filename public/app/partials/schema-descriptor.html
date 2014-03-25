@@ -1,0 +1,10 @@
+<label class="label label-default">{{descriptor.name}}</label>
+<a ng-if="descriptor.url" href="{{ descriptor.url }}">
+    <label class="label label-warning add-pointer">{{descriptor.type}}</label>
+</a>
+<label ng-if="!descriptor.url" class="label label-success">{{descriptor.type}}</label>
+<label class="label label-primary" ng-show="descriptor.required">required</label>
+<label class="label label-info" ng-show="descriptor.unique">unique</label>
+<ul ng-hide="!descriptor.children">
+    <li ng-repeat="descriptor in descriptor.children" ng-include="'public/app/partials/schema-descriptor.html'"></li>
+</ul>

@@ -55,6 +55,7 @@ sisapp.controller("EntitiesController", function($scope, $location, $route,
     var schemaName = $route.current.params.schema;
     SisClient.schemas.get(schemaName, function(err, schema) {
         if (schema) {
+            $scope.$broadcast('schema', schema);
             // grab the entities (TODO: paginate)
             SisClient.entities(schemaName).list(function(err, entities) {
                 if (entities) {
