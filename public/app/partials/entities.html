@@ -11,26 +11,29 @@
         <label class="sr-only" for="filter">Filter</label>
         <input ng-model="filterText" type="text" class="form-control" id="filter" placeholder="Filter">
       </div>
+      <div class="form-group pull-right">
+        <button ng-show="canAdd" type="button" class="btn btn-primary" ng-click="addNew();" >Add New</button>
+      </div>
     </form>
 </div>
 <div class="row">
     <table class="table table-bordered table-condensed table-striped">
         <thead>
             <tr>
-                <td>Name</td>
+                <td>{{ idField }}</td>
                 <td>Owners</td>
                 <th>Actions</th>
             </tr>
         </thead>
         <tbody>
             <tr ng-repeat="entity in entities | filter:filterText">
-                <td><a href="#/entities/{{$parent.schema.name}}/{{entity._id}}">{{entity[$parent.idField]}}</a></td>
+                <td><a ng-click="viewEntity(entity);">{{entity[$parent.idField]}}</a></td>
                 <td><span style="margin-right: 1px;" ng-repeat="owner in entity.owner" class="label label-default">{{owner}}</span></td>
                 <td>
                     <a ng-show="!entity.canManage" class="btn btn-xs btn-default" disabled="disabled">
                         <span class="glyphicon glyphicon-lock"></span>
                     </a>
-                    <a ng-show="entity.canManage" class="btn btn-xs btn-primary" href="#/entities/{{schema.name}}/{{entity._id}}/edit">
+                    <a ng-show="entity.canManage" class="btn btn-xs btn-primary" ng-click="editEntity(entity);">
                         <span class="glyphicon glyphicon-edit">Edit</span>
                     </a>
                     <a ng-show="entity.canManage" class="btn btn-xs btn-danger" ng-click="$parent.remove(entity)">

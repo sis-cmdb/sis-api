@@ -3,6 +3,7 @@
 sisapp.controller("LoginController", function($scope, $location, currentUserService) {
     if (currentUserService.isLoggedIn()) {
         $location.path("/schemas");
+        return;
     }
     $scope.login = function() {
         var username = $scope.username;

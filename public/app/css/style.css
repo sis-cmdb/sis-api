@@ -12,3 +12,7 @@ ul {
 }
 .nav, .pagination, .carousel, .panel-title a { cursor: pointer; }
 .add-pointer { cursor: pointer; }
+
+.entity-display li {
+    list-style-type: none;
+}

@@ -1,0 +1,13 @@
+<div>
+    <div class="modal-header">
+        <h3>Add an entity of type {{ schema.name }}</h3>
+    </div>
+    <div class="modal-body entity-display">
+        <li ng-controller="EntityDescriptorController" ng-repeat="descriptor in descriptors" ng-init="init(entity, descriptor);">
+            <div ng-include="'public/app/partials/entity-descriptor.html'"></div>
+        </li>
+    </div>
+    <div class="modal-footer">
+        <button class="btn btn-warning" ng-click="$close(false);">Cancel</button>
+    </div>
+</div>

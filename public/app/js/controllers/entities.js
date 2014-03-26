@@ -1,69 +1,69 @@
 'use strict';
 
 sisapp.controller("EntitiesController", function($scope, $location, $route,
-                                                 currentUserService, SisClient) {
+                                                 $modal, SisUtil, SisClient) {
     if (!($route.current && $route.current.params && $route.current.params.schema)) {
         $location.path("/#schemas");
         return;
-    }
-
-    var canManage = function(entity, schema) {
-        var user = currentUserService.getCurrentUser();
-        if (!user || entity.sis_locked) {
-            return false;
-        }
-        if (user.super_user) { return true; }
-        var roles = user.roles || { };
-        var owner = entity.owner || schema.owner;
-        for (var i = 0; i < owner.length; ++i) {
-            var group = owner[i];
-            if (!roles[group]) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    var getIdField = function(schema) {
-        var defn = schema.definition;
-        for (var k in defn) {
-            if (typeof defn[k] === 'object') {
-                var descriptor = defn[k];
-                if (typeof(descriptor['type']) === "string" &&
-                    descriptor['type'] == "String" &&
-                    descriptor['required'] &&
-                    descriptor['unique']) {
-                    // found a required, unique string
-                    return k;
-                }
-            }
-        }
-        var result = "_id";
-        if ('name' in defn) {
-            result = "name";
-        } else if ("title" in defn) {
-            result = "title";
-        }
-        return result;
     }
 
     $scope.remove = function(entity) {
 
     }
 
+    var addNew = function() {
+        // bring up a dialog..
+        var modalScope = $scope.$new(true);
+        modalScope.schema = $scope.schema;
+        modalScope.entity = { };
+        modalScope.action = 'add';
+        $modal.open({
+            templateUrl : "public/app/partials/mod-entity.html",
+            scope : modalScope,
+            controller : "ModEntityController"
+        })
+    }
+
+    var editEntity = function(entity) {
+        var modalScope = $scope.$new(true);
+        modalScope.schema = $scope.schema;
+        modalScope.entity = angular.copy(entity);
+        modalScope.action = 'edit';
+        $modal.open({
+            templateUrl : "public/app/partials/mod-entity.html",
+            scope : modalScope,
+            controller : "ModEntityController"
+        })
+    }
+
+    var viewEntity = function(entity) {
+        var modalScope = $scope.$new(true);
+        modalScope.schema = $scope.schema;
+        modalScope.entity = entity;
+        modalScope.action = 'edit';
+        $modal.open({
+            templateUrl : "public/app/partials/mod-entity.html",
+            scope : modalScope,
+            controller : "ModEntityController"
+        });
+    }
 
     var schemaName = $route.current.params.schema;
     SisClient.schemas.get(schemaName, function(err, schema) {
         if (schema) {
+            $scope.canAdd = SisUtil.canAddEntity(schema);
             $scope.$broadcast('schema', schema);
+            $scope.addNew = addNew;
+            $scope.editEntity = editEntity;
+            $scope.viewEntity = viewEntity;
             // grab the entities (TODO: paginate)
             SisClient.entities(schemaName).list(function(err, entities) {
                 if (entities) {
                     $scope.$apply(function() {
                         $scope.schema = schema;
-                        $scope.idField = getIdField(schema);
+                        $scope.idField = SisUtil.getIdField(schema);
                         $scope.entities = entities.results.map(function(ent) {
-                            ent.canManage = canManage(ent, schema);
+                            ent.canManage = SisUtil.canManageEntity(ent, schema);
                             return ent;
                         })
                     });

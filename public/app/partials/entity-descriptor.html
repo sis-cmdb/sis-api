@@ -1,0 +1,28 @@
+<div ng-switch on="descriptor.type">
+    <div ng-switch-when="Document">
+        <a class="add-pointer" ng-show="isItem();" ng-click="$parent.delItem(arrIdx);"> - </a>
+        <label>{{ descriptor.name || arrIdx }}</label>
+        <ul>
+            <li ng-controller="EntityDescriptorController" ng-repeat="descriptor in children" ng-init="init(doc, descriptor);">
+                <div ng-include="'public/app/partials/entity-descriptor.html'"></div>
+            </li>
+        </ul>
+    </div>
+    <div ng-switch-when="Array">
+        <a ng-show="isItem();" ng-click="$parent.delItem(arrIdx);"> - </a>
+        <label>{{descriptor.name }}</label>
+        <ul>
+            <li ng-controller="EntityDescriptorController" ng-init="init(value, childDesc, $index);" ng-repeat="value in array track by $index">
+                <div ng-include="'public/app/partials/entity-descriptor.html'"></div>
+            </li>
+            <li><a class="add-pointer" ng-click="addItem();">+ Add </a></li>
+        </ul>
+    </div>
+    <form ng-switch-default class="form-inline" role="form">
+        <div class="form-group">
+            <a class="add-pointer" ng-show="isItem();" ng-click="$parent.delItem(arrIdx);"> - </a>
+            <label for="{{path}}">{{ descriptor.name || arrIdx }}</label>
+            <input type="text" class="form-control" id="{{descriptor.name}}" placeholder="{{descriptor.type}}" value="{{ fieldValue }}">
+        </div>
+    </form>
+</div>
