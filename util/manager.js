@@ -319,7 +319,12 @@ Manager.prototype._getModCallback = function(d) {
     var self = this;
     return function(err, result) {
         if (err) {
-            d.reject(SIS.ERR_INTERNAL(err));
+            if (err.name == "ValidationError" || err.name == "CastError") {
+                err = SIS.ERR_BAD_REQ(err);
+            } else {
+                err = SIS.ERR_INTERNAL(err);
+            }
+            d.reject(err);
         } else {
             d.resolve(result);
         }
@@ -351,7 +356,11 @@ Manager.prototype._save = function(obj, callback) {
     } else {
         var m = obj;
         if (!(obj instanceof this.model)) {
-            m = new this.model(obj);
+            try {
+                m = new this.model(obj);
+            } catch (ex) {
+                return d.reject(SIS.ERR_BAD_REQ(ex));
+            }
         }
         m.save(this._getModCallback(d));
     }
