@@ -8,7 +8,19 @@ sisapp.controller("EntitiesController", function($scope, $location, $route,
     }
 
     $scope.remove = function(entity) {
-
+        var schemaName = $scope.schema.name;
+        SisClient.entities(schemaName).delete(entity, function(err, res) {
+            if (!err) {
+                $scope.$apply(function() {
+                    for (var i = 0; i < $scope.entities.length; ++i) {
+                        if ($scope.entities[i]['_id'] == entity['_id']) {
+                            $scope.entities.splice(i, 1)
+                            break;
+                        }
+                    }
+                });
+            }
+        });
     }
 
     var schemaName = $route.current.params.schema;
@@ -24,7 +36,6 @@ sisapp.controller("EntitiesController", function($scope, $location, $route,
             scope : modalScope,
             controller : "ShowEntityController"
         }).result.then(function(entity) {
-            entity.__canManage = SisUtil.canManageEntity(entity, $scope.schema);
             $scope.entities.push(entity);
         });;
     }
@@ -32,14 +43,13 @@ sisapp.controller("EntitiesController", function($scope, $location, $route,
     var editEntity = function(entity) {
         var modalScope = $scope.$new(true);
         modalScope.schema = $scope.schema;
-        modalScope.entity = angular.copy(entity);
+        modalScope.entity = entity;
         modalScope.action = 'edit';
         var modal = $modal.open({
             templateUrl : "public/app/partials/mod-entity.html",
             scope : modalScope,
             controller : "ShowEntityController"
         }).result.then(function(entity) {
-            entity.__canManage = SisUtil.canManageEntity(entity, $scope.schema);
             for (var i = 0; i < $scope.entities.length; ++i) {
                 if ($scope.entities[i]['_id'] == entity['_id']) {
                     $scope.entities[i] = entity;
@@ -61,6 +71,14 @@ sisapp.controller("EntitiesController", function($scope, $location, $route,
         });
     }
 
+    $scope.canManage = function(entity) {
+        return SisUtil.canManageEntity(entity, $scope.schema);
+    }
+
+    $scope.canRemove = function(entity) {
+        return $scope.canManage(entity) && SisUtil.canDelete(entity);
+    }
+
     SisClient.schemas.get(schemaName, function(err, schema) {
         if (schema) {
             $scope.canAdd = SisUtil.canAddEntity(schema);
@@ -75,7 +93,6 @@ sisapp.controller("EntitiesController", function($scope, $location, $route,
                         $scope.schema = schema;
                         $scope.idField = SisUtil.getIdField(schema);
                         $scope.entities = entities.results.map(function(ent) {
-                            ent.__canManage = SisUtil.canManageEntity(ent, schema);
                             return ent;
                         })
                     });

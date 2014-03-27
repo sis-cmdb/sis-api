@@ -141,9 +141,28 @@ sisapp.factory('SisUtil', function(currentUserService) {
         return false;
     }
 
+    var _getOwnerSubset = function(schema) {
+        var user = currentUserService.getCurrentUser();
+        if (!user) {
+            return
+        }
+        if (user.super_user) {
+            return schema.owner;
+        }
+        var roles = user.roles || { };
+        var subset = schema.owner.filter(function(o) {
+            return o in roles;
+        });
+        return subset;
+    }
+
+    var _canDelete = function(obj) {
+        return obj && !obj.sis_locked;
+    }
+
     var _canManageEntity = function(entity, schema) {
         var user = currentUserService.getCurrentUser();
-        if (!user || entity.sis_locked) {
+        if (!user) {
             return false;
         }
         if (user.super_user) { return true; }
@@ -160,7 +179,7 @@ sisapp.factory('SisUtil', function(currentUserService) {
 
     var _canManageSchema = function(schema) {
         var user = currentUserService.getCurrentUser();
-        if (!user || schema.sis_locked) {
+        if (!user) {
             return false;
         }
         if (user.super_user) { return true; }
@@ -216,7 +235,9 @@ sisapp.factory('SisUtil', function(currentUserService) {
         canManageSchema : _canManageSchema,
         canAddEntity : _canAddEntityForSchema,
         getDescriptorPath : _getPathForDesc,
-        getNewItemForDesc : _getNewItemForDesc
+        getNewItemForDesc : _getNewItemForDesc,
+        canDelete : _canDelete,
+        getOwnerSubset : _getOwnerSubset
     }
 })
 

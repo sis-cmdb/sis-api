@@ -20,13 +20,13 @@
                 <td><a href="#/entities/{{schema.name}}">{{schema.name}}</a></td>
                 <td><span style="margin-right: 1px;" ng-repeat="owner in schema.owner" class="label label-default">{{owner}}</span></td>
                 <td>
-                    <a ng-show="!schema.__canManage" class="btn btn-xs btn-default" disabled="disabled">
+                    <a ng-show="!canManage(schema)" class="btn btn-xs btn-default" disabled="disabled">
                         <span class="glyphicon glyphicon-lock"></span>
                     </a>
-                    <a ng-show="schema.__canManage" class="btn btn-xs btn-primary" href="#/schemas/{{schema.name}}">
+                    <a ng-show="canManage(schema)" class="btn btn-xs btn-primary" href="#/schemas/{{schema.name}}">
                         <span class="glyphicon glyphicon-edit">Edit</span>
                     </a>
-                    <a ng-show="schema.__canManage" class="btn btn-xs btn-danger" ng-click="$parent.remove(schema)">
+                    <a ng-show="canRemove(schema)" class="btn btn-xs btn-danger" ng-click="remove(schema)">
                         <span class="glyphicon glyphicon-trash">Remove</span>
                     </a>
                 </td>

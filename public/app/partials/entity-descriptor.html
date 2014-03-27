@@ -21,24 +21,44 @@
             <span ng-show="isCollapsed" class="glyphicon glyphicon-chevron-right"> {{ fieldName }}</span>
             <span ng-show="!isCollapsed" class="glyphicon glyphicon-chevron-down"> {{ fieldName }}</span>
         </a>
-        <ul collapse="isCollapsed">
-            <li ng-controller="EntityDescriptorController" ng-init="init($parent.fieldValue, $parent.children[0], $index);" ng-repeat="value in fieldValue track by $index">
-                <div ng-include="'public/app/partials/entity-descriptor.html'"></div>
-            </li>
-            <li>
-                <a ng-show="canAdd();" class="btn btn-xs btn-primary" ng-click="addItem();">
-                    <span class="glyphicon glyphicon-plus">Add</span>
-                </a>
-            </li>
-        </ul>
+        <div ng-if="fieldDescriptor.enum">
+            <ul collapse="isCollapsed">
+                <li>
+                    <fieldset ng-disabled="isReadOnly();">
+                    <label ng-repeat="choice in fieldDescriptor.enum">
+                        <input type="checkbox"
+                           ng-checked="fieldValue.indexOf(choice) >= 0"
+                           ng-click="toggleChoice(choice)"> {{ choice }}
+                    </label>
+                    </fieldset>
+                </li>
+            </ul>
+        </div>
+        <div ng-if="!fieldDescriptor.enum">
+            <ul collapse="isCollapsed">
+                <li ng-controller="EntityDescriptorController" ng-init="init($parent.fieldValue, $parent.children[0], $index);" ng-repeat="value in fieldValue track by $index">
+                    <div ng-include="'public/app/partials/entity-descriptor.html'"></div>
+                </li>
+                <li>
+                    <a ng-show="canAdd();" class="btn btn-xs btn-primary" ng-click="addItem();">
+                        <span class="glyphicon glyphicon-plus">Add</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
     </div>
-    <form ng-switch-default class="form-inline" role="form">
+    <form ng-switch-default class="form-inline css-form" role="form" novalidate>
         <div class="form-group">
             <a ng-show="canDelete();" class="btn btn-xs btn-primary" ng-click="delItem(arrIdx);">
                 <span class="glyphicon glyphicon-minus"></span>
             </a>
-            <label for="{{ path }}">{{ fieldName }}</label>
-            <input type="text" class="form-control input-sm" id="{{ path }}" placeholder="{{ fieldDescriptor.type }}" ng-change="valueChanged(fieldValue);" ng-disabled="isReadOnly();" ng-model="fieldValue">
+            <fieldset ng-disabled="isReadOnly();">
+                <label for="{{ path }}" ng-class="inputType()">{{ fieldName }}</label>
+                <select ng-if="fieldDescriptor.enum" ng-options="choice in fieldDescriptor.enum" ng-model="fieldValue" ng-disabled="isReadOnly();" ng-changed="valueChanged(fieldValue)"></select>
+
+                <input ng-if"!fieldDescriptor.enum" type="{{ inputType() }}" class="form-control input-sm" id="{{ path }}" placeholder="{{ fieldDescriptor.type }}" ng-change="valueChanged(fieldValue);" ng-model="fieldValue">
+
+            </fieldset>
         </div>
     </form>
 </div>

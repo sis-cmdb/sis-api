@@ -73,6 +73,26 @@ sisapp
         } // else we are a non container field
     }
 
+    $scope.inputType = function() {
+        switch ($scope.fieldDescriptor.type) {
+            case "Boolean":
+                return "checkbox";
+            case "Number":
+                return "number";
+            default:
+                return "text";
+        }
+    }
+
+    $scope.toggleChoice = function(choice) {
+        var idx = $scope.fieldValue.indexOf(choice);
+        if (idx == -1) {
+            $scope.fieldValue.push(choice);
+        } else {
+            $scope.fieldValue.splice(idx, 1);
+        }
+    }
+
     $scope.addItem = function() {
         var fieldDescriptor = $scope.fieldDescriptor;
         var itemDesc = fieldDescriptor['children'][0];
@@ -149,15 +169,28 @@ sisapp
 sisapp
 .controller("ShowEntityController", function($scope, $modalInstance,
                                              SisUtil, SisClient) {
+    var orig = $scope.entity;
+    $scope.entity = angular.copy(orig);
+    console.log("orig: " + JSON.stringify(orig));
     $scope.descriptors = SisUtil.getDescriptorArray($scope.schema);
-    delete $scope.entity['__canManage'];
+    // need to tweak this so owner and sis_locked show up..
+    var foundLocked = false;
+    for (var i = 0; i < $scope.descriptors.length; ++i) {
+        var desc = $scope.descriptors[i];
+        if (desc['name'] == 'owner') {
+            // convert owner into an enum
+            desc['enum'] = SisUtil.getOwnerSubset($scope.schema);
+        } else if (desc['name'] == 'sis_locked') {
+            foundLocked = true;
+        }
+    }
 
     // for the valueChanged recursion
     $scope.fieldValue = $scope.entity;
 
-    var orig = angular.copy($scope.entity);
 
     $scope.hasChanged = function() {
+        console.log(JSON.stringify($scope.entity));
         return !angular.equals(orig, $scope.entity);
     }
 
