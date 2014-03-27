@@ -245,7 +245,11 @@ sisapp.factory("currentUserService", function(SisClient, $q, $rootScope) {
                          currentUser.expirationTime > Date.now();
             if (!result) {
                 // cleanup
+                SisClient.authToken = null;
                 delete localStorage[USER_KEY];
+            } else {
+                // ensure sis client token is set
+                SisClient.authToken = currentUser.token;
             }
             return result;
         },
@@ -265,7 +269,7 @@ sisapp.factory("currentUserService", function(SisClient, $q, $rootScope) {
             var username = this.getCurrentUser().username;
             SisClient.tokens(username).delete(SisClient.authToken, function(e, r) {
                 // ignore errors
-                SisClient.auth_token = null;
+                SisClient.authToken = null;
                 delete localStorage[USER_KEY];
                 d.resolve(true)
                 $rootScope.$broadcast("loggedIn", false);
@@ -285,7 +289,8 @@ sisapp.factory("currentUserService", function(SisClient, $q, $rootScope) {
                             username : username,
                             super_user : user.super_user,
                             roles : user.roles,
-                            expirationTime : Date.now() + token.expires
+                            expirationTime : Date.now() + token.expires,
+                            token : token.name
                         }
                         localStorage[USER_KEY] = angular.toJson(data);
                         d.resolve(data);

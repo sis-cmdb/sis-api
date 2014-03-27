@@ -11,17 +11,22 @@ sisapp.controller("EntitiesController", function($scope, $location, $route,
 
     }
 
+    var schemaName = $route.current.params.schema;
+
     var addNew = function() {
         // bring up a dialog..
         var modalScope = $scope.$new(true);
         modalScope.schema = $scope.schema;
         modalScope.entity = { };
         modalScope.action = 'add';
-        $modal.open({
+        var modal = $modal.open({
             templateUrl : "public/app/partials/mod-entity.html",
             scope : modalScope,
-            controller : "ModEntityController"
-        })
+            controller : "ShowEntityController"
+        }).result.then(function(entity) {
+            entity.__canManage = SisUtil.canManageEntity(entity, $scope.schema);
+            $scope.entities.push(entity);
+        });;
     }
 
     var editEntity = function(entity) {
@@ -29,11 +34,19 @@ sisapp.controller("EntitiesController", function($scope, $location, $route,
         modalScope.schema = $scope.schema;
         modalScope.entity = angular.copy(entity);
         modalScope.action = 'edit';
-        $modal.open({
+        var modal = $modal.open({
             templateUrl : "public/app/partials/mod-entity.html",
             scope : modalScope,
-            controller : "ModEntityController"
-        })
+            controller : "ShowEntityController"
+        }).result.then(function(entity) {
+            entity.__canManage = SisUtil.canManageEntity(entity, $scope.schema);
+            for (var i = 0; i < $scope.entities.length; ++i) {
+                if ($scope.entities[i]['_id'] == entity['_id']) {
+                    $scope.entities[i] = entity;
+                    break;
+                }
+            }
+        });
     }
 
     var viewEntity = function(entity) {
@@ -44,11 +57,10 @@ sisapp.controller("EntitiesController", function($scope, $location, $route,
         $modal.open({
             templateUrl : "public/app/partials/mod-entity.html",
             scope : modalScope,
-            controller : "ModEntityController"
+            controller : "ShowEntityController"
         });
     }
 
-    var schemaName = $route.current.params.schema;
     SisClient.schemas.get(schemaName, function(err, schema) {
         if (schema) {
             $scope.canAdd = SisUtil.canAddEntity(schema);

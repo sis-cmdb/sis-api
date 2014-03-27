@@ -7,7 +7,11 @@
             <div ng-include="'public/app/partials/entity-descriptor.html'"></div>
         </li>
     </div>
-    <div class="modal-footer">
-        <button class="btn btn-warning" ng-click="$close(false);">Cancel</button>
+    <div class="modal-footer" ng-if="action != 'view'">
+        <button ng-disabled="!hasChanged()" class="btn btn-primary" ng-click="save();">Save</button>
+        <button class="btn btn-warning" ng-click="$dismiss('Cancel');">Cancel</button>
+    </div>
+    <div class="modal-footer" ng-if="action == 'view'">
+        <button class="btn btn-warning" ng-click="$dismiss('Close');">Close</button>
     </div>
 </div>

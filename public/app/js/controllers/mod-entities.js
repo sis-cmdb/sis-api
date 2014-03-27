@@ -126,6 +126,7 @@ sisapp
 
     // Dirty hack.  Better way would be to make binding fieldValue
     // and propagating that up without ngChange
+    // TODO: debug why binding w/ ng-model only didn't work.
     $scope.valueChanged = function(value) {
         if ($scope.isItem()) {
             $scope.$parent.fieldValue[$scope.arrIdx] = value;
@@ -146,7 +147,38 @@ sisapp
 });
 
 sisapp
-.controller("ModEntityController", function($scope, SisUtil, SisClient) {
+.controller("ShowEntityController", function($scope, $modalInstance,
+                                             SisUtil, SisClient) {
     $scope.descriptors = SisUtil.getDescriptorArray($scope.schema);
     delete $scope.entity['__canManage'];
+
+    // for the valueChanged recursion
+    $scope.fieldValue = $scope.entity;
+
+    var orig = angular.copy($scope.entity);
+
+    $scope.hasChanged = function() {
+        return !angular.equals(orig, $scope.entity);
+    }
+
+    $scope.save = function() {
+        var schemaName = $scope.schema['name'];
+        var endpoint = SisClient.entities(schemaName);
+        if ($scope.action == 'add') {
+            // create
+            endpoint.create($scope.entity, function(err, res) {
+                if (!err) {
+                    $modalInstance.close(res);
+                }
+            });
+        } else {
+            // update
+            endpoint.update($scope.entity, function(err, res) {
+                if (!err) {
+                    $modalInstance.close(res);
+                }
+            });
+        }
+    }
+
 })
