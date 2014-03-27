@@ -12,7 +12,7 @@
         <input ng-model="filterText" type="text" class="form-control" id="filter" placeholder="Filter">
       </div>
       <div class="form-group pull-right">
-        <button ng-show="canAdd" type="button" class="btn btn-primary" ng-click="addNew();" >Add New</button>
+        <button ng-show="canAdd" type="button" class="btn btn-primary" ng-click="addNew();">Add New</button>
       </div>
     </form>
 </div>
@@ -30,13 +30,13 @@
                 <td><a ng-click="viewEntity(entity);">{{entity[$parent.idField]}}</a></td>
                 <td><span style="margin-right: 1px;" ng-repeat="owner in entity.owner" class="label label-default">{{owner}}</span></td>
                 <td>
-                    <a ng-show="!entity.canManage" class="btn btn-xs btn-default" disabled="disabled">
+                    <a ng-show="!entity.__canManage" class="btn btn-xs btn-default" disabled="disabled">
                         <span class="glyphicon glyphicon-lock"></span>
                     </a>
-                    <a ng-show="entity.canManage" class="btn btn-xs btn-primary" ng-click="editEntity(entity);">
+                    <a ng-show="entity.__canManage" class="btn btn-xs btn-primary" ng-click="editEntity(entity);">
                         <span class="glyphicon glyphicon-edit">Edit</span>
                     </a>
-                    <a ng-show="entity.canManage" class="btn btn-xs btn-danger" ng-click="$parent.remove(entity)">
+                    <a ng-show="entity.__canManage" class="btn btn-xs btn-danger" ng-click="$parent.remove(entity)">
                         <span class="glyphicon glyphicon-trash">Remove</span>
                     </a>
                 </td>

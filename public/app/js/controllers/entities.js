@@ -40,7 +40,7 @@ sisapp.controller("EntitiesController", function($scope, $location, $route,
         var modalScope = $scope.$new(true);
         modalScope.schema = $scope.schema;
         modalScope.entity = entity;
-        modalScope.action = 'edit';
+        modalScope.action = 'view';
         $modal.open({
             templateUrl : "public/app/partials/mod-entity.html",
             scope : modalScope,
@@ -63,7 +63,7 @@ sisapp.controller("EntitiesController", function($scope, $location, $route,
                         $scope.schema = schema;
                         $scope.idField = SisUtil.getIdField(schema);
                         $scope.entities = entities.results.map(function(ent) {
-                            ent.canManage = SisUtil.canManageEntity(ent, schema);
+                            ent.__canManage = SisUtil.canManageEntity(ent, schema);
                             return ent;
                         })
                     });

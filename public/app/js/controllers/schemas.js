@@ -14,7 +14,7 @@ sisapp.controller("SchemasController", function($scope, $location,
     SisClient.schemas.listAll({ sort : "name" }, function(err, schemas) {
         if (schemas) {
             schemas = schemas.map(function(s) {
-                s.canManage = SisUtil.canManageSchema(s);
+                s.__canManage = SisUtil.canManageSchema(s);
                 return s;
             })
             $scope.$apply(function() {
