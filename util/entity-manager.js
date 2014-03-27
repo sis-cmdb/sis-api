@@ -102,6 +102,12 @@
             //     }
             // }
             if (SIS.FIELD_OWNER in entity) {
+                if (entity[SIS.FIELD_OWNER] instanceof Array &&
+                    entity[SIS.FIELD_OWNER].length == 0) {
+                    // let the authorize call take care of setting
+                    // sub owners
+                    return null;
+                }
                 var err = this.validateOwner(entity);
                 if (err) {
                     return err;
