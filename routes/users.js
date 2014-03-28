@@ -58,7 +58,7 @@
                 delete u.pw;
                 result.push(u);
             }
-            o = u;
+            o = result;
         } else {
             var u = o.toObject();
             delete u.pw;

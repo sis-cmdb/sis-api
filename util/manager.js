@@ -362,6 +362,9 @@ Manager.prototype._save = function(obj, callback) {
                 return d.reject(SIS.ERR_BAD_REQ(ex));
             }
         }
+        // HACK - see
+        // https://github.com/LearnBoost/mongoose/pull/1981
+        m.$__error(null);
         m.save(this._getModCallback(d));
     }
     return Q.nodeify(d.promise, callback);
