@@ -192,9 +192,9 @@
             path = ref.path;
             var schema = this.model.schema;
             var refModelName = ref.ref;
-            ref = schema.path(path);
             if (ref.type == 'oid') {
-                if (typeof currObj === 'object') {
+                if (typeof currObj === 'object' &&
+                    currObj.constructor.name !== "ObjectID") {
                     if (SIS.FIELD_ID in currObj) {
                         currObj = currObj[SIS.FIELD_ID];
                     } else {

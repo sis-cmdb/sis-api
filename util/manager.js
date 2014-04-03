@@ -161,6 +161,10 @@ Manager.prototype.update = function(id, obj, user, callback) {
     var p = this.getById(id)
         .then(function(found) {
             // need to save found's old state
+            // HACK - see
+            // https://github.com/LearnBoost/mongoose/pull/1981
+            found.$__error(null);
+
             var old = found.toObject();
             var innerP = self._merge(found, obj)
                 .then(function(merged) {
@@ -362,9 +366,7 @@ Manager.prototype._save = function(obj, callback) {
                 return d.reject(SIS.ERR_BAD_REQ(ex));
             }
         }
-        // HACK - see
-        // https://github.com/LearnBoost/mongoose/pull/1981
-        m.$__error(null);
+
         m.save(this._getModCallback(d));
     }
     return Q.nodeify(d.promise, callback);
