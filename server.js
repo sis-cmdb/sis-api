@@ -74,6 +74,7 @@ var startServer = function(config, callback) {
     app.options('/',function(req,res) {
         res.send(200);
     });
+    app.disable('etag');
 
     app.configure(function() {
         mongoose.connect(nconf.get('db').url, function(err) {

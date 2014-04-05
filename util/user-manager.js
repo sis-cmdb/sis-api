@@ -148,7 +148,8 @@
                     }
                     // need to get the diffs..
                     var userRoles = user[SIS.FIELD_ROLES];
-                    var roleDiff = jsondiff.diff(doc[SIS.FIELD_ROLES], mergedDoc[SIS.FIELD_ROLES]);
+                    var docRoles = doc[SIS.FIELD_ROLES] || { };
+                    var roleDiff = jsondiff.diff(docRoles, mergedDoc[SIS.FIELD_ROLES]);
                     for (var k in roleDiff) {
                         // need to make sure the user is an admin of the role being added/deleted/updated
                         if (!(k in userRoles) || userRoles[k] != SIS.ROLE_ADMIN) {

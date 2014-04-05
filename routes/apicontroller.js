@@ -74,7 +74,7 @@ ApiController.prototype.getType = function(req) {
 ApiController.prototype.convertToResponseObject = function(req, obj) {
     // default does nothing
     // hiera needs to return a sub field
-    return Q(obj);
+    return obj;
 }
 
 // Apply default parameters to a request
@@ -367,6 +367,7 @@ ApiController.prototype._getSendCallback = function(req, res, code) {
             // update.. grab the second obj
             result = result[1];
         }
+        result = self.convertToResponseObject(req, result);
         self.sendObject(res, code, result);
         // dispatch hooks
         if (self.hm && req.method in SIS.METHODS_TO_EVENT) {
@@ -420,9 +421,6 @@ ApiController.prototype._finish = function(req, res, p, code) {
     if (this.commitManager && req.method in SIS.METHODS_TO_EVENT) {
         p = p.then(this._saveCommit(req));
     }
-    p = p.then(function(o) {
-        return self.convertToResponseObject(req, o);
-    });
     return Q.nodeify(p, this._getSendCallback(req, res, code));
 }
 
