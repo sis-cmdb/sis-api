@@ -14,13 +14,13 @@
 
  ***********************************************************/
 
-'use strict';
 // A class used to manage the SIS Schemas defined by the /schemas api
 // and also help out the /entities apis
 
 // Not all controllers need this and can use mongoose directly
 // but we have it here since the schemas and entities controller can benefit
 (function() {
+    'use strict';
 
     var SIS = require("./constants");
     var Manager = require("./manager");
@@ -43,7 +43,7 @@
         }
     }
 
-    SchemaManager.prototype.__proto__ = Manager.prototype;
+    require('util').inherits(SchemaManager, Manager);
 
     // overrides
     SchemaManager.prototype.validate = function(modelObj, isUpdate) {
@@ -55,7 +55,7 @@
             return ownerError;
         }
 
-        if (modelObj.name.indexOf("sis_") == 0) {
+        if (modelObj.name.indexOf("sis_") === 0) {
             return "Schema name is reserved.";
         }
 
@@ -66,7 +66,7 @@
         try {
             // object.keys will fail if the var is not an object..
             var fields = Object.keys(modelObj.definition);
-            if (fields.length == 0) {
+            if (!fields.length) {
                 return "Cannot add an empty schema.";
             }
             for (var i = 0; i < fields.length; ++i) {
@@ -81,7 +81,7 @@
             return "Schema is invalid: " + ex;
         }
         return null;
-    }
+    };
 
     SchemaManager.prototype._diffSchemas = function(schema1, schema2) {
 
@@ -122,7 +122,7 @@
         addedPaths = addedPaths.concat(s2Paths);
         removedPaths = removedPaths.concat(s1Paths);
         return [addedPaths, removedPaths, updatedPaths];
-    }
+    };
 
     SchemaManager.prototype.applyUpdate = function(currentSchema, sisSchema) {
         // now we have the persisted schema document.
@@ -195,7 +195,7 @@
             }
         );
         return d.promise;
-    }
+    };
 
     SchemaManager.prototype.objectRemoved = function(schema) {
         // schema document is removed.. now delete the
@@ -225,12 +225,12 @@
             });
         });
         return d.promise;
-    }
+    };
 
     // additional methods
     SchemaManager.prototype.getSisModel = function(name) {
         return this.mongoose.models[name];
-    }
+    };
 
     SchemaManager.prototype.getSisModelAsync = function(name, callback) {
         if (this.hasEntityModel(name)) {
@@ -240,18 +240,18 @@
         var self = this;
         this.model.findOne({name: name}, function(err, schema) {
             if (err) {
-                d.reject(SIS.ERR_BAD_REQ("Schema not found with name " + name))
+                d.reject(SIS.ERR_BAD_REQ("Schema not found with name " + name));
             } else {
                 var model = self.getEntityModel(schema);
                 if (!model) {
-                    d.reject(SIS.ERR_BAD_REQ("Invalid schema found with name " + name))
+                    d.reject(SIS.ERR_BAD_REQ("Invalid schema found with name " + name));
                 } else {
                     d.resolve(model);
                 }
             }
         });
         return Q.nodeify(d.promise, callback);
-    }
+    };
 
     // Bootstrap mongoose by setting up entity models
     SchemaManager.prototype.bootstrapEntitySchemas = function(callback) {
@@ -265,7 +265,7 @@
             }
             callback(null);
         });
-    }
+    };
 
     // may throw an exception.
     SchemaManager.prototype._getMongooseSchema = function(sisSchema) {
@@ -281,7 +281,7 @@
         definition[SIS.FIELD_UPDATED_BY] = { "type" : "String" };
 
         return this.mongoose.Schema(definition);
-    }
+    };
 
     // get a mongoose model back based on the sis schema
     // passed in.  sisSchema would be an object returned by
@@ -319,19 +319,19 @@
             // console.log("getEntityModel: Invalid schema " + JSON.stringify(sisSchema) + " w/ ex " + ex);
             return null;
         }
-    }
+    };
 
     SchemaManager.prototype.hasEntityModel = function(name) {
         return name in this.mongoose.models;
-    }
+    };
 
     SchemaManager.prototype.getEntityModelByName = function(name) {
         return this.mongoose.models[name];
-    }
+    };
 
     // export
     module.exports = function(mongoose, opts) {
         return new SchemaManager(mongoose, opts);
-    }
+    };
 
 })();

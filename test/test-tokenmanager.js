@@ -39,50 +39,52 @@ describe('Token Manager', function() {
 
     var users = require("./data").users;
 
-    describe("temp tokens", function() {
-        before(function(done) {
-            // set the expiration time to 80 seconds (in ms).
-            SIS.AUTH_EXPIRATION_TIME = 80000;
-            var userManager = schemaManager.auth[SIS.SCHEMA_USERS];
-            var superUser = users['superman'];
-            var admin = users['admin1'];
-            userManager.add(admin, superUser, done);
-        });
-        after(function(done) {
-            SIS.AUTH_EXPIRATION_TIME = 1000 * 60 * 60 * 8;
-            var userManager = schemaManager.auth[SIS.SCHEMA_USERS];
-            var superUser = users['superman'];
-            userManager.delete('admin1', superUser, done);
-        });
+    if (process.env.SIS_RUN_LONG_TESTS) {
+        describe("temp tokens", function() {
+            before(function(done) {
+                // set the expiration time to 80 seconds (in ms).
+                SIS.AUTH_EXPIRATION_TIME = 80000;
+                var userManager = schemaManager.auth[SIS.SCHEMA_USERS];
+                var superUser = users['superman'];
+                var admin = users['admin1'];
+                userManager.add(admin, superUser, done);
+            });
+            after(function(done) {
+                SIS.AUTH_EXPIRATION_TIME = 1000 * 60 * 60 * 8;
+                var userManager = schemaManager.auth[SIS.SCHEMA_USERS];
+                var superUser = users['superman'];
+                userManager.delete('admin1', superUser, done);
+            });
 
-        it("should add a temp token", function(done) {
-            // mongo ttl thread runs every minute... sort of
-            this.timeout(240000);
-            console.log("Testing temp token expiration.  This takes a few minutes.");
-            var userManager = schemaManager.auth[SIS.SCHEMA_USERS];
-            var tokenManager = schemaManager.auth[SIS.SCHEMA_TOKENS];
-            var user = users['admin1'];
-            userManager.createTempToken(user, function(e, token) {
-                should.not.exist(e);
-                should.exist(token);
-                'admin1'.should.eql(token[SIS.FIELD_USERNAME]);
-                setTimeout(function() {
-                    tokenManager.getById(token['name'], function(e, token) {
-                        should.not.exist(e);
-                        should.exist(token);
-                        'admin1'.should.eql(token[SIS.FIELD_USERNAME]);
-                    });
-                }, 70000);
-                setTimeout(function() {
-                    tokenManager.getById(token['name'], function(e, token) {
-                        should.exist(e);
-                        should.not.exist(token);
-                        done();
-                    });
-                }, 185000);
+            it("should add a temp token", function(done) {
+                // mongo ttl thread runs every minute... sort of
+                this.timeout(240000);
+                console.log("Testing temp token expiration.  This takes a few minutes.");
+                var userManager = schemaManager.auth[SIS.SCHEMA_USERS];
+                var tokenManager = schemaManager.auth[SIS.SCHEMA_TOKENS];
+                var user = users['admin1'];
+                userManager.createTempToken(user, function(e, token) {
+                    should.not.exist(e);
+                    should.exist(token);
+                    'admin1'.should.eql(token[SIS.FIELD_USERNAME]);
+                    setTimeout(function() {
+                        tokenManager.getById(token['name'], function(e, token) {
+                            should.not.exist(e);
+                            should.exist(token);
+                            'admin1'.should.eql(token[SIS.FIELD_USERNAME]);
+                        });
+                    }, 70000);
+                    setTimeout(function() {
+                        tokenManager.getById(token['name'], function(e, token) {
+                            should.exist(e);
+                            should.not.exist(token);
+                            done();
+                        });
+                    }, 185000);
+                });
             });
         });
-    });
+    }
 
     var userData = require("./data");
     var users = userData.users;

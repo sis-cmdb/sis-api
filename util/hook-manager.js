@@ -14,17 +14,16 @@
 
  ***********************************************************/
 
-'use strict';
 // A class used to manage the SIS Hooks defined by the /hooks api
-// imports..
-// node http lib
-var http = require('http');
-// async js for parallel hook exec
-var async = require('async');
-// simplified http req
-var request = require('request');
-
 (function() {
+    'use strict';
+    // node http lib
+    var http = require('http');
+    // async js for parallel hook exec
+    var async = require('async');
+    // simplified http req
+    var request = require('request');
+
 
     var SIS = require('./constants');
     var Manager = require("./manager");
@@ -38,7 +37,7 @@ var request = require('request');
         Manager.call(this, model, opts);
     }
 
-    HookManager.prototype.__proto__ = Manager.prototype;
+    require('util').inherits(HookManager, Manager);
 
     HookManager.prototype.validate = function(modelObj, isUpdate) {
         if (!modelObj) {
@@ -69,7 +68,7 @@ var request = require('request');
             return "Hook on parameter has no values.";
         }
         return this.validateOwner(modelObj);
-    }
+    };
     /////////////////////////////////
 
     var sendRequest = function(options, retry_count, delay, callback) {
@@ -82,17 +81,17 @@ var request = require('request');
                     // retry
                     setTimeout(function() {
                         sendRequest(options, retry_count - 1, delay, callback);
-                    }, delay * 1000)
+                    }, delay * 1000);
                 }
             } else {
                 // success!
                 return callback(null, res.body);
             }
         });
-    }
+    };
 
     var dispatchHook = function(hook, entity, event, callback) {
-        if (typeof entity['toObject'] == 'function') {
+        if (typeof entity.toObject === 'function') {
             entity = entity.toObject();
         }
         var data = {
@@ -103,21 +102,21 @@ var request = require('request');
         };
         if (event == SIS.EVENT_UPDATE) {
             // array of two
-            data['data'] = entity[1];
-            data['old_value'] = entity[0];
+            data.data = entity[1];
+            data.old_value = entity[0];
         }
         var options = {
             "uri" : hook.target.url,
             "method" : hook.target.action,
         };
-        if (options['method'] == 'GET') {
-            data['data'] = JSON.stringify(entity);
-            options['qs'] = {'data' : data};
+        if (options.method == 'GET') {
+            data.data = JSON.stringify(entity);
+            options.qs = {'data' : data};
         } else {
-            options['json'] = data;
+            options.json = data;
         }
         sendRequest(options, hook.retry_count || 0, hook.retry_delay || 1, callback);
-    }
+    };
 
     // hook dispatching methods
     HookManager.prototype.dispatchHooks = function(entity, entity_type, event, callback) {
@@ -126,7 +125,7 @@ var request = require('request');
                 if (err) {
                     console.log("Error running hooks " + err);
                 }
-            }
+            };
         }
         // find hooks that have the entity_type w/ the
         // event
@@ -140,10 +139,10 @@ var request = require('request');
                 }, callback);
             }
         });
-    }
+    };
 
     module.exports = function(schemaManager, opts) {
         return new HookManager(schemaManager);
-    }
+    };
 
 })();

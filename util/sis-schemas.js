@@ -14,9 +14,11 @@
 
  ***********************************************************/
 
+(function() {
+
 'use strict';
 
-var SIS = require('./constants')
+var SIS = require('./constants');
 
 // schema definitions
 module.exports.schemas = [
@@ -100,3 +102,5 @@ module.exports.schemas = [
     }
 
 ];
+
+})();

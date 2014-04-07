@@ -2,11 +2,11 @@ Table of Contents
 =================
 
 - [Configuration](#configuration)
+    - [Authentication Backends](#authentication-backends)
+        - [Default backend configuration](#default-backend-configuration)
+        - [Active Directory via LDAP](#authentication-using-active-directory-via-ldap)
 - [API Description](#api-description)
 	- [Role based access control](#role-based-access-control)
-	- [Authentication Backends](#authentication-backends)
-		- [Default backend configuration](#default-backend-configuration)
-		- [Active Directory via LDAP](#authentication-using-active-directory-via-ldap)
 	- [Common Headers](#common-headers)
 	- [Schema API](#schema-api)
 		- [Schema Definitions](#schema-definitions)
@@ -36,8 +36,10 @@ Table of Contents
 		- [Adding a new hiera entry](#adding-a-new-hiera-entry)
 		- [Updating a hiera entry](#updating-a-hiera-entry)
 		- [Deleting a hiera entry](#deleting-a-hiera-entry)
-	- [Pagination and searching](#pagination-and-searching)
+	- [List retrieval options](#list-retrieval-options)
 		- [Pagination](#pagination)
+        - [Field selection](#field-selection)
+        - [Sorting](#sorting)
 		- [Search](#search)
 			- [Joins](#joins)
 	- [Revisions and Commit Log support](#revisions-and-commit-log-support)
@@ -48,11 +50,6 @@ Table of Contents
 		- [Example commit log](#example-commit-log)
 	- [Data Sharing and Organization](#data-sharing-and-organization)
 - [API Examples using resty](#api-examples-using-resty)
-- [Developer Info](#developer-info)
-	- [Frameworks](#frameworks)
-	- [Project Layout](#project-layout)
-	- [Running tests](#running-tests)
-		- [Tests TODO](#tests-todo)
 
 sis-web
 =======
@@ -89,15 +86,6 @@ module.exports = {
     }
 }
 ```
-
-# API Description
-
-The only way to interface with SIS is via the HTTP API described below.  All objects are transmitted in JSON format.
-
-## Role based access control
-
-Throughout this document, users will see many objects with an `owner` field.  Please consult the
-documentation on [Role Based Access Control](./docs/rbac.md) for more information.
 
 ## Authentication Backends
 
@@ -138,6 +126,15 @@ auth_config : {
 ```
 
 An authentication request for `user1` will attempt to authenticate `user1@ad.corp.com` and create the user `user1` with email `user1@company.com` if successful and does not already exist.
+
+# API Description
+
+The only way to interface with SIS is via the HTTP API described below.  All objects are transmitted in JSON format.
+
+## Role based access control
+
+Throughout this document, users will see many objects with an `owner` field.  Please consult the
+documentation on [Role Based Access Control](./docs/rbac.md) for more information.
 
 ## Common Headers
 
@@ -562,9 +559,9 @@ The response is the updated hiera entry object.
 
 Deletes the heira entry with the specified `name` or errors.
 
-## Pagination and searching
+## List retrieval options
 
-All GET requests that retrieve a list of objects support pagination and search.
+All GET requests that retrieve a list of objects support a variety of options specified via query parameters.
 
 ### Pagination
 
@@ -573,13 +570,27 @@ The following query parameters are used in pagination:
 * limit - the number of items to fetch.  200 by default.  At most 200 items can be retrieved in a single call.
 * offset - the number of items to skip before fetching.  0 based.
 
-### Search
+### Field selection
 
-Search / filtering is done by passing a URL encoded JSON object in the q parameter.  The object looks like a [MongoDB query document](http://docs.mongodb.org/manual/tutorial/query-documents/).
+Field selection is done by passing a comma separated list of field names in the `fields` parameter.  Dot notation may be used to specify the field of an embedded object.
 
 For instance:
 
-`/api/v1/schemas?q={"owner":"SIS"}` returns a list of schemas where the owner is "SIS"
+`/api/v1/schemas?fields=name,definition.name` returns a list of schemas where the objects only contain the name, _id, and the `name` field of the `definition`.  If `name` is not specified in the schema definition, the other two fields are still returned.
+
+Note that `_id` is always returned.
+
+### Sorting
+
+To sort objects by a particular field, pass in the field name via the `sort` query parameter.  For instance, to sort schemas in ascending order by name, specify `sort=name`.  To sort in descending, specify `sort=-name`
+
+### Search
+
+Search / filtering is done by passing a URL encoded JSON object in the `q` parameter.  The object looks like a [MongoDB query document](http://docs.mongodb.org/manual/tutorial/query-documents/).
+
+For instance:
+
+`/api/v1/schemas?q={"owner":"SIS"}` returns a list of schemas where "SIS" is an owner.
 
 #### Joins
 
@@ -836,37 +847,4 @@ DELETE /hiera/common
 
 ```
 
-
-# Developer Info
-
-## Frameworks
-- express web framework
-- mocha testing
-- jade templating
-
-## Project Layout
-- server.js - main server
-- routes/ - routes go here.  server.js will bootstrap them.  different files for different API bases (devices, vips, etc.)
-- test/ - mocha tests
-- public/ - static files
-- views/ - jade templates
-
-## Running tests
-
-Mocha must be installed in the global path
-
-`npm install -g mocha`
-
-From the sis-web dir run `make test`
-
-Tests require a mongo instance to be running.  See test/test-config.js.  Additionally, the connection url may be specified as the `db__url` environment variable.
-
-### Tests TODO
-
-- field selection
-- token management HTTP API
-
-## Acknowledgements
-
-[doctoc](https://github.com/thlorenz/doctoc) was used to generate the Table of Contents.
 

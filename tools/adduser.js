@@ -18,7 +18,7 @@ var mongoose = require('mongoose');
 var nconf = require('nconf');
 var SIS = require('./util/constants');
 var fs = require('fs');
-var config = require('./config')
+var config = require('./config');
 
 if (process.argv.length != 3) {
     console.log("Require a JSON file.");
@@ -55,5 +55,5 @@ mongoose.connect(nconf.get('db').url, function(err) {
             console.log("User successfully added.");
             process.exit();
         });
-    })
+    });
 });

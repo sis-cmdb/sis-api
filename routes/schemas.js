@@ -14,9 +14,10 @@
 
  ***********************************************************/
 
-'use strict';
 // API for schemas
 (function() {
+
+    'use strict';
 
     var ApiController = require("./apicontroller");
     var SIS = require("../util/constants");
@@ -35,14 +36,14 @@
     }
 
     // inherit
-    SchemaController.prototype.__proto__ = ApiController.prototype;
+    require('util').inherits(SchemaController, ApiController);
     /////////////////////////////////
 
     // all route controllers expose a setup method
     module.exports.setup = function(app, config) {
         var controller = new SchemaController(config);
         controller.attach(app, "/api/v1/schemas");
-    }
+    };
 
 })();
 

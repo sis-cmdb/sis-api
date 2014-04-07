@@ -14,9 +14,10 @@
 
  ***********************************************************/
 
-'use strict';
 // API for schemas
 (function() {
+
+    'use strict';
 
     var ApiController = require("./apicontroller");
     var SIS = require("../util/constants");
@@ -36,21 +37,21 @@
     }
 
     // inherit
-    HieraController.prototype.__proto__ = ApiController.prototype;
+    require('util').inherits(HieraController, ApiController);
 
     // The GET/:id request needs to send only the hiera object back
     HieraController.prototype.convertToResponseObject = function(req, obj) {
         if (req.method == "GET" && req.params.id) {
-            return obj['hieradata'];
+            return obj.hieradata;
         }
         return obj;
-    }
+    };
     /////////////////////////////////
 
     // all route controllers expose a setup method
     module.exports.setup = function(app, config) {
         var controller = new HieraController(config);
         controller.attach(app, "/api/v1/hiera");
-    }
+    };
 
 })();

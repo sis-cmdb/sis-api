@@ -14,6 +14,8 @@
 
  ***********************************************************/
 
+(function() {
+
 'use strict';
 
 var SIS = require("../util/constants");
@@ -60,12 +62,12 @@ ApiController.prototype.getManager = function(req) {
     } else {
         return Q.reject(SIS.ERR_INTERNAL("Error fetching object"));
     }
-}
+};
 
 // Get the type of object from the request
 ApiController.prototype.getType = function(req) {
     return this.type || "invalid" ;
-}
+};
 
 // Convert the object to an object suitable for the response.
 // Default does nothing, but subclasses may override to
@@ -75,12 +77,12 @@ ApiController.prototype.convertToResponseObject = function(req, obj) {
     // default does nothing
     // hiera needs to return a sub field
     return obj;
-}
+};
 
 // Apply default parameters to a request
 ApiController.prototype.applyDefaults = function(req) {
     // noop
-}
+};
 
 // Utils - not normal to override these
 
@@ -96,12 +98,12 @@ ApiController.prototype.sendError = function(res, err) {
         err = [500, err];
     }
     res.jsonp(err[0], err[1]);
-}
+};
 
 // Send a response with the specified code and data
 ApiController.prototype.sendObject = function(res, code, obj) {
     res.jsonp(code, obj);
-}
+};
 
 // Parse the query parameters for a given req
 // Converts the q param to an object and assigns a
@@ -116,9 +118,9 @@ ApiController.prototype.parseQuery = function(req) {
     } catch (ex) {
         query = {};
     }
-    var limit = parseInt(req.query.limit) || SIS.MAX_RESULTS;
-    if (limit > SIS.MAX_RESULTS) { limit = SIS.MAX_RESULTS };
-    var offset = parseInt(req.query.offset) || 0;
+    var limit = parseInt(req.query.limit, 10) || SIS.MAX_RESULTS;
+    if (limit > SIS.MAX_RESULTS) { limit = SIS.MAX_RESULTS; }
+    var offset = parseInt(req.query.offset, 10) || 0;
     var fields = req.query.fields;
     if (fields) {
         if (typeof fields !== 'string') {
@@ -141,10 +143,10 @@ ApiController.prototype.parseQuery = function(req) {
             c[field] = opt;
             return c;
         }, { });
-        result['sort'] = sortOpt;
+        result.sort = sortOpt;
     }
     return result;
-}
+};
 
 // Returns true if the request wants sub-documents populated
 ApiController.prototype.parsePopulate = function(req) {
@@ -157,7 +159,7 @@ ApiController.prototype.parsePopulate = function(req) {
     } else {
         return req.query.populate || false;
     }
-}
+};
 
 // A helper that returns a function meant for promise chaining.
 // The func parameter is a string which is a method name to
@@ -170,7 +172,7 @@ var MgrPromise = function(func) {
     return function(manager) {
         return manager[func].apply(manager, argsToFunc);
     };
-}
+};
 
 // Handler for the getAll request (typically GET controller_base/)
 ApiController.prototype.getAll = function(req, res) {
@@ -178,7 +180,7 @@ ApiController.prototype.getAll = function(req, res) {
     var rq = this.parseQuery(req);
     var options = { skip : rq.offset, limit: rq.limit};
     if (rq.sort) {
-        options['sort'] = rq.sort;
+        options.sort = rq.sort;
     }
     var fields = rq.fields;
     var condition = rq.query;
@@ -199,7 +201,7 @@ ApiController.prototype.getAll = function(req, res) {
                         });
                     });
     this._finish(req, res, p, 200);
-}
+};
 
 // Handler for the get request (typically GET controller_base/:id)
 ApiController.prototype.get = function(req, res) {
@@ -212,7 +214,7 @@ ApiController.prototype.get = function(req, res) {
                 });
 
     this._finish(req, res, p, 200);
-}
+};
 
 // Handler for the delete request (typically DELETE controller_base/:id)
 ApiController.prototype.delete = function(req, res) {
@@ -220,7 +222,7 @@ ApiController.prototype.delete = function(req, res) {
     var id = req.params.id;
     var p = this.getManager(req).then(MgrPromise('delete', id, req.user));
     this._finish(req, res, p, 200);
-}
+};
 
 // Handler for the update request (typically PUT controller_base:/id)
 ApiController.prototype.update = function(req, res) {
@@ -229,7 +231,7 @@ ApiController.prototype.update = function(req, res) {
     var obj = req.body;
     var p = this.getManager(req).then(MgrPromise('update', id, obj, req.user));
     this._finish(req, res, p, 200);
-}
+};
 
 // Handler for the add request (typically POST controller_base:/)
 ApiController.prototype.add = function(req, res) {
@@ -237,7 +239,7 @@ ApiController.prototype.add = function(req, res) {
     var obj = req.body;
     var p = this.getManager(req).then(MgrPromise('add', obj, req.user));
     this._finish(req, res, p, 201);
-}
+};
 
 // Attach the controller to the app at a particular base
 ApiController.prototype.attach = function(app, prefix) {
@@ -253,7 +255,7 @@ ApiController.prototype.attach = function(app, prefix) {
             this._enableCommitApi(app, prefix);
         }
     }
-}
+};
 
 // Returns a promise that authenticates a request
 // The type specifies which kind of authentication to use
@@ -265,7 +267,7 @@ ApiController.prototype.authenticate = function(req, res, type) {
         if (err) {
             d.reject(err);
         }
-    }
+    };
     passport.authenticate(type, {session : false}, function(err, user) {
         if (err) {
             d.reject(SIS.ERR_BAD_CREDS("" + err));
@@ -273,11 +275,11 @@ ApiController.prototype.authenticate = function(req, res, type) {
             d.reject(SIS.ERR_BAD_CREDS("Invalid credentials"));
         } else {
             req.user = user;
-            d.resolve(user)
+            d.resolve(user);
         }
     })(req, res, next);
     return d.promise;
-}
+};
 
 // "private"
 // Wrap a controller func with authorization
@@ -295,7 +297,7 @@ ApiController.prototype._wrapAuth = function(func) {
             func.call(self, req, res);
         });
     }.bind(this);
-}
+};
 
 // Enable the commit API endpoints
 ApiController.prototype._enableCommitApi = function(app, prefix) {
@@ -308,8 +310,8 @@ ApiController.prototype._enableCommitApi = function(app, prefix) {
         var mongooseModel = this.commitManager.model;
 
         // update the query for the right types
-        rq.query['entity_id'] = id;
-        rq.query['type'] = type;
+        rq.query.entity_id = id;
+        rq.query.type = type;
 
         mongooseModel.count(rq.query, function(err, c) {
             if (err || !c) {
@@ -353,8 +355,7 @@ ApiController.prototype._enableCommitApi = function(app, prefix) {
         });
 
     }.bind(this));
-
-}
+};
 
 // Get the callback that will send the result from the controller
 ApiController.prototype._getSendCallback = function(req, res, code) {
@@ -374,8 +375,8 @@ ApiController.prototype._getSendCallback = function(req, res, code) {
             self.hm.dispatchHooks(orig, self.getType(req),
                                   SIS.METHODS_TO_EVENT[req.method]);
         }
-    }
-}
+    };
+};
 
 // Save a commit to the commit log
 ApiController.prototype._saveCommit = function(req) {
@@ -410,8 +411,8 @@ ApiController.prototype._saveCommit = function(req) {
             d.resolve(result);
         });
         return d.promise;
-    }
-}
+    };
+};
 
 // Do the final steps of the request
 // p is the promise that receives the object from the
@@ -422,7 +423,7 @@ ApiController.prototype._finish = function(req, res, p, code) {
         p = p.then(this._saveCommit(req));
     }
     return Q.nodeify(p, this._getSendCallback(req, res, code));
-}
+};
 
 // Get a function that receives objects and returns a promise
 // to populate them
@@ -434,9 +435,10 @@ ApiController.prototype._getPopulatePromise = function(req, m) {
         } else {
             return Q(results);
         }
-    }
-}
+    };
+};
 
 // export it
 module.exports = exports = ApiController;
 
+})();

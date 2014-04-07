@@ -40,7 +40,7 @@ var allowCrossDomain = function(req,res,next) {
         res.set("WWW-Authenticate", 'Basic realm="Users"');
     }
     next();
-}
+};
 
 var defaultConfig = {
     app : {
@@ -49,9 +49,11 @@ var defaultConfig = {
             type : 'sis'
         }
     }
-}
+};
 
 var startServer = function(config, callback) {
+    'use strict';
+
     var passport = require("passport");
     var webUtil = require("./routes/webutil");
     var nconf = require('nconf');
@@ -107,7 +109,7 @@ var startServer = function(config, callback) {
                     route.setup(app, cfg);
                 });
                 // listen
-                httpServer = app.listen(nconf.get('server').port, function(err) {
+                var httpServer = app.listen(nconf.get('server').port, function(err) {
                     if (callback) {
                         callback(app, httpServer);
                     }
@@ -115,11 +117,11 @@ var startServer = function(config, callback) {
             });
         });
     });
-}
+};
 
 // Run if we're the root module
 if (!module.parent) {
-    var config = require('./config')
+    var config = require('./config');
     startServer(config);
 }
 
@@ -128,4 +130,4 @@ module.exports.mongoose = mongoose;
 module.exports.startServer = startServer;
 module.exports.stopServer = function(server, callback) {
     server.close(callback);
-}
+};

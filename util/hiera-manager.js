@@ -14,10 +14,9 @@
 
  ***********************************************************/
 
-'use strict';
-
 // Manager for hiera
 (function() {
+    'use strict';
 
     var Manager = require("./manager");
     var SIS = require("./constants");
@@ -33,7 +32,7 @@
     }
 
     // inherit
-    HieraManager.prototype.__proto__ = Manager.prototype;
+    require('util').inherits(HieraManager, Manager);
 
     HieraManager.prototype.validate = function(entry, isUpdate) {
         if (!entry || !entry.name || typeof entry.name != 'string') {
@@ -43,24 +42,24 @@
         var hieradata = entry.hieradata;
         try {
             // validate it's an object
-            if (Object.keys(entry.hieradata).length == 0) {
+            if (!Object.keys(entry.hieradata).length) {
                 return "hieradata cannot be empty";
             }
         } catch (ex) {
             return "hieradata is not a valid object";
         }
         return this.validateOwner(entry);
-    }
+    };
 
     HieraManager.prototype.applyUpdate = function(doc, updateObj) {
         /* allow partial update */
         doc.hieradata = this.applyPartial(doc.hieradata, updateObj.hieradata);
         return doc;
-    }
+    };
     /////////////////////////////////
 
     module.exports = function(schemaManager, opts) {
         return new HieraManager(schemaManager, opts);
-    }
+    };
 
 })();

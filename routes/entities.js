@@ -14,11 +14,11 @@
 
  ***********************************************************/
 
-'use strict';
-
 // API for entities that adhere to schemas created via
 // the schemas API
 (function() {
+
+    'use strict';
 
     var ApiController = require("./apicontroller");
     var SIS = require("../util/constants");
@@ -40,7 +40,7 @@
     }
 
     // inherit
-    EntityController.prototype.__proto__ = ApiController.prototype;
+    require('util').inherits(EntityController, ApiController);
 
     // overrides
     // Get the manager to handle this query
@@ -66,27 +66,29 @@
             }
         });
         return d.promise;
-    }
+    };
+
     // The type is the schema being requested
     EntityController.prototype.getType = function(req) {
         return req.params.schema;
-    }
+    };
+
     // Apply the default to populate the objects returned from GET
     EntityController.prototype.applyDefaults = function(req) {
         if (req.method == "GET") {
             // need to populate..
             if (!('populate' in req.query)) {
-                req.query['populate'] = true;
+                req.query.populate = true;
             }
         }
-    }
+    };
     /////////////////////////////////
 
     // all route controllers expose a setup method
     module.exports.setup = function(app, config) {
         var controller = new EntityController(config);
         controller.attach(app, "/api/v1/entities/:schema");
-    }
+    };
 
 })();
 

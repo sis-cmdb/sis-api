@@ -14,10 +14,9 @@
 
  ***********************************************************/
 
-'use strict';
 // A class used to manage users, services and tokens
-
 (function() {
+    'use strict';
 
     var SIS = require("./constants");
     var Manager = require("./manager");
@@ -32,24 +31,25 @@
         this.sm = sm;
         this.authEnabled = this.sm.authEnabled;
     }
-    UserManager.prototype.__proto__ = Manager.prototype;
+
+    require('util').inherits(UserManager, Manager);
 
     UserManager.prototype.createTempToken = function(user, callback) {
         var tm = this.sm.auth[SIS.SCHEMA_TOKENS];
         var token = {
             username : user[SIS.FIELD_NAME],
             expires : Date.now() + SIS.AUTH_EXPIRATION_TIME
-        }
+        };
         var p = tm.add(token, user);
         return Q.nodeify(p, callback);
-    }
+    };
 
     UserManager.prototype.hashPw = function(pw) {
         if (!pw) { return null; }
         var h = crypto.createHash('sha256');
         h.update(pw, 'utf8');
         return h.digest('hex');
-    }
+    };
 
     // need to hash the pw
     UserManager.prototype.add = function(obj, user, callback) {
@@ -57,7 +57,7 @@
             obj[SIS.FIELD_PW] = this.hashPw(obj[SIS.FIELD_PW]);
         }
         return Manager.prototype.add.call(this, obj, user, callback);
-    }
+    };
 
     UserManager.prototype.applyUpdate = function(obj, updateObj) {
         if (updateObj[SIS.FIELD_PW]) {
@@ -65,7 +65,7 @@
         }
         //return this.applyPartial(obj, updateObj);
         return Manager.prototype.applyUpdate.call(this, obj, updateObj);
-    }
+    };
 
     UserManager.prototype.getVerifiedUser = function(username, pw, callback) {
         var self = this;
@@ -78,7 +78,7 @@
             }
         });
         return Q.nodeify(p, callback);
-    }
+    };
 
     UserManager.prototype.getOrCreateEmptyUser = function(userObj, superUser, callback) {
         var self = this;
@@ -104,7 +104,7 @@
                 return callback(null, user);
             }
         });
-    }
+    };
 
     UserManager.prototype.authorize = function(evt, doc, user, mergedDoc) {
         if (!this.authEnabled) {
@@ -147,17 +147,18 @@
                         return Q.reject(SIS.ERR_BAD_CREDS("User's cannot change their own roles."));
                     }
                     // need to get the diffs..
+                    var k;
                     var userRoles = user[SIS.FIELD_ROLES];
                     var docRoles = doc[SIS.FIELD_ROLES] || { };
                     var roleDiff = jsondiff.diff(docRoles, mergedDoc[SIS.FIELD_ROLES]);
-                    for (var k in roleDiff) {
+                    for (k in roleDiff) {
                         // need to make sure the user is an admin of the role being added/deleted/updated
                         if (!(k in userRoles) || userRoles[k] != SIS.ROLE_ADMIN) {
                             return Q.reject(SIS.ERR_BAD_CREDS(user[SIS.FIELD_NAME] + " is not an admin of role " + k));
                         }
                     }
                     // non role fields can't be changed here.
-                    for (var k in doc) {
+                    for (k in doc) {
                         if (k != SIS.FIELD_ROLES && k != SIS.FIELD_UPDATED_BY) {
                             if (k in mergedDoc && mergedDoc[k].toString() != doc[k].toString()) {
                                 // can't change this field.
@@ -175,9 +176,8 @@
                     }
                 }
                 return Q(mergedDoc);
-
-        }
-    }
+        } // end switch
+    };
 
     UserManager.prototype.objectRemoved = function(user) {
         // remove all tokens where username = user[name];
@@ -191,18 +191,18 @@
             }
         });
         return d.promise;
-    }
+    };
 
     UserManager.prototype.validate = function(obj, isUpdate) {
         if (!obj || !obj[SIS.FIELD_NAME]) {
             return "User must have a name.";
         }
         return SIS.UTIL_VALIDATE_ROLES(obj, true);
-    }
+    };
     /////////////////////////////////
 
     module.exports = function(sm) {
         return new UserManager(sm);
-    }
+    };
 
 })();
