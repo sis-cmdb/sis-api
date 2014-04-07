@@ -190,7 +190,7 @@ ApiController.prototype.getAll = function(req, res) {
                             return mgr.count(flattenedCondition).then(function(c) {
                                 c = c || 0;
                                 res.setHeader(SIS.HEADER_TOTAL_COUNT, c);
-                                if (!c) {
+                                if (!c || c < options.offset) {
                                     return Q([]);
                                 }
                                 return mgr.getAll(flattenedCondition, options, fields)
