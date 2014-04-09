@@ -123,7 +123,7 @@
         if (!callback) {
             callback = function(err) {
                 if (err) {
-                    console.log("Error running hooks " + err);
+                    console.log("Error running hooks " + JSON.stringify(err));
                 }
             };
         }

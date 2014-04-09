@@ -53,6 +53,7 @@
 
     // need to hash the pw
     UserManager.prototype.add = function(obj, user, callback) {
+        obj = JSON.parse(JSON.stringify(obj));
         if (obj[SIS.FIELD_PW]) {
             obj[SIS.FIELD_PW] = this.hashPw(obj[SIS.FIELD_PW]);
         }
@@ -60,8 +61,9 @@
     };
 
     UserManager.prototype.applyUpdate = function(obj, updateObj) {
+        updateObj = JSON.parse(JSON.stringify(updateObj));
         if (updateObj[SIS.FIELD_PW]) {
-            obj[SIS.FIELD_PW] = this.hashPw(updateObj[SIS.FIELD_PW]);
+            updateObj[SIS.FIELD_PW] = this.hashPw(updateObj[SIS.FIELD_PW]);
         }
         //return this.applyPartial(obj, updateObj);
         return Manager.prototype.applyUpdate.call(this, obj, updateObj);

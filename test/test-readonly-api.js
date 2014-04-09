@@ -14,19 +14,8 @@
 
  ***********************************************************/
 
-// use the edge config
-var config = require('./test-config');
-var server = require("../server")
-var should = require('should');
-var request = require('supertest');
-var async = require('async');
-var SIS = require("../util/constants");
-
-var mongoose = null;
-var schemaManager = null;
-var app = null;
-var httpServer = null;
-
+// Note this is not a remote test since it requires spinning up a
+// readonly server
 describe('API at the Edge ', function() {
 
     var schema = {
@@ -41,26 +30,26 @@ describe('API at the Edge ', function() {
         }
     };
 
+    var SIS = require("../util/constants");
+    var config = require('./fixtures/config');
+    var should = require('should');
+    var TestUtil = require('./fixtures/util');
+    var ApiServer = new TestUtil.TestServer();
+    var app = null;
+
     before(function(done) {
         config.app = config.app || { };
         config.app['readonly'] = true;
-        server.startServer(config, function(expressApp, httpSrv) {
-            mongoose = server.mongoose;
-            schemaManager = expressApp.get(SIS.OPT_SCHEMA_MGR);
-            app = expressApp;
-            httpServer = httpSrv;
-            // create a schema
-            schemaManager.add(schema, done);
+        ApiServer.start(config, function(err, sd) {
+            if (err) { return done(err); }
+            app = sd.app;
+            sd.schemaManager.add(schema, sd.superUser, done);
         });
     });
 
     after(function(done) {
-        delete config.app['readonly'];
-        server.stopServer(httpServer, function() {
-            mongoose.connection.db.dropDatabase();
-            mongoose.connection.close();
-            done();
-        });
+        config.app['readonly'] = false;
+        ApiServer.stop(done);
     });
 
     it("should have readonly set in the app", function() {
@@ -76,16 +65,14 @@ describe('API at the Edge ', function() {
 
     paths.map(function(path) {
         it("should allow GET on " + path, function(done) {
-            request(app)
-                .get(path)
-                .expect(200, done);
+            ApiServer.get(path)
+                     .expect(200, done);
         });
     });
 
     paths.map(function(path) {
         it("should 404 when POSTing to " + path, function(done) {
-            request(app).post(path)
-                .set('Content-Encoding', 'application/json')
+            ApiServer.post(path)
                 .send({"unprocessed" : "entity"})
                 .expect(404, done);
         });

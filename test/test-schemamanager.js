@@ -14,33 +14,25 @@
 
  ***********************************************************/
 
-var config = require('./test-config');
-var mongoose = require('mongoose');
-var should = require('should');
-var SIS = require("../util/constants");
-
-var schemaManager = null;
-
 describe('SchemaManager', function() {
+  "use strict";
+  var SIS = require("../util/constants");
+  var config = require('./fixtures/config');
+  var should = require('should');
+  var TestUtil = require('./fixtures/util');
+  var LocalTest = new TestUtil.LocalTest();
 
-  var nconf = require('nconf');
-  nconf.env('__').argv();
-  nconf.defaults(config);
-
+  var schemaManager = null;
 
   before(function(done) {
-    mongoose.connect(nconf.get('db').url);
-    var db = mongoose.connection;
-    db.once('open', function() {
-        schemaManager = require('../util/schema-manager')(mongoose, {auth : false});
-        done();
+    LocalTest.start(config, function(err, mongoose) {
+        schemaManager = require("../util/schema-manager")(mongoose, { auth : false});
+        done(err);
     });
   });
 
   after(function(done) {
-    mongoose.connection.db.dropDatabase();
-    mongoose.connection.close();
-    done();
+    LocalTest.stop(done);
   });
 
   describe('add-invalid-schema', function() {

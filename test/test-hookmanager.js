@@ -14,34 +14,26 @@
 
  ***********************************************************/
 
-var config = require('./test-config');
-var mongoose = require('mongoose');
-var should = require('should');
-var SIS = require("../util/constants");
-
-var hookManager = null;
-
 describe('HookManager', function() {
 
-  var nconf = require('nconf');
-  nconf.env('__').argv();
-  nconf.defaults(config);
+  var SIS = require("../util/constants");
+  var config = require('./fixtures/config');
+  var should = require('should');
+  var TestUtil = require('./fixtures/util');
+  var LocalTest = new TestUtil.LocalTest();
 
+  var hookManager = null;
 
   before(function(done) {
-    mongoose.connect(nconf.get('db').url);
-    var db = mongoose.connection;
-    db.once('open', function() {
-        var schemaManager = require("../util/schema-manager")(mongoose, {"auth" : false});
+    LocalTest.start(config, function(err, mongoose) {
+        var schemaManager = require("../util/schema-manager")(mongoose, { auth : false});
         hookManager = require('../util/hook-manager')(schemaManager);
-        done();
+        done(err);
     });
   });
 
   after(function(done) {
-    mongoose.connection.db.dropDatabase();
-    mongoose.connection.close();
-    done();
+    LocalTest.stop(done);
   });
 
   describe('add-invalid-hook', function() {

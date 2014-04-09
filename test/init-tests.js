@@ -14,34 +14,21 @@
 
  ***********************************************************/
 
-var config = require('./test-config');
-var server = require("../server")
-var should = require('should');
-var request = require('supertest');
-var async = require('async');
-
-var mongoose = null;
-var app = null;
-var httpServer = null;
-
-var SIS = require("../util/constants")
-
 describe('Initialize Tests', function() {
+    "use strict";
+
+    var config = require('./fixtures/config');
+    var util = require('./fixtures/util');
+
+    var test = null;
+
     before(function(done) {
-        server.startServer(config, function(expressApp, httpSrv) {
-            mongoose = server.mongoose;
-            app = expressApp;
-            httpServer = httpSrv;
-            done();
-        });
+        test = new util.LocalTest();
+        test.start(config, done);
     });
 
     after(function(done) {
-        server.stopServer(httpServer, function() {
-            mongoose.connection.db.dropDatabase();
-            mongoose.connection.close();
-            done();
-        });
+        test.stop(done);
     });
 
     it("Should pass", function(done) {

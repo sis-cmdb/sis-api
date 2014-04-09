@@ -79,7 +79,7 @@ module.exports = {
     AUTH_TYPES : ["sis", "ldap"],
 
     // option keys
-    OPT_SCHEMA_MGR : "schema_manager", // TODO: snake case
+    OPT_SCHEMA_MGR : "schema_manager",
     OPT_LOG_COMMTS : "log_commits",
     OPT_FIRE_HOOKS : "fire_hooks",
     OPT_READONLY : "readonly",

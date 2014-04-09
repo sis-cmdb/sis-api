@@ -14,34 +14,25 @@
 
  ***********************************************************/
 
-var config = require('./test-config');
-var server = require("../server")
-var should = require('should');
-var request = require('supertest');
-var async = require('async');
-var SIS = require("../util/constants");
-var mongoose = null;
-var schemaManager = null;
-var app = null;
-var httpServer = null;
+describe('@API - History API', function() {
+    "use strict";
 
-describe('History API', function() {
+    var should = require('should');
+    var SIS = require("../util/constants");
+    var config = require('./fixtures/config');
+    var TestUtil = require('./fixtures/util');
+    var ApiServer = new TestUtil.TestServer();
+    var token = null;
+
     before(function(done) {
-        server.startServer(config, function(expressApp, httpSrv) {
-            mongoose = server.mongoose;
-            schemaManager = expressApp.get(SIS.OPT_SCHEMA_MGR);
-            app = expressApp;
-            httpServer = httpSrv;
-            done();
+        ApiServer.start(config, function(e) {
+            if (e) { return done(e); }
+            ApiServer.becomeSuperUser(done);
         });
     });
 
     after(function(done) {
-        server.stopServer(httpServer, function() {
-            mongoose.connection.db.dropDatabase();
-            mongoose.connection.close();
-            done();
-        });
+        ApiServer.stop(done);
     });
 
     // test on sample entity, hooks, schemas, and hiera
@@ -165,18 +156,18 @@ describe('History API', function() {
             // insert the entries
             before(function(done) {
                 var insertItem = function(idx) {
-                    var req = request(app);
-                    var status = 201;
                     if (idx >= entries.length) {
                         return done();
                     }
-                    if (idx == 0) {
-                        req = req.post(prefix);
-                    } else {
-                        req = req.put(prefix + "/" + items[idx - 1][idField]);
+                    var url = prefix;
+                    var method = 'post';
+                    var status = 201;
+                    if (idx > 0) {
+                        method = 'put'
+                        url = prefix + "/" + items[idx - 1][idField];
                         status = 200;
                     }
-                    req.set('Content-Encoding', 'application/json')
+                    ApiServer.newRequest(method, url, token)
                         .send(entries[idx])
                         .end(function(err, res) {
                             if (err) {
@@ -201,7 +192,7 @@ describe('History API', function() {
             var middleItemHid = null;
 
             it("should retrieve " + entries.length + " commit records", function(done) {
-                request(app).get(prefix + "/" + items[0][idField] + "/commits")
+                ApiServer.newRequest('get', prefix + "/" + items[0][idField] + "/commits")
                     .expect(200, function(err, res) {
                         should.not.exist(err);
                         should.exist(res);
@@ -214,7 +205,7 @@ describe('History API', function() {
 
             it("should retrieve the middle item by commit id", function(done) {
                 var path = [prefix, items[middleIdx][idField], 'commits', middleItemHid];
-                request(app).get(path.join("/"))
+                ApiServer.newRequest('get', path.join("/"))
                     .expect(200, function(err, res) {
                         should.not.exist(err);
                         should.exist(res.body);
@@ -232,7 +223,7 @@ describe('History API', function() {
                         var idx = i;
                         var utc = items[idx]['_updated_at'];
                         var path = [prefix, items[idx][idField], 'revision', utc];
-                        request(app).get(path.join("/"))
+                        ApiServer.newRequest('get', path.join("/"))
                             .expect(200, function(err, res) {
                                 should.not.exist(err);
                                 should.exist(res.body);
@@ -250,7 +241,7 @@ describe('History API', function() {
                 var time = (items[middleIdx + 1]['_updated_at'] - items[middleIdx]['_updated_at']) / 2;
                 time += items[middleIdx]['_updated_at'];
                 var path = [prefix, items[0][idField], 'revision', time];
-                request(app).get(path.join("/"))
+                ApiServer.newRequest('get', path.join("/"))
                     .expect(200, function(err, res) {
                         should.not.exist(err);
                         should.exist(res.body);

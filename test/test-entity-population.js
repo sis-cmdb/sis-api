@@ -14,35 +14,23 @@
 
  ***********************************************************/
 
-var config = require('./test-config');
-var server = require("../server")
-var should = require('should');
-var request = require('supertest');
-var async = require('async');
-var SIS = require("../util/constants");
+describe('@API - Entity Population API', function() {
+    var should = require('should');
+    var async = require('async');
+    var SIS = require("../util/constants");
+    var config = require('./fixtures/config');
+    var TestUtil = require('./fixtures/util');
+    var ApiServer = new TestUtil.TestServer();
 
-var mongoose = null;
-var schemaManager = null;
-var app = null;
-var httpServer = null;
-
-describe('Entity Population API', function() {
     before(function(done) {
-        server.startServer(config, function(expressApp, httpSrv) {
-            mongoose = server.mongoose;
-            schemaManager = expressApp.get(SIS.OPT_SCHEMA_MGR);
-            app = expressApp;
-            httpServer = httpSrv;
-            done();
+        ApiServer.start(config, function(e) {
+            if (e) { return done(e); }
+            ApiServer.becomeSuperUser(done);
         });
     });
 
     after(function(done) {
-        server.stopServer(httpServer, function() {
-            mongoose.connection.db.dropDatabase();
-            mongoose.connection.close();
-            done();
-        });
+        ApiServer.stop(done);
     });
 
     describe("Populate entities", function() {
@@ -83,9 +71,19 @@ describe('Entity Population API', function() {
 
         var schemas = [schema1, schema2, schema3];
 
+        var addSchema = function(schema, callback) {
+            ApiServer.post('/api/v1/schemas')
+                .send(schema).expect(201, callback);
+        };
+
+        var deleteSchema = function(name, callback) {
+            ApiServer.del('/api/v1/schemas/' + name)
+                .expect(200, callback);
+        };
+
         before(function(done) {
             // setup the schemas
-            async.map(schemas, schemaManager.add.bind(schemaManager), function(err, res) {
+            async.map(schemas, addSchema, function(err, res) {
                 if (err) { return done(err, res); }
 
                 var createEntity = function(i) {
@@ -96,7 +94,7 @@ describe('Entity Population API', function() {
                         // assign _id of the previous entity
                         entities[i][1]['ref_field'] = entities[i - 1][1]['_id'];
                     }
-                    request(app).post("/api/v1/entities/" + entities[i][0])
+                    ApiServer.post("/api/v1/entities/" + entities[i][0])
                         .set("Content-Type", "application/json")
                         .query("populate=false")
                         .send(entities[i][1])
@@ -114,12 +112,12 @@ describe('Entity Population API', function() {
 
         after(function(done) {
             var names = schemas.map(function(s) { return s.name; });
-            async.map(names, schemaManager.delete.bind(schemaManager), done);
+            async.map(names, deleteSchema, done);
         });
 
         it("Should populate pop_schema_2 ref_field", function(done) {
             // test it with the GET /
-            request(app).get("/api/v1/entities/pop_schema_3")
+            ApiServer.get("/api/v1/entities/pop_schema_3")
                 .set('Content-Type', 'application/json')
                 .expect(200, function(err, res) {
                     if (err) { return done(err, res); }
@@ -134,7 +132,7 @@ describe('Entity Population API', function() {
         });
 
         it("Should populate pop_schema_1 ref_field", function(done) {
-            request(app).get("/api/v1/entities/pop_schema_2/" + entities[1][1]['_id'])
+            ApiServer.get("/api/v1/entities/pop_schema_2/" + entities[1][1]['_id'])
                 .set("Content-Type", "application/json")
                 .expect(200, function(err, res) {
                     if (err) { return done(err, res) }
@@ -150,7 +148,7 @@ describe('Entity Population API', function() {
 
         it("Should not populate pop_schema_2 ref_field", function(done) {
             // test it with the GET /
-            request(app).get("/api/v1/entities/pop_schema_3")
+            ApiServer.get("/api/v1/entities/pop_schema_3")
                 .query("populate=false")
                 .set('Content-Type', 'application/json')
                 .expect(200, function(err, res) {
@@ -163,7 +161,7 @@ describe('Entity Population API', function() {
         });
 
         it("Should not populate pop_schema_1 ref_field", function(done) {
-            request(app).get("/api/v1/entities/pop_schema_2/" + entities[1][1]['_id'])
+            ApiServer.get("/api/v1/entities/pop_schema_2/" + entities[1][1]['_id'])
                 .query("populate=false")
                 .set("Content-Type", "application/json")
                 .expect(200, function(err, res) {
@@ -181,7 +179,7 @@ describe('Entity Population API', function() {
             entity = JSON.parse(JSON.stringify(entity));
             entity['ref_field'] = entities[2][1]['_id'];
             // try to update
-            request(app).put("/api/v1/entities/pop_schema_2/" + entity['_id'])
+            ApiServer.put("/api/v1/entities/pop_schema_2/" + entity['_id'])
                 .set("Content-Type", "application/json")
                 .send(entity)
                 .expect(400, function(err, res) {
@@ -193,7 +191,7 @@ describe('Entity Population API', function() {
         it("Should not add pop_schema_1 with a bad ref", function(done) {
             var entity = {"ps2_name" : "ps2.bad", "type" : "ps2_type.bad"}
             entity['ref_field'] = entities[2][1]['_id'];
-            request(app).post("/api/v1/entities/pop_schema_2")
+            ApiServer.post("/api/v1/entities/pop_schema_2")
                         .set("Content-Type", "application/json")
                         .send(entity)
                         .expect(400, function(err, res) {

@@ -12,6 +12,8 @@ lib-cov
 pids
 logs
 results
+dist
+_reports
 
 npm-debug.log
 

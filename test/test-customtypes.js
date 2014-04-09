@@ -1,32 +1,35 @@
-var config = require('./test-config');
-var server = require("../server")
-var should = require('should');
-var request = require('supertest');
-var async = require('async');
-var SIS = require("../util/constants");
+/***********************************************************
 
-var mongoose = null;
-var schemaManager = null;
-var app = null;
-var httpServer = null;
+ The information in this document is proprietary
+ to VeriSign and the VeriSign Product Development.
+ It may not be used, reproduced or disclosed without
+ the written approval of the General Manager of
+ VeriSign Product Development.
 
-describe('Custom Types', function() {
+ PRIVILEGED AND CONFIDENTIAL
+ VERISIGN PROPRIETARY INFORMATION
+ REGISTRY SENSITIVE INFORMATION
+
+ Copyright (c) 2014 VeriSign, Inc.  All rights reserved.
+
+ ***********************************************************/
+
+describe('@API - Custom Types', function() {
+    var SIS = require("../util/constants");
+    var config = require('./fixtures/config');
+    var should = require('should');
+    var TestUtil = require('./fixtures/util');
+    var ApiServer = new TestUtil.TestServer();
+
     before(function(done) {
-        server.startServer(config, function(expressApp, httpSrv) {
-            mongoose = server.mongoose;
-            schemaManager = expressApp.get(SIS.OPT_SCHEMA_MGR);
-            app = expressApp;
-            httpServer = httpSrv;
-            done();
+        ApiServer.start(config, function(e) {
+            if (e) { return done(e); }
+            ApiServer.becomeSuperUser(done);
         });
     });
 
     after(function(done) {
-        server.stopServer(httpServer, function() {
-            mongoose.connection.db.dropDatabase();
-            mongoose.connection.close();
-            done();
-        });
+        ApiServer.stop(done);
     });
 
     var ip10_1_1_1_24 = {
@@ -58,14 +61,14 @@ describe('Custom Types', function() {
         };
 
         before(function(done) {
-            request(app).post("/api/v1/schemas")
+            ApiServer.post("/api/v1/schemas")
                 .set('Content-Encoding', 'application/json')
                 .send(schema)
                 .expect(201, done);
         });
 
         after(function(done) {
-            request(app).del("/api/v1/schemas/host")
+            ApiServer.del("/api/v1/schemas/host")
                 .expect(200, done);
         });
 
@@ -74,7 +77,7 @@ describe('Custom Types', function() {
                 name : "v4_test",
                 ip : "10.1.1.1/24"
             };
-            request(app).post("/api/v1/entities/host")
+            ApiServer.post("/api/v1/entities/host")
                 .set('Content-Encoding', 'application/json')
                 .send(entity)
                 .expect(201, function(e, res) {
@@ -91,7 +94,7 @@ describe('Custom Types', function() {
                 name : "v6_test",
                 ip : "2001:0:ce49:7601:e866:efff:62c3:fffe/100"
             };
-            request(app).post("/api/v1/entities/host")
+            ApiServer.post("/api/v1/entities/host")
                 .set('Content-Encoding', 'application/json')
                 .send(entity)
                 .expect(201, function(e, res) {
@@ -107,7 +110,7 @@ describe('Custom Types', function() {
             var query = {
                 q : { "ip.ip_address" : "10.1.1.1" }
             }
-            request(app).get("/api/v1/entities/host")
+            ApiServer.get("/api/v1/entities/host")
                 .query(query)
                 .expect(200, function(err, res) {
                     should.exist(res.body);
@@ -132,14 +135,14 @@ describe('Custom Types', function() {
         };
 
         before(function(done) {
-            request(app).post("/api/v1/schemas")
+            ApiServer.post("/api/v1/schemas")
                 .set('Content-Encoding', 'application/json')
                 .send(schema)
                 .expect(201, done);
         });
 
         after(function(done) {
-            request(app).del("/api/v1/schemas/host")
+            ApiServer.del("/api/v1/schemas/host")
                 .expect(200, done);
         });
 
@@ -148,7 +151,7 @@ describe('Custom Types', function() {
                 name : "v4_test",
                 ips : ["10.1.1.1/24", "2001:0:ce49:7601:e866:efff:62c3:fffe/100"]
             };
-            request(app).post("/api/v1/entities/host")
+            ApiServer.post("/api/v1/entities/host")
                 .set('Content-Encoding', 'application/json')
                 .send(entity)
                 .expect(201, function(e, res) {

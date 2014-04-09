@@ -14,46 +14,29 @@
 
  ***********************************************************/
 
-var config = require('./test-config');
-var mongoose = require('mongoose');
-var should = require('should');
-var SIS = require("../util/constants");
-
-var config = require('./test-config');
-var server = require("../server")
-var should = require('should');
-var request = require('supertest');
-var async = require('async');
-var util = require("util");
-var mongoose = null;
-var schemaManager = null;
-var app = null;
-var httpServer = null;
-
 describe('User Manager', function() {
+    var should = require('should');
+    var util = require('util');
+    var async = require('async');
+
+    var SIS = require("../util/constants");
+    var config = require('./fixtures/config');
+    var TestUtil = require('./fixtures/util');
+    var LocalTest = new TestUtil.LocalTest();
+    var schemaManager = null;
+
     before(function(done) {
-        config.app[SIS.OPT_USE_AUTH] = true;
-        server.startServer(config, function(expressApp, httpSrv) {
-            mongoose = server.mongoose;
-            schemaManager = expressApp.get(SIS.OPT_SCHEMA_MGR);
-            should.exist(schemaManager);
-            should.exist(schemaManager.auth);
-            app = expressApp;
-            httpServer = httpSrv;
-            done();
+        LocalTest.start(config, function(err, mongoose) {
+            schemaManager = require("../util/schema-manager")(mongoose, { auth : true });
+            done(err);
         });
     });
 
     after(function(done) {
-        config.app[SIS.OPT_USE_AUTH] = false;
-        server.stopServer(httpServer, function() {
-            mongoose.connection.db.dropDatabase();
-            mongoose.connection.close();
-            done();
-        });
+        LocalTest.stop(done);
     });
 
-    var userData = require("./data");
+    var userData = require("./fixtures/authdata");
     var users = userData.users;
     var addTests = userData.addTests;
     var superTests = userData.superTests;
