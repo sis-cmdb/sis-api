@@ -110,8 +110,13 @@ auth_config : {
     "type" : "ldap",
     "url" : "<url of the LDAP endpoint>",
     "user_domain" : "<the user domain to authenticate against>",
-    "email_domain" : "<the domain to append as the email address for the user>"
+    "email_domain" : "<the domain to append as the email address for the user>",
+    "client_opts" " {
+        "option_1" : "option_1_value",
+        // etc.  These are options used when creating the [ldapjs client](http://ldapjs.org/client.html)
+    }
 }
+
 ```
 
 As an example, with the following config:

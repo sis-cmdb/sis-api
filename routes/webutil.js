@@ -43,9 +43,9 @@
         if (!url || !ud || !ed) {
             throw new Error("LDAP authentication requires url, user_domain, and email_domain");
         }
-        var client = ldap.createClient({
-            url : url
-        });
+        var client_opts = auth_config.client_opts || { };
+        client_opts.url = url;
+        var client = ldap.createClient(client_opts);
         // "user" that is in the created by fields - a super user
         var ldapSisUser = {
             name : "_sis_ldap_auth_",
