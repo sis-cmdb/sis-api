@@ -29,6 +29,12 @@
         this.schema = schema;
         Manager.call(this, model, opts);
         this.sm = opts[SIS.OPT_SCHEMA_MGR];
+        this.mixedTypes = [];
+        model.schema.eachPath(function(pathName, type) {
+            if (type.instance == "Mixed") {
+                mixedTypes.push(pathName);
+            }
+        });
     }
 
     // inherit
@@ -171,6 +177,10 @@
                 }
             }
         }
+        // horribly inefficient and may be unnecessary
+        this.mixedTypes.forEach(function(p) {
+            result.markModified(p);
+        });
         return result;
     };
 

@@ -124,7 +124,8 @@ describe('@API - History API', function() {
                 "field_n" : 20
               }
             }
-          ]
+          ],
+          "type" : "hiera"
         },
 
         // entities
@@ -180,9 +181,19 @@ describe('@API - History API', function() {
                             should.exist(res.body[idField]);
                             should.exist(res.body['_updated_at']);
                             items.push(res.body);
-                            setTimeout(function() {
-                                insertItem(idx + 1);
-                            }, 500);
+                            var item = res.body;
+                            // ensure get matches
+                            ApiServer.get(prefix + "/" + res.body[idField])
+                                .expect(200, function(err, res) {
+                                if (test.type !== "hiera") {
+                                    item.should.eql(res.body);
+                                } else {
+                                    item.hieradata.should.eql(res.body);
+                                }
+                                setTimeout(function() {
+                                    insertItem(idx + 1);
+                                }, 500);
+                            });
                         });
                 }
                 insertItem(0);
@@ -218,9 +229,8 @@ describe('@API - History API', function() {
 
             for (var i = 0; i < entries.length; ++i) {
 
-                var createTest = function(i) {
+                var createTest = function(idx) {
                     return function(done) {
-                        var idx = i;
                         var utc = items[idx]['_updated_at'];
                         var path = [prefix, items[idx][idField], 'revision', utc];
                         ApiServer.newRequest('get', path.join("/"))

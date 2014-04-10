@@ -68,13 +68,12 @@ module.exports.schemas = [
             type : "String",
             entity_id : "String",
             action : { type : "String", required : true, enum : SIS.EVENTS_ENUM},
-            diff : "Mixed",
-            old_value : "Mixed",
+            commit_data : "Mixed",
             date_modified : { type : "Number", "index" : true },
             modified_by : "String"
         },
         indexes : [
-            { schema: 1, entity_id: 1 }
+            { type: 1, entity_id: 1 }
         ]
     },
     // sis_users

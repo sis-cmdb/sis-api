@@ -54,6 +54,7 @@
     HieraManager.prototype.applyUpdate = function(doc, updateObj) {
         /* allow partial update */
         doc.hieradata = this.applyPartial(doc.hieradata, updateObj.hieradata);
+        doc.markModified('hieradata');
         return doc;
     };
     /////////////////////////////////

@@ -280,13 +280,12 @@ Manager.prototype.applyPartial = function (full, partial) {
         // merge the object
         var result = full;
         for (var k in partial) {
-            if (partial[k]) {
+            if (partial[k] !== null) {
                 if (!full[k]) {
                     result[k] = partial[k];
                 } else {
                     result[k] = this.applyPartial(full[k], partial[k]);
                 }
-
             } else {
                 delete result[k];
             }
@@ -370,7 +369,6 @@ Manager.prototype._save = function(obj, callback) {
                 return d.reject(SIS.ERR_BAD_REQ(ex));
             }
         }
-
         m.save(this._getModCallback(d));
     }
     return Q.nodeify(d.promise, callback);
