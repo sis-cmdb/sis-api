@@ -43,8 +43,9 @@ describe("Hook Dispatch", function() {
 
         before(function(done) {
             var express = require('express');
+            var bodyParser = require('body-parser');
             hookServer = express();
-            hookServer.use(express.json());
+            hookServer.use(bodyParser.json());
             hookServer.get('/hook', function(req, res) {
                 should.exist(req.query.data);
                 var data = req.query.data;
@@ -145,8 +146,9 @@ describe("Hook Dispatch", function() {
 
         before(function(done) {
             var express = require('express');
+            var bodyParser = require('body-parser');
             hookServer = express();
-            hookServer.use(express.json());
+            hookServer.use(bodyParser.json());
             hookServer.post('/hook', function(req, res) {
                 should.exist(req.body);
                 req.body.entity_type.should.eql(SIS.SCHEMA_SCHEMAS);
