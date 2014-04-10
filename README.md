@@ -647,12 +647,7 @@ A commit object has the following schema definition:
     // If insert, the new object
     // If update, the patch from [JsonDiffPatch](https://github.com/benjamine/JsonDiffPatch)
     // If delete, null
-    "diff" : "Mixed",
-
-    // If insert, null
-    // If update, the old value that the patch can be applied to
-    // If delete, the value being deleted
-    "old_value" : "Mixed",
+    "commit_data" : "Mixed",
 
     // same as the _updated_at value of the entity that was saved
     "date_modified" : { "type" : "Number" },
@@ -684,7 +679,7 @@ To retrieve a list of commits on an entity of type 'my_type' with `_id` 1234, is
 
 ### Retrieving an individual commit of an object
 
-To retrieve an individual commit, append the `_id` of the commit object to the commits URL.  The returned object is a commit object with an additional field - `value_at`.  The `value_at` field is the actual state of the object with `old_value` having the `diff` applied to it.
+To retrieve an individual commit, append the `_id` of the commit object to the commits URL.  The returned object is a commit object with an additional field - `value_at`.  The `value_at` field is the actual state of the object at that mooment in time.
 
 ### Retrieving an object at a particular time
 
@@ -693,6 +688,8 @@ To retrieve an object's state at a particular time, append `/revisions/:utc_time
 For example, to retrieve the `my_hook` object at 11/11/11 @ 11:11:11 (utc timestamp 1321009871000), issue the request `/api/v1/hooks/my_hook/revisions/1321009871000`
 
 Timestamps in the future will return the current object.  Timestamps in the past return 404.
+
+Note that a commit object is not returned, but rather the object itself.
 
 ### Example commit log
 
@@ -707,7 +704,7 @@ The following is a commit log for a hiera entry that was added, updated, and del
     "entity_id": "hiera_entry",
     "action": "insert",
     "modified_by": "user1",
-    "diff": {
+    "commit_data": {
         "__v": 0,
         "_updated_at": 1385599521199,
         "name": "hiera_entry",
@@ -719,7 +716,6 @@ The following is a commit log for a hiera entry that was added, updated, and del
         "_created_at": 1385599521199,
         "owner": ["group1"]
     },
-    "old_value": null,
     "date_modified": 1385599521199,
     "_id": "529692213a74002bdf000004",
     "__v": 0,
@@ -732,25 +728,13 @@ The following is a commit log for a hiera entry that was added, updated, and del
     "entity_id": "hiera_entry",
     "action": "update",
     "modified_by": "user1",
-    "diff": {
+    "commit_data": {
         "_updated_at": [1385599521199, 1385599522218],
         "hieradata": {
             "new_field": ["new"],
             "field": ["v1", 0, 0],
             "field_n": [0, 0, 0]
         }
-    },
-    "old_value": {
-        "_updated_at": 1385599521199,
-        "name": "hiera_entry",
-        "hieradata": {
-            "field": "v1",
-            "field_n": 0
-        },
-        "_id": "529692213a74002bdf000003",
-        "__v": 0,
-        "_created_at": 1385599521199,
-        "owner": ["group1"]
     },
     "date_modified": 1385599522218,
     "_id": "529692223a74002bdf000005",
@@ -764,8 +748,7 @@ The following is a commit log for a hiera entry that was added, updated, and del
     "entity_id": "hiera_entry",
     "action": "delete",
     "modified_by": "user1",
-    "diff": null,
-    "old_value": {
+    "commit_data": {
         "_updated_at": 1385599522218,
         "name": "hiera_entry",
         "hieradata": {
