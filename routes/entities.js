@@ -50,6 +50,7 @@
             var smModel = this.sm.getEntityModelByName(name);
             var current = this.managerCache[name];
             if (current && current.model == smModel) {
+                req.sisManager = current;
                 return Q(current);
             }
         }
@@ -61,11 +62,19 @@
                 d.reject(e);
             } else {
                 var model = self.sm.getEntityModel(schema);
-                self.managerCache[name] = createEntityManager(model, schema.toObject(), self.opts);
-                d.resolve(self.managerCache[name]);
+                var manager = createEntityManager(model, schema.toObject(), self.opts);
+                self.managerCache[name] = manager;
+                req.sisManager = manager;
+                d.resolve(manager);
             }
         });
         return d.promise;
+    };
+
+    EntityController.prototype.shouldSaveCommit = function(req) {
+        return req.sisManager &&
+               req.sisManager.schema[SIS.FIELD_TRACK_HISTORY] &&
+               ApiController.prototype.shouldSaveCommit.call(this, req);
     };
 
     // The type is the schema being requested

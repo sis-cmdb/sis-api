@@ -262,4 +262,45 @@ describe('@API - History API', function() {
 
         });
     });
+
+    describe("Test prevent commit tracking", function() {
+        var schema = {
+            name : "history_test_2",
+            owner : ["sistest"],
+            definition : {
+                name : "String",
+                number : "Number"
+            },
+            track_history : false
+        };
+        var entity = {
+            name : "e1",
+            number : 1
+        };
+        before(function(done) {
+            ApiServer.post("/api/v1/schemas")
+                .send(schema)
+                .expect(201, function(err, res) {
+                    should.not.exist(err);
+                    ApiServer.post("/api/v1/entities/history_test_2")
+                        .send(entity).expect(201, function(err, res) {
+                            should.not.exist(err);
+                            entity = res.body;
+                            entity.number = 2;
+                            ApiServer.put("/api/v1/entities/history_test_2/" + entity._id)
+                                .send(entity).expect(200, done);
+                        });
+                });
+        });
+
+        it("Should not retrieve any commits", function(done) {
+            ApiServer.get("/api/v1/entities/history_test_2/" + entity._id + "/commits")
+                .expect(200, function(err, res) {
+                    should.not.exist(err);
+                    res.body.should.eql([]);
+                    done();
+                });
+        });
+    });
+
 });

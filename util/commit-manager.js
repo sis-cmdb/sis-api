@@ -75,6 +75,11 @@
             // TODO: look into offloading to node-webworker-threads
             // if intense
             var initial = commits.shift();
+            if (initial.action !== 'insert') {
+                // in a situation where tracking was enabled
+                // later
+                return null;
+            }
             var patched = commits.reduce(function(obj, commit) {
                 // apply commit.commit_data to obj
                 if (commit.commit_data) {
@@ -105,7 +110,7 @@
             // get only the commit data sorted in ascending
             // time
             var query = self.model.find(condition)
-                                  .select('commit_data')
+                                  .select('commit_data action')
                                   .sort({date_modified: 1 });
             query.exec(function(err, commits) {
                 if (err || !commits || !commits.length) {
@@ -145,7 +150,8 @@
                 "entity_id" : id,
                 "type" : type
             };
-            var q = self.model.find(query).sort({date_modified: 1 });
+            var q = self.model.find(query)
+                .select('commit_data action').sort({date_modified: 1 });
             q.exec(function(err, commits) {
                 if (err || !commits || !commits.length) {
                     callback(SIS.ERR_INTERNAL_OR_NOT_FOUND(err, "commit", utc), null);
@@ -158,6 +164,9 @@
                     }
                     // merge
                     var patched = aggregateCommits(commits);
+                    if (!patched) {
+                        return callback(SIS.ERR_NOT_FOUND("Full commit history unavailable."), null);
+                    }
                     return callback(null, patched);
                 }
             });

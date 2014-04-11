@@ -84,6 +84,10 @@ ApiController.prototype.applyDefaults = function(req) {
     // noop
 };
 
+ApiController.prototype.shouldSaveCommit = function(req) {
+    return (this.commitManager && req.method in SIS.METHODS_TO_EVENT);
+};
+
 // Utils - not normal to override these
 
 // Send an error via the response object
@@ -384,6 +388,9 @@ ApiController.prototype._saveCommit = function(req) {
     // but returns the initial object passed to it
     var self = this;
     return function(result) {
+        if (!self.shouldSaveCommit(req)) {
+            return Q(result);
+        }
         var d = Q.defer();
         var old = null;
         var now = null;
@@ -418,10 +425,7 @@ ApiController.prototype._saveCommit = function(req) {
 // p is the promise that receives the object from the
 // request handler
 ApiController.prototype._finish = function(req, res, p, code) {
-    var self = this;
-    if (this.commitManager && req.method in SIS.METHODS_TO_EVENT) {
-        p = p.then(this._saveCommit(req));
-    }
+    p = p.then(this._saveCommit(req));
     return Q.nodeify(p, this._getSendCallback(req, res, code));
 };
 

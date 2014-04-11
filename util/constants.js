@@ -64,6 +64,7 @@ module.exports = {
     FIELD_VERIFIED : "verified",
     FIELD_LOCKED : "sis_locked",
     FIELD_LOCKED_FIELDS : "locked_fields",
+    FIELD_TRACK_HISTORY : "track_history",
 
     // schema names
     SCHEMA_SCHEMAS : "sis_schemas",

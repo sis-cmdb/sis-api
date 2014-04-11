@@ -30,7 +30,8 @@ module.exports.schemas = [
             sis_locked : { type : "Boolean", required : true, "default" : false },
             owner : { type : ["String"], required : true },
             definition : { type : {}, required : true },
-            locked_fields : { type : ["String"] }
+            locked_fields : { type : ["String"] },
+            track_history : { type : "Boolean", default : true }
         }
     },
     // sis_hooks
