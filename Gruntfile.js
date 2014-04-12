@@ -89,7 +89,7 @@ module.exports = function(grunt) {
     'mochaTest',
     'copy:dist',
     'jshint:dist',
-    'buildjson'
+    'buildjson:dist'
   ]);
 
   grunt.registerTask('build', [
