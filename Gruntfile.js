@@ -75,21 +75,23 @@ module.exports = function(grunt) {
 
   grunt.registerTask('buildjson', function(target) {
     var outfile = 'build.json';
-    if (target == 'dist') {
-        outfile = 'dist/' + outfile;
-    }
     var buildNum = process.env['BUILD_NUMBER'] || 'local-build';
     var githash = process.env['GIT_COMMIT_HASH'] || 'dev-hash';
     grunt.file.write(outfile, JSON.stringify({ build_num : buildNum, git_hash : githash }));
+    if (target == 'dist') {
+        // write to dist as well
+        outfile = 'dist/' + outfile;
+        grunt.file.write(outfile, JSON.stringify({ build_num : buildNum, git_hash : githash }));
+    }
   });
 
   grunt.registerTask('dist', [
     'env:dist',
     'clean:dist',
+    'buildjson:dist',
     'mochaTest',
     'copy:dist',
-    'jshint:dist',
-    'buildjson:dist'
+    'jshint:dist'
   ]);
 
   grunt.registerTask('build', [

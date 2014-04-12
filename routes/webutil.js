@@ -48,13 +48,13 @@
         if (client_opts.tlsOptions && client_opts.tlsOptions.rejectUnauthorized === false) {
             process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
         }
-        var client = ldap.createClient(client_opts);
         // "user" that is in the created by fields - a super user
         var ldapSisUser = {
             name : "_sis_ldap_auth_",
             super_user : true
         };
         return function(user, pass, done) {
+            var client = ldap.createClient(client_opts);
             var ldapUser = user + '@' + ud;
             client.bind(ldapUser, pass, function(err) {
                 // unbind - don't wait around.
