@@ -14,6 +14,7 @@ logs
 results
 dist
 _reports
+build.json
 
 npm-debug.log
 

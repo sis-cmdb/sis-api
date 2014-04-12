@@ -26,7 +26,8 @@ var routes = [
     'hiera',
     'hooks',
     'users',
-    'tokens'
+    'tokens',
+    'info'
 ];
 
 var allowCrossDomain = function(req,res,next) {

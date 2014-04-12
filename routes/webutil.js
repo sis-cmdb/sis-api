@@ -45,6 +45,9 @@
         }
         var client_opts = auth_config.client_opts || { };
         client_opts.url = url;
+        if (client_opts.tlsOptions && client_opts.tlsOptions.rejectUnauthorized === false) {
+            process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+        }
         var client = ldap.createClient(client_opts);
         // "user" that is in the created by fields - a super user
         var ldapSisUser = {
@@ -54,6 +57,8 @@
         return function(user, pass, done) {
             var ldapUser = user + '@' + ud;
             client.bind(ldapUser, pass, function(err) {
+                // unbind - don't wait around.
+                client.unbind(function() { });
                 if (err) {
                     return done(SIS.ERR_BAD_CREDS("LDAP authentication failed : " + err), null);
                 }

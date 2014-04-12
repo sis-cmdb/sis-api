@@ -73,17 +73,29 @@ module.exports = function(grunt) {
     }
   });
 
+  grunt.registerTask('buildjson', function(target) {
+    var outfile = 'build.json';
+    if (target == 'dist') {
+        outfile = 'dist/' + outfile;
+    }
+    var buildNum = process.env['BUILD_NUMBER'] || 'local-build';
+    var githash = process.env['GIT_COMMIT_HASH'] || 'dev-hash';
+    grunt.file.write(outfile, JSON.stringify({ build_num : buildNum, git_hash : githash }));
+  });
+
   grunt.registerTask('dist', [
     'env:dist',
     'clean:dist',
     'mochaTest',
     'copy:dist',
-    'jshint:dist'
+    'jshint:dist',
+    'buildjson'
   ]);
 
   grunt.registerTask('build', [
     'jshint',
-    'mochaTest'
+    'buildjson',
+    'mochaTest',
   ]);
 
   grunt.registerTask('default', ['newer:jshint','build']);
