@@ -28,6 +28,7 @@
 
     function SchemaManager(mongoose, opts) {
         this.mongoose = mongoose;
+        this.entitySchemaToUpdateTime = { };
         require('./types')(mongoose);
         var sisSchemas = require('./sis-schemas').schemas;
         for (var i = 0; i < sisSchemas.length; ++i) {
@@ -76,11 +77,23 @@
             }
             // set the model object to have owners
             modelObj.definition[SIS.FIELD_OWNER] = ["String"];
-            this.mongoose.Schema(modelObj.definition);
+            var mongooseSchema = this.mongoose.Schema(modelObj.definition);
+            // set the references
+            var refs = SIS.UTIL_GET_OID_PATHS(mongooseSchema);
+            modelObj[SIS.FIELD_REFERENCES] = refs.map(function(ref) {
+                return ref.ref;
+            });
+
         } catch (ex) {
             return "Schema is invalid: " + ex;
         }
         return null;
+    };
+
+    SchemaManager.prototype._invalidateSchema = function(name) {
+        delete this.mongoose.modelSchemas[name];
+        delete this.mongoose.models[name];
+        delete this.entitySchemaToUpdateTime[name];
     };
 
     SchemaManager.prototype._diffSchemas = function(schema1, schema2) {
@@ -162,8 +175,7 @@
 
         // update the def and cache
         currentSchema.definition = newDef;
-        delete this.mongoose.modelSchemas[name];
-        delete this.mongoose.models[name];
+        this._invalidateSchema(name);
         currentMongooseModel = this.getEntityModel(currentSchema);
 
 
@@ -204,8 +216,7 @@
         var name = schema[SIS.FIELD_NAME];
         var model = this.getEntityModel(schema);
         var collection = model.collection;
-        delete this.mongoose.modelSchemas[name];
-        delete this.mongoose.models[name];
+        this._invalidateSchema(name);
         // seems very hacky - this is for a race condition
         // exposed by very quick tests that create a collection
         // requiring an index and then drop it shortly after.
@@ -232,10 +243,7 @@
         return this.mongoose.models[name];
     };
 
-    SchemaManager.prototype.getSisModelAsync = function(name, callback) {
-        if (this.hasEntityModel(name)) {
-            return callback(null, this.getSisModel(name));
-        }
+    SchemaManager.prototype.getEntityModelAsync = function(name, callback) {
         var d = Q.defer();
         var self = this;
         this.model.findOne({name: name}, function(err, schema) {
@@ -283,19 +291,39 @@
         return this.mongoose.Schema(definition);
     };
 
+    // wrap this so we can handle the error case
+    SchemaManager.prototype.getById = function(id, callback) {
+        var d = Q.defer();
+        var self = this;
+        Manager.prototype.getById.call(this, id, function(err, result) {
+            if (err) {
+                self._invalidateSchema(id);
+                d.reject(err);
+            } else {
+                d.resolve(result);
+            }
+        });
+        return Q.nodeify(d.promise, callback);
+    };
+
     // get a mongoose model back based on the sis schema
     // passed in.  sisSchema would be an object returned by
-    // calls like getByName
+    // calls like getById
     // the mongoose cached version is returned if available
     // Do not hang on to any of these objects
     SchemaManager.prototype.getEntityModel = function(sisSchema) {
         if (!sisSchema || !sisSchema.name || !sisSchema.definition) {
-            //console.log("getEntityModel: Invalid schema " + JSON.stringify(sisSchema));
             return null;
         }
         var name = sisSchema.name;
+        var schemaTime = sisSchema[SIS.FIELD_UPDATED_AT] || Date.now();
         if (name in this.mongoose.models) {
-            return this.mongoose.models[name];
+            if (this.entitySchemaToUpdateTime[name] == schemaTime) {
+                return this.mongoose.models[name];
+            } else {
+                // invalidate
+                this._invalidateSchema(name);
+            }
         }
         // convert to mongoose
         try {
@@ -313,10 +341,10 @@
                 }
             }
 
+            this.entitySchemaToUpdateTime[name] = schemaTime;
             this.mongoose.models[name] = result;
             return result;
         } catch (ex) {
-            // console.log("getEntityModel: Invalid schema " + JSON.stringify(sisSchema) + " w/ ex " + ex);
             return null;
         }
     };

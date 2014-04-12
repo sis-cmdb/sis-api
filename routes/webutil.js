@@ -170,7 +170,7 @@
             // just return an empty array
             return callback(null, []);
         }
-        sm.getSisModelAsync(opts.ref, function(err, sisModel) {
+        sm.getEntityModelAsync(opts.ref, function(err, sisModel) {
             if (err) {
                 return callback(err, null);
             }
@@ -182,7 +182,7 @@
                 sisModel.find(getFindCond(remainingPath, condition), '_id', getQueryIdsCallback(callback));
             } else {
                 // need to see if we're looking to join another set of object ids
-                var references = SIS.UTIL_GET_OID_PATHS(sisModel).filter(function(ref) {
+                var references = SIS.UTIL_GET_OID_PATHS(sisModel.schema).filter(function(ref) {
                     return ref.type != 'arr';
                 }).map(function(ref) {
                     return ref.path;

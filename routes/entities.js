@@ -45,16 +45,8 @@
     // overrides
     // Get the manager to handle this query
     EntityController.prototype.getManager = function(req) {
-        var name = this.getType(req);
-        if (this.sm.hasEntityModel(name)) {
-            var smModel = this.sm.getEntityModelByName(name);
-            var current = this.managerCache[name];
-            if (current && current.model == smModel) {
-                req.sisManager = current;
-                return Q(current);
-            }
-        }
         // Get the latest
+        var name = this.getType(req);
         var self = this;
         var d = Q.defer();
         this.sm.getById(name, function(e, schema) {

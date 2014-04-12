@@ -16,9 +16,9 @@
 
 var mongoose = require('mongoose');
 var nconf = require('nconf');
-var SIS = require('./util/constants');
+var SIS = require('../util/constants');
 var fs = require('fs');
-var config = require('./config');
+var config = require('../config');
 
 if (process.argv.length != 4) {
     console.log("Require an action and argument.");

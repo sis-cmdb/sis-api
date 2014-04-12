@@ -20,6 +20,7 @@
 
 var Q = require('q');
 var SIS = require('./constants');
+var async = require('async');
 
 // Constructor for a Manager base
 // A manager is responsible for communicating with
@@ -40,7 +41,7 @@ function Manager(model, opts) {
     this.authEnabled = SIS.OPT_USE_AUTH in opts ? opts[SIS.OPT_USE_AUTH] : SIS.DEFAULT_OPT_USE_AUTH;
     this.adminRequired = opts[SIS.OPT_ADMIN_REQUIRED] || false;
     // objects this manager refers to
-    this.references = SIS.UTIL_GET_OID_PATHS(this.model);
+    this.references = SIS.UTIL_GET_OID_PATHS(this.model.schema);
 }
 
 // return a string if validation fails
@@ -86,14 +87,30 @@ Manager.prototype.count = function(condition, callback) {
 };
 
 // Populate the object/array of objects one level deep
-Manager.prototype.populate = function(toPopulate, callback) {
+Manager.prototype.populate = function(toPopulate, schemaManager) {
     var fields = this._getPopulateFields();
     if (!fields) {
         return Q(toPopulate);
     }
+    // ensure the fields exist
+    var refs = this.references;
+    var refsToLoad = [];
+    refs.forEach(function(ref) {
+        if (!schemaManager.hasEntityModel(ref)) {
+            refsToLoad.push(ref);
+        }
+    });
     var d = Q.defer();
-    this.model.populate(toPopulate, fields, this._getModCallback(d));
-    return Q.nodeify(d.promise, callback);
+    var self = this;
+    if (!refsToLoad.length) {
+        this.model.populate(toPopulate, fields, this._getModCallback(d));
+    } else {
+        async.map(refsToLoad, schemaManager.getEntityModelAsync.bind(schemaManager),
+        function(err, res) {
+            self.model.populate(toPopulate, fields, self._getModCallback(d));
+        });
+    }
+    return d.promise;
 };
 
 // get a single object by id.

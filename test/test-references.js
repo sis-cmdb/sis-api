@@ -137,12 +137,17 @@ describe('@API - Entity References', function() {
         });
 
 
-        // it("ref_2 should have oid reference paths", function(done) {
-        //     var smModel = schemaManager.getEntityModel(schema_2);
-        //     var refs = SIS.UTIL_GET_OID_PATHS(smModel);
-        //     refs.length.should.eql(1);
-        //     done();
-        // });
+        it("ref_2 should have oid reference paths", function(done) {
+            ApiServer.get("/api/v1/schemas/ref_2")
+                .expect(200, function(err, res) {
+                should.not.exist(err);
+                var schema = res.body;
+                should.exist(schema[SIS.FIELD_REFERENCES]);
+                schema[SIS.FIELD_REFERENCES].length.should.eql(1);
+                schema[SIS.FIELD_REFERENCES][0].should.eql('ref_1');
+                done();
+            });
+        });
 
         it("should fail to add a bad ref_2", function(done) {
             var bad_refs = entities['ref_3'];

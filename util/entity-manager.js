@@ -211,7 +211,7 @@
                         return callback(SIS.ERR_BAD_REQ("Reference Object has no _id"), null);
                     }
                 }
-                this.sm.getSisModelAsync(refModelName, function(err, model) {
+                this.sm.getEntityModelAsync(refModelName, function(err, model) {
                     if (err) { return callback(err, false); }
                     if (!model) {
                         return callback(SIS.ERR_BAD_REQ("No schema named " + refModelName));
@@ -245,7 +245,7 @@
                 if (errored) {
                     return callback(SIS.ERR_BAD_REQ("Reference Object has no _id field"));
                 }
-                this.sm.getSisModelAsync(refModelName, function(err, model) {
+                this.sm.getEntityModelAsync(refModelName, function(err, model) {
                     if (err) { return callback(err, false); }
                     if (!model) {
                         return callback(SIS.ERR_BAD_REQ("No schema named " + refModelName));

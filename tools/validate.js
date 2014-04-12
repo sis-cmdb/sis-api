@@ -16,9 +16,9 @@
 
 var mongoose = require('mongoose');
 var nconf = require('nconf');
-var SIS = require('./util/constants');
+var SIS = require('../util/constants');
 var fs = require('fs');
-var config = require('./config');
+var config = require('../config');
 
 if (process.argv.length < 3) {
     console.log("Require a schema JSON file with optional entity JSON file.");
@@ -29,7 +29,7 @@ nconf.env('__').argv();
 nconf.defaults(config);
 
 var appConfig = nconf.get('app') || {};
-var schemaManager = require('./util/schema-manager')(mongoose, appConfig);
+var schemaManager = require('../util/schema-manager')(mongoose, appConfig);
 
 // get the info for a user.
 var schemaModel = null;

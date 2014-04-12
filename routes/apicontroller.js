@@ -213,8 +213,8 @@ ApiController.prototype.get = function(req, res) {
     var id = req.params.id;
     var self = this;
     var p = this.getManager(req)
-                .then(function(m) {
-                    return m.getById(id).then(self._getPopulatePromise(req, m));
+                .then(function(mgr) {
+                    return mgr.getById(id).then(self._getPopulatePromise(req, mgr));
                 });
 
     this._finish(req, res, p, 200);
@@ -435,7 +435,7 @@ ApiController.prototype._getPopulatePromise = function(req, m) {
     var self = this;
     return function(results) {
         if (self.parsePopulate(req)) {
-            return m.populate(results);
+            return m.populate(results, self.sm);
         } else {
             return Q(results);
         }

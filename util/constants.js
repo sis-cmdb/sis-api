@@ -65,6 +65,7 @@ module.exports = {
     FIELD_LOCKED : "sis_locked",
     FIELD_LOCKED_FIELDS : "locked_fields",
     FIELD_TRACK_HISTORY : "track_history",
+    FIELD_REFERENCES : "_references",
 
     // schema names
     SCHEMA_SCHEMAS : "sis_schemas",
@@ -243,8 +244,8 @@ module.exports = {
 
     // return an array of arrays where each inner array
     // is a broken down path to an object id type that isn't _id
-    UTIL_GET_OID_PATHS : function(model) {
-        var schema = model.schema;
+    // schema is a mongoose schema object
+    UTIL_GET_OID_PATHS : function(schema) {
         var paths = [];
         schema.eachPath(function(pathName, schemaType) {
             if (schemaType.instance == "ObjectID" &&
