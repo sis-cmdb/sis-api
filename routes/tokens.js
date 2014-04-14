@@ -14,9 +14,10 @@
 
  ***********************************************************/
 
-'use strict';
 // API for schemas
 (function() {
+
+    'use strict';
 
     var ApiController = require("./apicontroller");
     var SIS = require("../util/constants");
@@ -37,17 +38,17 @@
     }
 
     // inherit
-    TokenController.prototype.__proto__ = ApiController.prototype;
+    require('util').inherits(TokenController, ApiController);
 
     // Append the query parameter to be that of the user
     TokenController.prototype.applyDefaults = function(req) {
         if (req.method == "GET" && req[SIS.FIELD_TOKEN_USER]) {
             var rq = this.parseQuery(req);
-            var query = rq['query'];
+            var query = rq.query;
             query[SIS.FIELD_USERNAME] = req.params.uid;
             req.query.q = query;
         }
-    }
+    };
 
     TokenController.prototype.convertToResponseObject = function(req, o) {
         var convertToken = function(token) {
@@ -62,20 +63,20 @@
                 token[SIS.FIELD_EXPIRES] = timeLeft;
             }
             return token;
-        }
+        };
         if (o instanceof Array) {
             o = o.map(convertToken);
         } else {
             o = convertToken(o);
         }
         return o;
-    }
+    };
 
     // override main entry points to ensure user exists..
     TokenController.prototype.ensureUser = function(req, callback) {
         var uid = req.params.uid;
         return Q.nodeify(this.userManager.getById(uid), callback);
-    }
+    };
 
     var fixBody = function(req) {
         if (req.method == "PUT" || req.method == "POST") {
@@ -85,7 +86,7 @@
                 delete obj[SIS.FIELD_EXPIRES];
             }
         }
-    }
+    };
 
     // Wrap the token API to ensure the user requesting it
     // is allowed to
@@ -115,14 +116,14 @@
                         });
                     }
                 });
-            }
-        }
+            };
+        };
         var apis = ['get', 'getAll', 'update', 'add', 'delete'];
         for (var i = 0; i < apis.length; ++i) {
             var fname = apis[i];
             this[fname] = wrapFunc(ApiController.prototype[fname]);
         }
-    }
+    };
 
     /////////////////////////////////
 
@@ -135,6 +136,6 @@
         var controller = new TokenController(config);
         controller.wrapApi();
         controller.attach(app, "/api/v1/users/:uid/tokens");
-    }
+    };
 
 })();

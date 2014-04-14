@@ -16,6 +16,7 @@
 
 var express = require('express');
 var mongoose = require('mongoose');
+var bodyParser = require('body-parser');
 var app = null;
 
 // routes we want to include
@@ -26,7 +27,7 @@ var routes = [
     'hooks',
     'users',
     'tokens',
-    'index'
+    'info'
 ];
 
 var allowCrossDomain = function(req,res,next) {
@@ -41,7 +42,7 @@ var allowCrossDomain = function(req,res,next) {
         res.set("WWW-Authenticate", 'Basic realm="Users"');
     }
     next();
-}
+};
 
 var defaultConfig = {
     app : {
@@ -50,9 +51,11 @@ var defaultConfig = {
             type : 'sis'
         }
     }
-}
+};
 
 var startServer = function(config, callback) {
+    'use strict';
+
     var passport = require("passport");
     var webUtil = require("./routes/webutil");
     var nconf = require('nconf');
@@ -64,7 +67,7 @@ var startServer = function(config, callback) {
     var app = express();
 
     //app.use(webUtil.json());
-    app.use(express.json());
+    app.use(bodyParser.json());
     app.use(allowCrossDomain);
 
     // Setup global options
@@ -75,51 +78,50 @@ var startServer = function(config, callback) {
     app.options('/',function(req,res) {
         res.send(200);
     });
+    app.disable('etag');
 
-    app.configure(function() {
-        mongoose.connect(nconf.get('db').url, function(err) {
+    mongoose.connect(nconf.get('db').url, function(err) {
+        if (err) {
+            throw err;
+        }
+
+        // express app settings
+        var appConfig = nconf.get('app') || {};
+        for (var k in appConfig) {
+            app.set(k, appConfig[k]);
+        }
+        var schemaManager = require('./util/schema-manager')(mongoose, appConfig);
+        schemaManager.bootstrapEntitySchemas(function(err) {
             if (err) {
                 throw err;
             }
+            passport.use(webUtil.createTokenStrategy(schemaManager));
+            passport.use(webUtil.createUserPassStrategy(schemaManager, appConfig));
 
-            // express app settings
-            var appConfig = nconf.get('app') || {};
-            for (var k in appConfig) {
-                app.set(k, appConfig[k]);
-            }
-            var schemaManager = require('./util/schema-manager')(mongoose, appConfig);
-            schemaManager.bootstrapEntitySchemas(function(err) {
-                if (err) {
-                    throw err;
+            app.use(passport.initialize());
+
+            var cfg = { };
+            cfg[SIS.OPT_SCHEMA_MGR] = schemaManager;
+            cfg[SIS.OPT_USE_AUTH] = app.get(SIS.OPT_USE_AUTH);
+            app.set(SIS.OPT_SCHEMA_MGR, schemaManager);
+            // setup the routes
+            routes.map(function(routeName) {
+                var route = require("./routes/" + routeName);
+                route.setup(app, cfg);
+            });
+            // listen
+            var httpServer = app.listen(nconf.get('server').port, function(err) {
+                if (callback) {
+                    callback(app, httpServer);
                 }
-                passport.use(webUtil.createTokenStrategy(schemaManager));
-                passport.use(webUtil.createUserPassStrategy(schemaManager, appConfig));
-
-                app.use(passport.initialize());
-
-                var cfg = { };
-                cfg[SIS.OPT_SCHEMA_MGR] = schemaManager;
-                cfg[SIS.OPT_USE_AUTH] = app.get(SIS.OPT_USE_AUTH);
-                app.set(SIS.OPT_SCHEMA_MGR, schemaManager);
-                // setup the routes
-                routes.map(function(routeName) {
-                    var route = require("./routes/" + routeName);
-                    route.setup(app, cfg);
-                });
-                // listen
-                httpServer = app.listen(nconf.get('server').port, function(err) {
-                    if (callback) {
-                        callback(app, httpServer);
-                    }
-                });
             });
         });
     });
-}
+};
 
 // Run if we're the root module
 if (!module.parent) {
-    var config = require('./config')
+    var config = require('./config');
     startServer(config);
 }
 
@@ -128,4 +130,4 @@ module.exports.mongoose = mongoose;
 module.exports.startServer = startServer;
 module.exports.stopServer = function(server, callback) {
     server.close(callback);
-}
+};

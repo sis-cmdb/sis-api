@@ -14,10 +14,9 @@
 
  ***********************************************************/
 
-'use strict';
-
 // Manager for entities
 (function() {
+    'use strict';
 
     var Manager = require("./manager");
     var Q = require("q");
@@ -30,10 +29,16 @@
         this.schema = schema;
         Manager.call(this, model, opts);
         this.sm = opts[SIS.OPT_SCHEMA_MGR];
+        this.mixedTypes = [];
+        model.schema.eachPath(function(pathName, type) {
+            if (type.instance == "Mixed") {
+                mixedTypes.push(pathName);
+            }
+        });
     }
 
     // inherit
-    EntityManager.prototype.__proto__ = Manager.prototype;
+    require('util').inherits(EntityManager, Manager);
 
     EntityManager.prototype.fixSubObject = function(entity, reference, isUpdate) {
         var obj = entity;
@@ -70,26 +75,27 @@
             }
         }
         return null;
-    }
+    };
 
     // validate the entity
     EntityManager.prototype.validate = function(entity, isUpdate) {
+        var keys = Object.keys(entity);
+        var i = 0;
         if (isUpdate) {
             // remove reserved fields..
-            var keys = Object.keys(entity);
-            for (var i = 0; i < keys.length; ++i) {
+            for (i = 0; i < keys.length; ++i) {
                 var rf = keys[i];
                 if (rf[0] == '_') {
                     delete entity[rf];
                 }
             }
+            keys = Object.keys(entity);
         }
         try {
-            var keys = Object.keys(entity);
-            if (keys.length == 0) {
+            if (!keys.length) {
                 return "entity cannot be empty";
             }
-            for (var i = 0; i < keys.length; ++i) {
+            for (i = 0; i < keys.length; ++i) {
                 if (keys[i][0] == '_') {
                     return keys[i] + " is a reserved field";
                 }
@@ -102,6 +108,12 @@
             //     }
             // }
             if (SIS.FIELD_OWNER in entity) {
+                if (entity[SIS.FIELD_OWNER] instanceof Array &&
+                    !entity[SIS.FIELD_OWNER].length) {
+                    // let the authorize call take care of setting
+                    // sub owners
+                    return null;
+                }
                 var err = this.validateOwner(entity);
                 if (err) {
                     return err;
@@ -109,7 +121,7 @@
                 // ensure the document is a subset of owners of the schema
                 var owners = entity[SIS.FIELD_OWNER];
                 var schemaOwners = this.schema[SIS.FIELD_OWNER];
-                for (var i = 0; i < owners.length; ++i) {
+                for (i = 0; i < owners.length; ++i) {
                     if (schemaOwners.indexOf(owners[i]) == -1) {
                         // must be a subset
                         return "entity owners must be a subset of the schema owners.";
@@ -120,14 +132,14 @@
             return "cannot be empty or is not an object " + ex;
         }
         return null;
-    }
+    };
 
     function getOwnerSubset(user, schema) {
         if (!user[SIS.FIELD_ROLES]) {
             return [];
         }
         var schemaOwners = schema[SIS.FIELD_OWNER];
-        var userRoles = Object.keys(user[SIS.FIELD_ROLES])
+        var userRoles = Object.keys(user[SIS.FIELD_ROLES]);
         return userRoles.filter(function(owner) {
             return schemaOwners.indexOf(owner) != -1;
         });
@@ -142,31 +154,35 @@
         }
         // authorize against entity subset or schema
         var ownerSubset = getOwnerSubset(user, this.schema);
-        if (ownerSubset.length == 0) {
+        if (!ownerSubset.length) {
             return Q.reject(SIS.ERR_BAD_CREDS("Insufficient privileges to operate on entities in this schema."));
         }
-        if (!doc[SIS.FIELD_OWNER] || doc[SIS.FIELD_OWNER].length == 0) {
+        if (!doc[SIS.FIELD_OWNER] || !doc[SIS.FIELD_OWNER].length) {
             doc[SIS.FIELD_OWNER] = ownerSubset;
         }
         if (mergedDoc && !mergedDoc[SIS.FIELD_OWNER]) {
             mergedDoc[SIS.FIELD_OWNER] = ownerSubset;
         }
         return Manager.prototype.authorize.call(this, evt, doc, user, mergedDoc);
-    }
+    };
 
     EntityManager.prototype.applyUpdate = function(result, entity) {
         var schema = result.schema;
         for (var k in entity) {
             if (schema.path(k)) {
-                if (entity[k] != null) {
+                if (entity[k] !== null) {
                     result[k] = this.applyPartial(result[k], entity[k]);
                 } else {
                     delete result[k];
                 }
             }
         }
+        // horribly inefficient and may be unnecessary
+        this.mixedTypes.forEach(function(p) {
+            result.markModified(p);
+        });
         return result;
-    }
+    };
 
     EntityManager.prototype.getEnsureReference = function(obj) {
         return function(ref, callback) {
@@ -186,16 +202,16 @@
             path = ref.path;
             var schema = this.model.schema;
             var refModelName = ref.ref;
-            ref = schema.path(path);
             if (ref.type == 'oid') {
-                if (typeof currObj === 'object') {
+                if (typeof currObj === 'object' &&
+                    currObj.constructor.name !== "ObjectID") {
                     if (SIS.FIELD_ID in currObj) {
                         currObj = currObj[SIS.FIELD_ID];
                     } else {
                         return callback(SIS.ERR_BAD_REQ("Reference Object has no _id"), null);
                     }
                 }
-                this.sm.getSisModelAsync(refModelName, function(err, model) {
+                this.sm.getEntityModelAsync(refModelName, function(err, model) {
                     if (err) { return callback(err, false); }
                     if (!model) {
                         return callback(SIS.ERR_BAD_REQ("No schema named " + refModelName));
@@ -229,7 +245,7 @@
                 if (errored) {
                     return callback(SIS.ERR_BAD_REQ("Reference Object has no _id field"));
                 }
-                this.sm.getSisModelAsync(refModelName, function(err, model) {
+                this.sm.getEntityModelAsync(refModelName, function(err, model) {
                     if (err) { return callback(err, false); }
                     if (!model) {
                         return callback(SIS.ERR_BAD_REQ("No schema named " + refModelName));
@@ -247,10 +263,10 @@
             }
 
         }.bind(this);
-    }
+    };
 
     EntityManager.prototype.ensureReferences = function(obj) {
-        if (this.references.length == 0 || !obj) {
+        if (!this.references.length || !obj) {
             return Q(obj);
         }
         // convert to POJO
@@ -268,18 +284,18 @@
             }
         });
         return d.promise;
-    }
+    };
 
     EntityManager.prototype._save = function(obj, callback) {
         // ensure references
         var p = this.ensureReferences(obj)
             .then(Manager.prototype._save.bind(this));
         return Q.nodeify(p, callback);
-    }
+    };
     //////////
 
     module.exports = function(model, schema, opts) {
         return new EntityManager(model, schema, opts);
-    }
+    };
 
 })();

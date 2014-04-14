@@ -14,9 +14,11 @@
 
  ***********************************************************/
 
+(function() {
+
 'use strict';
 
-var SIS = require('./constants')
+var SIS = require('./constants');
 
 // schema definitions
 module.exports.schemas = [
@@ -28,7 +30,9 @@ module.exports.schemas = [
             sis_locked : { type : "Boolean", required : true, "default" : false },
             owner : { type : ["String"], required : true },
             definition : { type : {}, required : true },
-            locked_fields : { type : ["String"] }
+            locked_fields : { type : ["String"] },
+            track_history : { type : "Boolean", default : true },
+            _references : ["String"]
         }
     },
     // sis_hooks
@@ -66,13 +70,12 @@ module.exports.schemas = [
             type : "String",
             entity_id : "String",
             action : { type : "String", required : true, enum : SIS.EVENTS_ENUM},
-            diff : "Mixed",
-            old_value : "Mixed",
+            commit_data : "Mixed",
             date_modified : { type : "Number", "index" : true },
             modified_by : "String"
         },
         indexes : [
-            { schema: 1, entity_id: 1 }
+            { type: 1, entity_id: 1 }
         ]
     },
     // sis_users
@@ -100,3 +103,5 @@ module.exports.schemas = [
     }
 
 ];
+
+})();

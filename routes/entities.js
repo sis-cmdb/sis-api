@@ -14,11 +14,11 @@
 
  ***********************************************************/
 
-'use strict';
-
 // API for entities that adhere to schemas created via
 // the schemas API
 (function() {
+
+    'use strict';
 
     var ApiController = require("./apicontroller");
     var SIS = require("../util/constants");
@@ -40,20 +40,13 @@
     }
 
     // inherit
-    EntityController.prototype.__proto__ = ApiController.prototype;
+    require('util').inherits(EntityController, ApiController);
 
     // overrides
     // Get the manager to handle this query
     EntityController.prototype.getManager = function(req) {
-        var name = this.getType(req);
-        if (this.sm.hasEntityModel(name)) {
-            var smModel = this.sm.getEntityModelByName(name);
-            var current = this.managerCache[name];
-            if (current && current.model == smModel) {
-                return Q(current);
-            }
-        }
         // Get the latest
+        var name = this.getType(req);
         var self = this;
         var d = Q.defer();
         this.sm.getById(name, function(e, schema) {
@@ -61,32 +54,42 @@
                 d.reject(e);
             } else {
                 var model = self.sm.getEntityModel(schema);
-                self.managerCache[name] = createEntityManager(model, schema.toObject(), self.opts);
-                d.resolve(self.managerCache[name]);
+                var manager = createEntityManager(model, schema.toObject(), self.opts);
+                self.managerCache[name] = manager;
+                req.sisManager = manager;
+                d.resolve(manager);
             }
         });
         return d.promise;
-    }
+    };
+
+    EntityController.prototype.shouldSaveCommit = function(req) {
+        return req.sisManager &&
+               req.sisManager.schema[SIS.FIELD_TRACK_HISTORY] &&
+               ApiController.prototype.shouldSaveCommit.call(this, req);
+    };
+
     // The type is the schema being requested
     EntityController.prototype.getType = function(req) {
         return req.params.schema;
-    }
+    };
+
     // Apply the default to populate the objects returned from GET
     EntityController.prototype.applyDefaults = function(req) {
         if (req.method == "GET") {
             // need to populate..
             if (!('populate' in req.query)) {
-                req.query['populate'] = true;
+                req.query.populate = true;
             }
         }
-    }
+    };
     /////////////////////////////////
 
     // all route controllers expose a setup method
     module.exports.setup = function(app, config) {
         var controller = new EntityController(config);
         controller.attach(app, "/api/v1/entities/:schema");
-    }
+    };
 
 })();
 

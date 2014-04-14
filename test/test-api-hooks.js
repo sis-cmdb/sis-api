@@ -14,48 +14,36 @@
 
  ***********************************************************/
 
-var config = require('./test-config');
-var server = require("../server")
-var should = require('should');
-var request = require('supertest');
-var async = require('async');
-var SIS = require("../util/constants");
+describe('@API - Hook API', function() {
+    var SIS = require("../util/constants");
+    var config = require('./fixtures/config');
+    var should = require('should');
+    var TestUtil = require('./fixtures/util');
+    var ApiServer = new TestUtil.TestServer();
+    var async = require('async');
 
-var mongoose = null;
-var hookManager = null;
-var app = null;
-var httpServer = null;
-
-describe('Hook API', function() {
     before(function(done) {
-        server.startServer(config, function(expressApp, httpSrv) {
-            mongoose = server.mongoose;
-            var schemaManager = expressApp.get(SIS.OPT_SCHEMA_MGR);
-            hookManager = require('../util/hook-manager')(schemaManager);
-            app = expressApp;
-            httpServer = httpSrv;
-            done();
+        ApiServer.start(config, function(e) {
+            if (e) { return done(e); }
+            ApiServer.becomeSuperUser(done);
         });
     });
 
     after(function(done) {
-        server.stopServer(httpServer);
-        mongoose.connection.db.dropDatabase();
-        mongoose.connection.close();
-        done();
+        ApiServer.stop(done);
     });
 
     describe("Hooks failure cases", function() {
         // no hooks.
         it("Should fail if name does not exist ", function(done) {
-            request(app).get("/api/v1/hooks/DNE").expect(404, done);
+            ApiServer.get("/api/v1/hooks/DNE").expect(404, done);
         });
         it("Should fail to delete non existent hook", function(done) {
-            request(app).del("/api/v1/hooks/DNE")
+            ApiServer.del("/api/v1/hooks/DNE")
                 .expect(404, done);
         });
         it("Should fail to create an invalid hook", function(done) {
-            request(app).post("/api/v1/hooks")
+            ApiServer.post("/api/v1/hooks")
                 .set("Content-Type", "application/json")
                 .send({"invalid" : "hook"})
                 .expect(400, done);
@@ -71,7 +59,7 @@ describe('Hook API', function() {
                 },
                 "events": ['insert','update']
             };
-            request(app).put("/api/v1/hooks/DNE")
+            ApiServer.put("/api/v1/hooks/DNE")
                 .set("Content-Type", "application/json")
                 .send(hook)
                 .expect(404, done);
@@ -90,13 +78,13 @@ describe('Hook API', function() {
             "events": ['insert','update']
         };
         it("Should create new hook", function(done) {
-            request(app).post("/api/v1/hooks")
+            ApiServer.post("/api/v1/hooks")
                 .set('Content-Encoding', 'application/json')
                 .send(hook)
                 .expect(201, done);
         });
         it("Should retrieve the hook", function(done) {
-            request(app).get("/api/v1/hooks/test_hook")
+            ApiServer.get("/api/v1/hooks/test_hook")
                 .expect(200, function(err, res) {
                     should.not.exist(err);
                     should.exist(res.body);
@@ -108,7 +96,7 @@ describe('Hook API', function() {
         });
         it("Should update the hook", function(done) {
             hook['events'] = ['insert'];
-            request(app).put("/api/v1/hooks/test_hook")
+            ApiServer.put("/api/v1/hooks/test_hook")
                 .set("Content-Type", "application/json")
                 .send(hook)
                 .expect(200)
@@ -123,13 +111,13 @@ describe('Hook API', function() {
         });
         it("Should fail to update the hook w/ invalid data", function(done) {
             delete hook['events'];
-            request(app).put("/api/v1/hooks/test_hook")
+            ApiServer.put("/api/v1/hooks/test_hook")
                 .set("Content-Type", "application/json")
                 .send(hook)
                 .expect(400, done);
         });
         it ("Should delete the hook", function(done) {
-            request(app).del("/api/v1/hooks/test_hook")
+            ApiServer.del("/api/v1/hooks/test_hook")
                 .expect(200, done);
         });
     });
@@ -170,13 +158,20 @@ describe('Hook API', function() {
                 }
             ];
             // async magic - https://github.com/caolan/async
-            async.map(hooks, hookManager.add.bind(hookManager), done);
+            async.map(hooks, function(hook, callback) {
+                ApiServer.post('/api/v1/hooks')
+                    .send(hook).expect(201, callback);
+            }, done);
         });
         after(function(done) {
-            async.map(['test_hook1', 'test_hook2', 'test_hook3'], hookManager.delete.bind(hookManager), done);
+            async.map(['test_hook1', 'test_hook2', 'test_hook3'],
+                function(hook, callback) {
+                    ApiServer.del('/api/v1/hooks/' + hook)
+                             .expect(200, callback);
+                }, done);
         });
         it("Should return 2 results", function(done) {
-            request(app).get("/api/v1/hooks")
+            ApiServer.get("/api/v1/hooks")
                 .query({ offset : 1, limit : 2})
                 .expect(200)
                 .end(function(err, res) {
@@ -186,7 +181,7 @@ describe('Hook API', function() {
                 });
         });
         it("Should return 1 results", function(done) {
-            request(app).get("/api/v1/hooks")
+            ApiServer.get("/api/v1/hooks")
                 .query({ q: JSON.stringify({"name" : "test_hook1"}) })
                 .expect(200)
                 .end(function(err, res) {

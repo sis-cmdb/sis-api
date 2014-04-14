@@ -14,52 +14,46 @@
 
  ***********************************************************/
 
-var config = require('./test-config');
-var server = require("../server")
-var should = require('should');
-var request = require('supertest');
-var async = require('async');
-var SIS = require("../util/constants");
-var mongoose = null;
-var schemaManager = null;
-var app = null;
-var httpServer = null;
-var superTest = null;
+describe('@API - Authorization API', function() {
+    var should = require('should');
+    var async = require('async');
 
-describe('Authorization API', function() {
-    var data = require("./data");
+    var SIS = require("../util/constants");
+    var config = require('./fixtures/config');
+    var TestUtil = require('./fixtures/util');
+    var data = require("./fixtures/authdata");
+
+    var ApiServer = new TestUtil.TestServer();
+
     var users = data.users;
     var userNames = Object.keys(users);
-
     var userToTokens = {};
 
     before(function(done) {
-        config.app[SIS.OPT_USE_AUTH] = true;
-        server.startServer(config, function(expressApp, httpSrv) {
-            mongoose = server.mongoose;
-            schemaManager = expressApp.get(SIS.OPT_SCHEMA_MGR);
-            var userManager = schemaManager.auth[SIS.SCHEMA_USERS];
-            app = expressApp;
-            superTest = request(app);
-            httpServer = httpSrv;
-            // create the users
-            var superUser = users['superman'];
-            async.parallel(userNames.map(function(name) {
-                var user = users[name];
-                return function(cb) {
-                    userManager.add(user, superUser, cb);
+        ApiServer.start(config, function(err) {
+            if (err) { return done(err); }
+            // issue create requests
+            var creds = ApiServer.getSuperCreds();
+            ApiServer.getTempToken(creds.username, creds.password,
+            function(e, t) {
+                if (e) {
+                    return done(e);
                 }
-            }), done)
+                var token = t.name;
+                async.parallel(userNames.map(function(name) {
+                    var user = users[name];
+                    return function(cb) {
+                        var req = ApiServer.newRequest('post', '/api/v1/users', token);
+                        req.send(user)
+                           .expect(201, cb);
+                    };
+                }), done);
+            });
         });
     });
 
     after(function(done) {
-        config.app[SIS.OPT_USE_AUTH] = false;
-        server.stopServer(httpServer, function() {
-            mongoose.connection.db.dropDatabase();
-            mongoose.connection.close();
-            done();
-        });
+        ApiServer.stop(done);
     });
 
     describe("get tokens", function() {
@@ -68,39 +62,34 @@ describe('Authorization API', function() {
             it(testName, function(done) {
                 // first token is a temp token
                 var user = users[name];
-                superTest.post("/api/v1/users/auth_token")
-                    .auth(name, name)
-                    .expect(201, function(err, res) {
-                        should.not.exist(err);
-                        var token = res.body;
-                        should.exist(token);
-                        name.should.eql(token.username);
-                        // now use the token to create a persistent token
-                        var data = {
-                            'username' : name,
-                            'desc' : 'persistent token baby'
-                        };
-                        var req = superTest.post("/api/v1/users/" + name + "/tokens")
-                            .set("x-auth-token", token.name)
-                            .set("Content-Type", "application/json")
-                            .send(data);
-                        if (user.super_user) {
-                            req.expect(400, function(err, res) {
-                                userToTokens[name] = [token];
-                                done();
-                            });
-                        } else {
-                            req.expect(201, function(err, res) {
-                                should.not.exist(err);
-                                var ptoken = res.body;
-                                should.exist(ptoken);
-                                name.should.eql(ptoken.username);
-                                // store the tokens
-                                userToTokens[name] = [token, ptoken];
-                                done();
-                            })
-                        }
-                    });
+                ApiServer.getTempToken(name, name, function(err, token) {
+                    should.not.exist(err);
+                    should.exist(token);
+                    name.should.eql(token.username);
+                    // now use the token to create a persistent token
+                    var data = {
+                        'username' : name,
+                        'desc' : 'persistent token baby'
+                    };
+                    var req = ApiServer.newRequest('post', "/api/v1/users/" + name + "/tokens", token.name)
+                                  .send(data);
+                    if (user.super_user) {
+                        req.expect(400, function(err, res) {
+                            userToTokens[name] = [token];
+                            done();
+                        });
+                    } else {
+                        req.expect(201, function(err, res) {
+                            should.not.exist(err);
+                            var ptoken = res.body;
+                            should.exist(ptoken);
+                            name.should.eql(ptoken.username);
+                            // store the tokens
+                            userToTokens[name] = [token, ptoken];
+                            done();
+                        })
+                    }
+                });
             });
         });
     });
@@ -116,8 +105,8 @@ describe('Authorization API', function() {
         var addSchemaTests = data.addSchemaTests;
 
         Object.keys(addSchemaTests).map(function(schemaName) {
-            var test = addSchemaTests[schemaName];
-            var passes = test['pass'];
+            var addTest = addSchemaTests[schemaName];
+            var passes = addTest['pass'];
             var schema = schemas[schemaName];
             // passes
             passes.map(function(userName) {
@@ -125,9 +114,7 @@ describe('Authorization API', function() {
                 it(testName, function(done) {
                     var tokens = userToTokens[userName];
                     var token = tokens[0][SIS.FIELD_NAME];
-                    superTest.post("/api/v1/schemas")
-                        .set("x-auth-token", token)
-                        .set("Content-Encoding", "application/json")
+                    ApiServer.newRequest('post', "/api/v1/schemas", token)
                         .send(schema)
                         .expect(201, function(err, res) {
                             should.not.exist(err);
@@ -138,8 +125,7 @@ describe('Authorization API', function() {
                                 token = tokens[1][SIS.FIELD_NAME];
                             }
                             // delete
-                            superTest.del("/api/v1/schemas/" + schemaName)
-                                .set("x-auth-token", token)
+                            ApiServer.newRequest('del', "/api/v1/schemas/" + schemaName, token)
                                 .expect(200, function(e, r) {
                                     should.not.exist(e);
                                     done();
@@ -149,15 +135,13 @@ describe('Authorization API', function() {
             }); // end passes
 
             // failures
-            var failures = test['fail'];
+            var failures = addTest['fail'];
             failures.map(function(userName) {
                 var testName = userName + " should NOT be able to add " + schemaName;
                 it(testName, function(done) {
                     var tokens = userToTokens[userName];
                     var token = tokens[0];
-                    superTest.post("/api/v1/schemas")
-                        .set("x-auth-token", token)
-                        .set("Content-Type", "application/json")
+                    ApiServer.newRequest('post', "/api/v1/schemas", token)
                         .send(schema)
                         .expect(401, function(err, res) {
                             done();
@@ -178,9 +162,7 @@ describe('Authorization API', function() {
             async.parallel(schemaNames.map(function(schemaName) {
                 var schema = schemas[schemaName];
                 return function(cb) {
-                    superTest.post("/api/v1/schemas")
-                        .set("x-auth-token", token)
-                        .set("Content-Encoding", "application/json")
+                    ApiServer.newRequest('post', "/api/v1/schemas", token)
                         .send(schema)
                         .expect(201, cb);
                 }
@@ -194,9 +176,7 @@ describe('Authorization API', function() {
             async.parallel(schemaNames.map(function(schemaName) {
                 var schema = schemas[schemaName];
                 return function(cb) {
-                    superTest.del("/api/v1/schemas/" + schemaName)
-                        .set("x-auth-token", token)
-                        .send(schema)
+                    ApiServer.newRequest('del', "/api/v1/schemas/" + schemaName, token)
                         .expect(200, cb);
                 }
             }), done);
@@ -207,8 +187,8 @@ describe('Authorization API', function() {
         var addEntityTests = data.addEntityTests;
 
         Object.keys(addEntityTests).map(function(entityName) {
-            var test = addEntityTests[entityName];
-            var passes = test['pass'];
+            var addTest = addEntityTests[entityName];
+            var passes = addTest['pass'];
             var entity = entities[entityName]['entity'];
             var schemaName = entities[entityName]['schema'];
             // passes
@@ -217,9 +197,7 @@ describe('Authorization API', function() {
                 it(testName, function(done) {
                     var tokens = userToTokens[userName];
                     var token = tokens[0][SIS.FIELD_NAME];
-                    superTest.post("/api/v1/entities/" + schemaName)
-                        .set("x-auth-token", token)
-                        .set("Content-Encoding", "application/json")
+                    ApiServer.newRequest('post', "/api/v1/entities/" + schemaName, token)
                         .send(entity)
                         .expect(201, function(err, res) {
                             should.not.exist(err);
@@ -232,8 +210,7 @@ describe('Authorization API', function() {
                             }
                             var entityId = res['_id'];
                             // delete
-                            superTest.del("/api/v1/entities/" + schemaName + "/" + entityId)
-                                .set("x-auth-token", token)
+                            ApiServer.newRequest('del', "/api/v1/entities/" + schemaName + "/" + entityId, token)
                                 .expect(200, function(e, r) {
                                     should.not.exist(e);
                                     done();
@@ -243,15 +220,13 @@ describe('Authorization API', function() {
             }); // end passes
 
             // failures
-            var failures = test['fail'];
+            var failures = addTest['fail'];
             failures.map(function(userName) {
                 var testName = userName + " should NOT be able to add entity " + entityName;
                 it(testName, function(done) {
                     var tokens = userToTokens[userName];
                     var token = tokens[0];
-                    superTest.post("/api/v1/entities/" + schemaName)
-                        .set("x-auth-token", token)
-                        .set("Content-Type", "application/json")
+                    ApiServer.newRequest('post', "/api/v1/entities/" + schemaName, token)
                         .send(entity)
                         .expect(401, function(err, res) {
                             done();
@@ -271,9 +246,7 @@ describe('Authorization API', function() {
                 it(testName, function(done) {
                     var tokens = userToTokens[userName];
                     var token = tokens[0][SIS.FIELD_NAME];
-                    superTest.post("/api/v1/entities/" + schemaName)
-                        .set("x-auth-token", token)
-                        .set("Content-Type", "application/json")
+                    ApiServer.newRequest('post', "/api/v1/entities/" + schemaName, token)
                         .send(entity)
                         .expect(400, function(err, res) {
                             done();
@@ -294,32 +267,28 @@ describe('Authorization API', function() {
             var tests = updateSchemaTests[schemaName];
             var schema = schemas[schemaName];
 
-            tests.map(function(test) {
-                var passes = test['pass'];
-                var ownerStr = JSON.stringify(test[SIS.FIELD_OWNER]);
+            tests.map(function(updateTest) {
+                var passes = updateTest['pass'];
+                var ownerStr = JSON.stringify(updateTest[SIS.FIELD_OWNER]);
                 passes.map(function(uname) {
                     var testName = uname + " can update " + schemaName + " w/ owners " + ownerStr;
                     it(testName, function(done) {
                         var superToken = userToTokens['superman'][0][SIS.FIELD_NAME];
                         // add the schema
-                        superTest.post("/api/v1/schemas")
-                            .set("x-auth-token", superToken)
-                            .set("Content-Type", "application/json")
+                        ApiServer.newRequest('post',"/api/v1/schemas", superToken)
                             .send(schema)
                             .expect(201, function(e1, r1) {
                                 // update it
                                 should.not.exist(e1);
                                 r1 = r1.body;
                                 var token = userToTokens[uname][0][SIS.FIELD_NAME];
-                                r1[SIS.FIELD_OWNER] = test[SIS.FIELD_OWNER];
-                                superTest.put("/api/v1/schemas/" + schemaName)
-                                    .set("x-auth-token", token)
-                                    .set("Content-Type", "application/json")
+                                r1[SIS.FIELD_OWNER] = updateTest[SIS.FIELD_OWNER];
+                                ApiServer.newRequest('put', "/api/v1/schemas/" + schemaName, token)
                                     .send(r1)
                                     .expect(200, function(e2, r2) {
                                         should.not.exist(e2);
                                         // delete..
-                                        superTest.del("/api/v1/schemas/" + schemaName)
+                                        ApiServer.newRequest('del',"/api/v1/schemas/" + schemaName, token)
                                             .set("x-auth-token", superToken)
                                             .expect(200, done);
                                     });
@@ -327,30 +296,25 @@ describe('Authorization API', function() {
                     });
                 });
 
-                var fails = test['fail'];
+                var fails = updateTest['fail'];
                 fails.map(function(uname) {
                     var testName = uname + " cannot update " + schemaName + " w/ owners " + ownerStr;
                     it(testName, function(done) {
                         var superToken = userToTokens['superman'][0][SIS.FIELD_NAME];
                         // add the schema
-                        superTest.post("/api/v1/schemas")
-                            .set("x-auth-token", superToken)
-                            .set("Content-Type", "application/json")
+                        ApiServer.newRequest('post', "/api/v1/schemas", superToken)
                             .send(schema)
                             .expect(201, function(e1, r1) {
                                 // update it
                                 should.not.exist(e1);
                                 r1 = r1.body;
                                 var token = userToTokens[uname][0][SIS.FIELD_NAME];
-                                r1[SIS.FIELD_OWNER] = test[SIS.FIELD_OWNER];
-                                superTest.put("/api/v1/schemas/" + schemaName)
-                                    .set("x-auth-token", token)
-                                    .set("Content-Type", "application/json")
+                                r1[SIS.FIELD_OWNER] = updateTest[SIS.FIELD_OWNER];
+                                ApiServer.newRequest('put', "/api/v1/schemas/" + schemaName, token)
                                     .send(r1)
                                     .expect(401, function(e2, r2) {
                                         // delete..
-                                        superTest.del("/api/v1/schemas/" + schemaName)
-                                            .set("x-auth-token", superToken)
+                                        ApiServer.newRequest('del', "/api/v1/schemas/" + schemaName, superToken)
                                             .expect(200, done);
                                     });
                             });
@@ -372,8 +336,7 @@ describe('Authorization API', function() {
             async.parallel(schemaNames.map(function(schemaName) {
                 var schema = schemas[schemaName];
                 return function(cb) {
-                    superTest.post("/api/v1/schemas")
-                        .set("x-auth-token", token)
+                    ApiServer.newRequest('post', "/api/v1/schemas", token)
                         .set("Content-Encoding", "application/json")
                         .send(schema)
                         .expect(201, cb);
@@ -388,8 +351,7 @@ describe('Authorization API', function() {
             async.parallel(schemaNames.map(function(schemaName) {
                 var schema = schemas[schemaName];
                 return function(cb) {
-                    superTest.del("/api/v1/schemas/" + schemaName)
-                        .set("x-auth-token", token)
+                    ApiServer.newRequest('del', "/api/v1/schemas/" + schemaName, token)
                         .send(schema)
                         .expect(200, cb);
                 }
@@ -412,9 +374,7 @@ describe('Authorization API', function() {
                     it(testName, function(done) {
                         var superToken = userToTokens['superman'][0][SIS.FIELD_NAME];
                         // add the entity
-                        superTest.post("/api/v1/entities/" + schemaName)
-                            .set("x-auth-token", superToken)
-                            .set("Content-Type", "application/json")
+                        ApiServer.newRequest('post', "/api/v1/entities/" + schemaName, superToken)
                             .send(entity)
                             .expect(201, function(e1, r1) {
                                 // update it
@@ -423,9 +383,7 @@ describe('Authorization API', function() {
                                 var token = userToTokens[uname][0][SIS.FIELD_NAME];
                                 r1[SIS.FIELD_OWNER] = test[SIS.FIELD_OWNER];
                                 r1[SIS.FIELD_CREATED_BY].should.eql('superman');
-                                superTest.put("/api/v1/entities/" + schemaName + "/" + r1['_id'])
-                                    .set("x-auth-token", token)
-                                    .set("Content-Type", "application/json")
+                                ApiServer.newRequest('put', "/api/v1/entities/" + schemaName + "/" + r1['_id'], token)
                                     .send(r1)
                                     .expect(200, function(e2, r2) {
                                         should.not.exist(e2);
@@ -433,8 +391,7 @@ describe('Authorization API', function() {
                                         r2[SIS.FIELD_CREATED_BY].should.eql('superman');
                                         r2[SIS.FIELD_UPDATED_BY].should.eql(uname);
                                         // delete..
-                                        superTest.del("/api/v1/entities/" + schemaName + "/" + r1['_id'])
-                                            .set("x-auth-token", superToken)
+                                        ApiServer.newRequest('del', "/api/v1/entities/" + schemaName + "/" + r1['_id'], superToken)
                                             .expect(200, done);
                                     });
                             });
@@ -448,9 +405,7 @@ describe('Authorization API', function() {
                     it(testName, function(done) {
                         var superToken = userToTokens['superman'][0][SIS.FIELD_NAME];
                         // add the entity
-                        superTest.post("/api/v1/entities/" + schemaName)
-                            .set("x-auth-token", superToken)
-                            .set("Content-Type", "application/json")
+                        ApiServer.newRequest('post',"/api/v1/entities/" + schemaName, superToken)
                             .send(entity)
                             .expect(201, function(e1, r1) {
                                 // update it
@@ -458,14 +413,11 @@ describe('Authorization API', function() {
                                 r1 = r1.body;
                                 var token = userToTokens[uname][0];
                                 r1[SIS.FIELD_OWNER] = test[SIS.FIELD_OWNER];
-                                superTest.put("/api/v1/entities/" + schemaName + "/" + r1['_id'])
-                                    .set("x-auth-token", token)
-                                    .set("Content-Type", "application/json")
+                                ApiServer.newRequest('put', "/api/v1/entities/" + schemaName + "/" + r1['_id'], token)
                                     .send(r1)
                                     .expect(failCode, function(e2, r2) {
                                         // delete..
-                                        superTest.del("/api/v1/entities/" + schemaName + "/" + r1['_id'])
-                                            .set("x-auth-token", superToken)
+                                        ApiServer.newRequest('del',"/api/v1/entities/" + schemaName + "/" + r1['_id'], superToken)
                                             .expect(200, done);
                                     });
                             });

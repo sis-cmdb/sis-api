@@ -14,6 +14,8 @@
 
  ***********************************************************/
 
+(function() {
+
 'use strict';
 
 var util = require('util');
@@ -62,6 +64,8 @@ module.exports = {
     FIELD_VERIFIED : "verified",
     FIELD_LOCKED : "sis_locked",
     FIELD_LOCKED_FIELDS : "locked_fields",
+    FIELD_TRACK_HISTORY : "track_history",
+    FIELD_REFERENCES : "_references",
 
     // schema names
     SCHEMA_SCHEMAS : "sis_schemas",
@@ -77,7 +81,7 @@ module.exports = {
     AUTH_TYPES : ["sis", "ldap"],
 
     // option keys
-    OPT_SCHEMA_MGR : "schema_manager", // TODO: snake case
+    OPT_SCHEMA_MGR : "schema_manager",
     OPT_LOG_COMMTS : "log_commits",
     OPT_FIRE_HOOKS : "fire_hooks",
     OPT_READONLY : "readonly",
@@ -128,7 +132,7 @@ module.exports = {
         return [500, { error : util.format("Internal error %s", msg), code : 1002 }, msg];
     },
     ERR_INTERNAL_OR_NOT_FOUND : function(err, type, id, result) {
-        if (err) {;
+        if (err) {
             if (typeof err == 'object' && err.name == 'CastError') {
                 return module.exports.ERR_NOT_FOUND(type, id);
             }
@@ -152,7 +156,7 @@ module.exports = {
     // credit.. http://stackoverflow.com/a/16436975/263895
     UTIL_ARRAYS_EQUAL : function(a, b) {
         if (a === b) return true;
-        if (a == null || b == null) return false;
+        if (!a || !b) return false;
         if (a.length != b.length) return false;
 
         // If you don't care about the order of the elements inside
@@ -164,10 +168,10 @@ module.exports = {
     },
 
     UTIL_ROLES_EQUAL : function(a, b) {
-        var rolesA = a['roles'];
-        var rolesB = b['roles'];
+        var rolesA = a.roles;
+        var rolesB = b.roles;
         if (rolesA === rolesB) return true;
-        if (rolesA == null || rolesB == null) return false;
+        if (!rolesA || !rolesB) return false;
         var roleNamesA = Object.keys(rolesA).sort();
         var roleNamesB = Object.keys(rolesB).sort();
         if (!this.UTIL_ARRAYS_EQUAL(roleNamesA, roleNamesB)) {
@@ -195,7 +199,7 @@ module.exports = {
         try {
             var keys = Object.keys(roles);
             // allow empty roles
-            if (keys.length == 0) {
+            if (!keys.length) {
                 return null;
             }
             for (var i = 0; i < keys.length; ++i) {
@@ -240,8 +244,8 @@ module.exports = {
 
     // return an array of arrays where each inner array
     // is a broken down path to an object id type that isn't _id
-    UTIL_GET_OID_PATHS : function(model) {
-        var schema = model.schema;
+    // schema is a mongoose schema object
+    UTIL_GET_OID_PATHS : function(schema) {
         var paths = [];
         schema.eachPath(function(pathName, schemaType) {
             if (schemaType.instance == "ObjectID" &&
@@ -251,19 +255,21 @@ module.exports = {
                     'splits' : pathName.split(/\./),
                     'type' : 'oid',
                     'ref' : schemaType.options.ref
-                })
+                });
             } else if (schemaType.constructor.name.indexOf('Array') != -1 &&
                        schemaType.caster.instance == "ObjectID" &&
                        schemaType.caster.options.ref) {
-                schemaType = schemaType.caster
+                schemaType = schemaType.caster;
                 paths.push({
                     'path' : pathName,
                     'splits' : pathName.split(/\./),
                     'type' : 'arr',
                     'ref' : schemaType.options.ref
-                })
+                });
             }
         });
         return paths;
     }
-}
+};
+
+})();

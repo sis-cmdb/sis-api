@@ -14,10 +14,9 @@
 
  ***********************************************************/
 
-'use strict';
 // A class used to manage users, services and tokens
-
 (function() {
+    'use strict';
 
     var SIS = require("./constants");
     var Manager = require("./manager");
@@ -33,7 +32,8 @@
         this.sm = sm;
         this.authEnabled = this.sm.authEnabled;
     }
-    TokenManager.prototype.__proto__ = Manager.prototype;
+
+    require('util').inherits(TokenManager, Manager);
 
     // override add to use createToken
     TokenManager.prototype.add = function(obj, user, callback) {
@@ -49,21 +49,21 @@
         var p = this.authorize(SIS.EVENT_INSERT, obj, user)
                     .then(this.createToken.bind(this));
         return Q.nodeify(p, callback);
-    }
+    };
 
     TokenManager.prototype.validate = function(obj, isUpdate, user) {
         if (!obj[SIS.FIELD_USERNAME]) {
             obj[SIS.FIELD_USERNAME] = user[SIS.FIELD_NAME];
         }
         return null;
-    }
+    };
 
     TokenManager.prototype.createToken = function(token) {
         // save token
         var self = this;
         var d = Q.defer();
         var createTokenHelper = function() {
-            token['name'] = hat();
+            token.name = hat();
             var doc = new self.model(token);
             doc.save(function(err, result) {
                 if (err) {
@@ -75,11 +75,11 @@
                 } else {
                     d.resolve(result);
                 }
-            })
-        }
+            });
+        };
         createTokenHelper();
         return d.promise;
-    }
+    };
 
     // check if request user can read the tokens of user
     TokenManager.prototype.canAdministerTokensOf = function(reqUser, user) {
@@ -94,7 +94,7 @@
         }
         // admins of all roles can
         return SIS.UTIL_ENSURE_ROLE_SUBSET(reqUser[SIS.FIELD_ROLES], user[SIS.FIELD_ROLES], true);
-    }
+    };
 
     // only the user, super user
     TokenManager.prototype.authorize = function(evt, doc, user, mergedDoc) {
@@ -137,11 +137,11 @@
             return d.reject(SIS.ERR_BAD_CREDS("Only admins of the user or the user can manage the token."));
         });
         return d.promise;
-    }
+    };
     /////////////////////////////////
 
     module.exports = function(sm) {
         return new TokenManager(sm);
-    }
+    };
 
 })();

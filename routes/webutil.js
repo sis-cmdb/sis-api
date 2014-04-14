@@ -14,9 +14,9 @@
 
 ***********************************************************/
 
-'use strict';
-
 (function() {
+
+    'use strict';
 
     var passport = require('passport');
     var BasicStrategy = require('passport-http').BasicStrategy;
@@ -43,17 +43,22 @@
         if (!url || !ud || !ed) {
             throw new Error("LDAP authentication requires url, user_domain, and email_domain");
         }
-        var client = ldap.createClient({
-            url : url
-        });
+        var client_opts = auth_config.client_opts || { };
+        client_opts.url = url;
+        if (client_opts.tlsOptions && client_opts.tlsOptions.rejectUnauthorized === false) {
+            process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+        }
         // "user" that is in the created by fields - a super user
         var ldapSisUser = {
             name : "_sis_ldap_auth_",
             super_user : true
         };
         return function(user, pass, done) {
+            var client = ldap.createClient(client_opts);
             var ldapUser = user + '@' + ud;
             client.bind(ldapUser, pass, function(err) {
+                // unbind - don't wait around.
+                client.unbind(function() { });
                 if (err) {
                     return done(SIS.ERR_BAD_CREDS("LDAP authentication failed : " + err), null);
                 }
@@ -63,8 +68,8 @@
                 };
                 return userManager.getOrCreateEmptyUser(userObj, ldapSisUser, done);
             });
-        }
-    }
+        };
+    };
 
     // authorization using sis_tokens
     var _verifySisToken = function(token, done) {
@@ -91,7 +96,7 @@
             return SIS.AUTH_TYPE_SIS;
         }
         return config.auth_config.type;
-    }
+    };
 
     // need a schema manager for the strategies
     module.exports.createUserPassStrategy = function(sm, config) {
@@ -101,7 +106,7 @@
             verifyFunc = getLdapVerificationFunc(sm, config.auth_config);
         }
         return new BasicStrategy({}, verifyFunc);
-    }
+    };
 
     // The passport strategy for authenticating x-auth-token
     function SisTokenStrategy(sm) {
@@ -128,69 +133,15 @@
         }
 
         this._verify(token, verified);
-    }
+    };
 
     module.exports.createTokenStrategy = function(sm) {
         return new SisTokenStrategy(sm);
-    }
-
-    // middleware - json parser
-    // from connect.js slightly modified
-    // to accept single line comments in json
-    module.exports.json = function(options) {
-        var getBody = require('raw-body');
-        options = options || {};
-        var limit = options.limit || '1mb';
-
-        return function json(req, res, next) {
-            if (req._body) return next();
-            req.body = req.body || {};
-
-            var hasBody = 'content-length' in req.headers && req.headers['content-length'] !== '0';
-            var mimeType = req.headers['content-type'] || '';
-            if (!hasBody || mimeType != 'application/json') {
-                return next();
-            }
-
-            // flag as parsed
-            req._body = true;
-
-            // parse
-            getBody(req, {
-                limit: limit,
-                expected: req.headers['content-length']
-            }, function (err, buf) {
-                if (err) return next(err);
-
-                buf = buf.toString('utf8').trim();
-                var lines = buf.split('\n')
-                var filtered = lines.filter(function(s) {
-                    return s.trim().indexOf("//") != 0;
-                });
-                buf = filtered.join("\n");
-
-                var first = buf[0];
-
-                if (0 == buf.length) {
-                    return next(SIS.ERR_BAD_REQ('invalid json, empty body'));
-                }
-
-                if ('{' != first && '[' != first) return next(SIS.ERR_BAD_REQ('invalid json'));
-                try {
-                    req.body = JSON.parse(buf, options.reviver);
-                } catch (err){
-                    err.body = buf;
-                    err.status = 400;
-                    return next(SIS.ERR_BAD_REQ(err));
-                }
-                next();
-            })
-        };
     };
 
     var stripOutId = function(idObj) {
-        return idObj['_id'].toString();
-    }
+        return idObj._id.toString();
+    };
 
     var getQueryIdsCallback = function(callback) {
         return function(e, ids) {
@@ -199,14 +150,14 @@
             }
             ids = ids.map(stripOutId);
             callback(null, ids);
-        }
-    }
+        };
+    };
 
     var getFindCond = function(key, condition) {
         var result = {};
         result[key] = condition;
         return result;
-    }
+    };
 
     // provides callback with an array of object ids that match a given condition
     // at the model's schemaPath.  remainingPath is the path left over
@@ -224,7 +175,7 @@
             // just return an empty array
             return callback(null, []);
         }
-        sm.getSisModelAsync(opts.ref, function(err, sisModel) {
+        sm.getEntityModelAsync(opts.ref, function(err, sisModel) {
             if (err) {
                 return callback(err, null);
             }
@@ -236,22 +187,40 @@
                 sisModel.find(getFindCond(remainingPath, condition), '_id', getQueryIdsCallback(callback));
             } else {
                 // need to see if we're looking to join another set of object ids
-                var references = SIS.UTIL_GET_OID_PATHS(sisModel).filter(function(ref) {
+                var references = SIS.UTIL_GET_OID_PATHS(sisModel.schema).filter(function(ref) {
                     return ref.type != 'arr';
                 }).map(function(ref) {
                     return ref.path;
                 });
-                if (references.length == 0) {
+                if (!references.length) {
                     // no object ids referenced by this nested model, so the
                     // path is invalid.. bail
                     return callback(null, []);
                 } else {
+                    // recursive call to getObjectIds callback
+                    var getRecursionCallback = function(ref, cb) {
+                        return function(e, ids) {
+                            if (e) {
+                                return cb(e, null);
+                            } else if (!ids.length) {
+                                return cb(null, ids);
+                            } else if (ids.length == 1) {
+                                // no need for $in
+                                sisModel.find(getFindCond(ref, ids[0]), '_id',
+                                              getQueryIdsCallback(cb));
+                            } else {
+                                // need in..
+                                sisModel.find(getFindCond(ref, { "$in" : ids }), '_id',
+                                              getQueryIdsCallback(cb));
+                            }
+                        };
+                    };
                     // find out which reference matches the remainingPath
                     var found = false;
                     for (var i = 0; i < references.length; ++i) {
                         var ref = references[i];
-                        var path = ref + ".";
-                        if (remainingPath.indexOf(path) == 0) {
+                        path = ref + ".";
+                        if (remainingPath.indexOf(path) === 0) {
                             found = true;
                             // if it's path._id then we can just query this
                             if (remainingPath == path + "_id") {
@@ -262,21 +231,7 @@
                                 // issue an $in query for this path
                                 var nestedRemain = remainingPath.substring(path.length);
                                 getObjectIds(references[i], condition, nestedRemain,
-                                             sm, sisModel, function(e, ids) {
-                                    if (e) {
-                                        return callback(e, null);
-                                    } else if (ids.length == 0) {
-                                        return callback(null, ids);
-                                    } else if (ids.length == 1) {
-                                        // no need for $in
-                                        sisModel.find(getFindCond(ref, ids[0]), '_id',
-                                                      getQueryIdsCallback(callback));
-                                    } else {
-                                        // need in..
-                                        sisModel.find(getFindCond(ref, { "$in" : ids }), '_id',
-                                                      getQueryIdsCallback(callback));
-                                    }
-                                });
+                                             sm, sisModel, getRecursionCallback(ref, callback));
                             }
                         }
                     }
@@ -287,12 +242,12 @@
                 }
             }
         });
-    }
+    };
 
     var addIdsToFlattenedCondition = function(flattened, path, ids) {
-        if (ids.length == 0 ||
+        if (!ids.length ||
             ((flattened[path] instanceof Array) &&
-            flattened[path].length == 0)) {
+             !flattened[path].length)) {
             flattened[path] = [];
             return;
         }
@@ -319,17 +274,17 @@
             // TODO: optimize
 
         }
-    }
+    };
 
     // "flatten" a query to deal with all joins
     // returns a promise for the flattened query
     module.exports.flattenCondition = function(condition, schemaManager, mgr) {
         if (!condition || typeof condition !== 'object' ||
-            !mgr.references || mgr.references.length == 0) {
+            !mgr.references || !mgr.references.length) {
             return Q(condition);
         }
         var keys = Object.keys(condition);
-        if (keys.length == 0) {
+        if (!keys.length) {
             return Q(condition);
         }
         var paths = mgr.references.filter(function(ref) {
@@ -353,7 +308,7 @@
             // this ;)
             for (var i = 0; i < paths.length; ++i) {
                 var ref = paths[i] + ".";
-                if (key.indexOf(ref) == 0 && key != ref + "_id") {
+                if (key.indexOf(ref) === 0 && key != ref + "_id") {
                     fieldToPath[key] = [paths[i], condition[key]];
                     found = true;
                     break;
@@ -391,7 +346,7 @@
                     for (var k in refConds) {
                         var v = refConds[k];
                         if (v instanceof Array) {
-                            flattened[k] = { "$in" : v }
+                            flattened[k] = { "$in" : v };
                         } else {
                             flattened[k] = v;
                         }
@@ -403,7 +358,6 @@
         } else {
             return Q(condition);
         }
-    }
-
+    };
 
 })();

@@ -14,42 +14,29 @@
 
  ***********************************************************/
 
-var config = require('./test-config');
-var server = require("../server")
-var should = require('should');
-var request = require('supertest');
-var async = require('async');
-var SIS = require("../util/constants");
+describe('@API - Entity Join API', function() {
+    var SIS = require("../util/constants");
+    var config = require('./fixtures/config');
+    var should = require('should');
+    var TestUtil = require('./fixtures/util');
+    var ApiServer = new TestUtil.TestServer();
+    var async = require('async');
 
-var mongoose = null;
-var schemaManager = null;
-var app = null;
-var httpServer = null;
-
-describe('Entity Join API', function() {
     before(function(done) {
-        server.startServer(config, function(expressApp, httpSrv) {
-            mongoose = server.mongoose;
-            schemaManager = expressApp.get(SIS.OPT_SCHEMA_MGR);
-            app = expressApp;
-            httpServer = httpSrv;
-            done();
+        ApiServer.start(config, function(e) {
+            if (e) { return done(e); }
+            ApiServer.becomeSuperUser(done);
         });
     });
 
     after(function(done) {
-        server.stopServer(httpServer, function() {
-            mongoose.connection.db.dropDatabase();
-            mongoose.connection.close();
-            done();
-        });
+        ApiServer.stop(done);
     });
 
     describe("Get entities with joins", function() {
         var schemas = [];
         var numSchemas = 3;
         var numEnts = 50;
-        var appReq = null;
 
         // create 3 schemas where join_schema_1 has a ref_0 to join_schema_0
         // and join_schema_2 has a ref_0 to join_schema_0 and ref_1 to join_schema_1
@@ -85,10 +72,19 @@ describe('Entity Join API', function() {
             entities.push(schema_ents);
         }
 
+        var addSchema = function(schema, callback) {
+            ApiServer.post('/api/v1/schemas')
+                .send(schema).expect(201, callback);
+        };
+
+        var deleteSchema = function(name, callback) {
+            ApiServer.del('/api/v1/schemas/' + name)
+                .expect(200, callback);
+        };
+
         before(function(done) {
-            appReq = request(app);
             // setup the schemas
-            async.map(schemas, schemaManager.add.bind(schemaManager), function(err, res) {
+            async.map(schemas, addSchema, function(err, res) {
                 if (err) { return done(err, res); }
 
                 // join_ent_2_2 will have ref_1 = join_ent_1_2 and ref_0 = join_ent_0_2
@@ -111,7 +107,7 @@ describe('Entity Join API', function() {
                     }
 
                     async.map(entities2Add, function(entity, callback) {
-                        appReq.post("/api/v1/entities/join_schema_" + i)
+                        ApiServer.post("/api/v1/entities/join_schema_" + i)
                             .set("Content-Type", "application/json")
                             .query("populate=false")
                             .send(entity)
@@ -134,14 +130,14 @@ describe('Entity Join API', function() {
 
         after(function(done) {
             var names = schemas.map(function(s) { return s.name; });
-            async.map(names, schemaManager.delete.bind(schemaManager), done);
+            async.map(names, deleteSchema, done);
         });
 
         it("should fetch join_ent_1_2", function(done) {
             var query = {
                 q : { "ref_0.num" : 102 }
             };
-            appReq.get("/api/v1/entities/join_schema_1")
+            ApiServer.get("/api/v1/entities/join_schema_1")
                 .query(query)
                 .expect(200, function(err, res) {
                     res.statusCode.should.eql(200);
@@ -157,7 +153,7 @@ describe('Entity Join API', function() {
             var query = {
                 q :  { "ref_1.ref_0.num" : 101 }
             };
-            appReq.get("/api/v1/entities/join_schema_2")
+            ApiServer.get("/api/v1/entities/join_schema_2")
                 .query(query)
                 .expect(200, function(err, res) {
                     should.exist(res.body);
@@ -177,7 +173,7 @@ describe('Entity Join API', function() {
                     "ref_1.ref_0.num" : { "$lt" : 106 }
                 }
             }
-            appReq.get("/api/v1/entities/join_schema_2")
+            ApiServer.get("/api/v1/entities/join_schema_2")
                 .query(query)
                 .expect(200, function(err, res) {
                     should.exist(res.body);
@@ -197,7 +193,7 @@ describe('Entity Join API', function() {
                     "ref_1.ref_1.num" : { "$lt" : 106 }
                 }
             }
-            appReq.get("/api/v1/entities/join_schema_2")
+            ApiServer.get("/api/v1/entities/join_schema_2")
                 .query(query)
                 .expect(200, function(err, res) {
                     should.exist(res.body);
@@ -215,7 +211,7 @@ describe('Entity Join API', function() {
                     "ref_1.ref_0." : { "$lt" : 106 }
                 }
             }
-            appReq.get("/api/v1/entities/join_schema_2")
+            ApiServer.get("/api/v1/entities/join_schema_2")
                 .query(query)
                 .expect(200, function(err, res) {
                     should.exist(res.body);

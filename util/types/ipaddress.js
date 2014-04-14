@@ -15,12 +15,14 @@
  ***********************************************************/
 
 module.exports = exports = function IpAddr(mongoose) {
-    var Schema = mongoose.Schema
-        , SchemaType = mongoose.SchemaType
-        , Types = mongoose.Types
-        , mongo = mongoose.mongo
-        , v6 = require("ipv6").v6
-        , v4 = require("ipv6").v4;
+    'use strict';
+
+    var Schema = mongoose.Schema;
+    var SchemaType = mongoose.SchemaType;
+    var Types = mongoose.Types;
+    var mongo = mongoose.mongo;
+    var v6 = require("ipv6").v6;
+    var v4 = require("ipv6").v4;
 
       /**
        * Long constructor
@@ -38,7 +40,7 @@ module.exports = exports = function IpAddr(mongoose) {
      * inherits
      */
 
-    IpAddress.prototype.__proto__ = SchemaType.prototype;
+    require('util').inherits(IpAddress, SchemaType);
 
     /**
      * Implement checkRequired method.
@@ -48,8 +50,8 @@ module.exports = exports = function IpAddr(mongoose) {
      */
 
     IpAddress.prototype.checkRequired = function (val) {
-        return null != val;
-    }
+        return null !== val;
+    };
 
     /**
      * Implement casting.
@@ -92,9 +94,9 @@ module.exports = exports = function IpAddr(mongoose) {
             'network' : start.addressMinusSuffix,
             'broadcast' : end.addressMinusSuffix,
             'subnet_mask' : netAddr.addressMinusSuffix
-        }
+        };
         return result;
-    }
+    };
 
     IpAddress.prototype.cast = function (val, scope, init) {
         if (null === val) return val;
@@ -136,34 +138,36 @@ module.exports = exports = function IpAddr(mongoose) {
         // if (!Array.isArray(val) && val.toString)
         //   return mongo.IpAddress.fromString(val.toString());
 
-        throw new SchemaType.CastError('IpAddress', val)
-    }
+        throw new SchemaType.CastError('IpAddress', val);
+    };
 
       /*!
        * ignore
        */
 
-       function handleSingle (val) {
-        return this.cast(val)
+    function handleSingle(val) {
+        /*jshint validthis:true */
+        return this.cast(val);
     }
 
     function handleArray (val) {
+        /*jshint validthis:true */
         var self = this;
         return val.map( function (m) {
-          return self.cast(m)
-      });
+          return self.cast(m);
+        });
     }
 
     IpAddress.prototype.$conditionalHandlers = {
-      '$lt' : handleSingle
-      , '$lte': handleSingle
-      , '$gt' : handleSingle
-      , '$gte': handleSingle
-      , '$ne' : handleSingle
-      , '$in' : handleArray
-      , '$nin': handleArray
-      , '$mod': handleArray
-      , '$all': handleArray
+      '$lt' : handleSingle,
+      '$lte': handleSingle,
+      '$gt' : handleSingle,
+      '$gte': handleSingle,
+      '$ne' : handleSingle,
+      '$in' : handleArray,
+      '$nin': handleArray,
+      '$mod': handleArray,
+      '$all': handleArray
     };
 
       /**
@@ -184,9 +188,8 @@ module.exports = exports = function IpAddr(mongoose) {
         } else {
           return this.cast($conditional);
         }
-    }
+    };
 
     Schema.Types.IpAddress = IpAddress;
     return IpAddress;
 };
-

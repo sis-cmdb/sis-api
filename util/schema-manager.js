@@ -14,13 +14,13 @@
 
  ***********************************************************/
 
-'use strict';
 // A class used to manage the SIS Schemas defined by the /schemas api
 // and also help out the /entities apis
 
 // Not all controllers need this and can use mongoose directly
 // but we have it here since the schemas and entities controller can benefit
 (function() {
+    'use strict';
 
     var SIS = require("./constants");
     var Manager = require("./manager");
@@ -28,6 +28,7 @@
 
     function SchemaManager(mongoose, opts) {
         this.mongoose = mongoose;
+        this.entitySchemaToUpdateTime = { };
         require('./types')(mongoose);
         var sisSchemas = require('./sis-schemas').schemas;
         for (var i = 0; i < sisSchemas.length; ++i) {
@@ -43,7 +44,7 @@
         }
     }
 
-    SchemaManager.prototype.__proto__ = Manager.prototype;
+    require('util').inherits(SchemaManager, Manager);
 
     // overrides
     SchemaManager.prototype.validate = function(modelObj, isUpdate) {
@@ -55,7 +56,7 @@
             return ownerError;
         }
 
-        if (modelObj.name.indexOf("sis_") == 0) {
+        if (modelObj.name.indexOf("sis_") === 0) {
             return "Schema name is reserved.";
         }
 
@@ -66,7 +67,7 @@
         try {
             // object.keys will fail if the var is not an object..
             var fields = Object.keys(modelObj.definition);
-            if (fields.length == 0) {
+            if (!fields.length) {
                 return "Cannot add an empty schema.";
             }
             for (var i = 0; i < fields.length; ++i) {
@@ -76,12 +77,24 @@
             }
             // set the model object to have owners
             modelObj.definition[SIS.FIELD_OWNER] = ["String"];
-            this.mongoose.Schema(modelObj.definition);
+            var mongooseSchema = this.mongoose.Schema(modelObj.definition);
+            // set the references
+            var refs = SIS.UTIL_GET_OID_PATHS(mongooseSchema);
+            modelObj[SIS.FIELD_REFERENCES] = refs.map(function(ref) {
+                return ref.ref;
+            });
+
         } catch (ex) {
             return "Schema is invalid: " + ex;
         }
         return null;
-    }
+    };
+
+    SchemaManager.prototype._invalidateSchema = function(name) {
+        delete this.mongoose.modelSchemas[name];
+        delete this.mongoose.models[name];
+        delete this.entitySchemaToUpdateTime[name];
+    };
 
     SchemaManager.prototype._diffSchemas = function(schema1, schema2) {
 
@@ -122,7 +135,7 @@
         addedPaths = addedPaths.concat(s2Paths);
         removedPaths = removedPaths.concat(s1Paths);
         return [addedPaths, removedPaths, updatedPaths];
-    }
+    };
 
     SchemaManager.prototype.applyUpdate = function(currentSchema, sisSchema) {
         // now we have the persisted schema document.
@@ -162,8 +175,7 @@
 
         // update the def and cache
         currentSchema.definition = newDef;
-        delete this.mongoose.modelSchemas[name];
-        delete this.mongoose.models[name];
+        this._invalidateSchema(name);
         currentMongooseModel = this.getEntityModel(currentSchema);
 
 
@@ -195,7 +207,7 @@
             }
         );
         return d.promise;
-    }
+    };
 
     SchemaManager.prototype.objectRemoved = function(schema) {
         // schema document is removed.. now delete the
@@ -204,8 +216,7 @@
         var name = schema[SIS.FIELD_NAME];
         var model = this.getEntityModel(schema);
         var collection = model.collection;
-        delete this.mongoose.modelSchemas[name];
-        delete this.mongoose.models[name];
+        this._invalidateSchema(name);
         // seems very hacky - this is for a race condition
         // exposed by very quick tests that create a collection
         // requiring an index and then drop it shortly after.
@@ -225,33 +236,30 @@
             });
         });
         return d.promise;
-    }
+    };
 
     // additional methods
     SchemaManager.prototype.getSisModel = function(name) {
         return this.mongoose.models[name];
-    }
+    };
 
-    SchemaManager.prototype.getSisModelAsync = function(name, callback) {
-        if (this.hasEntityModel(name)) {
-            return callback(null, this.getSisModel(name));
-        }
+    SchemaManager.prototype.getEntityModelAsync = function(name, callback) {
         var d = Q.defer();
         var self = this;
         this.model.findOne({name: name}, function(err, schema) {
             if (err) {
-                d.reject(SIS.ERR_BAD_REQ("Schema not found with name " + name))
+                d.reject(SIS.ERR_BAD_REQ("Schema not found with name " + name));
             } else {
                 var model = self.getEntityModel(schema);
                 if (!model) {
-                    d.reject(SIS.ERR_BAD_REQ("Invalid schema found with name " + name))
+                    d.reject(SIS.ERR_BAD_REQ("Invalid schema found with name " + name));
                 } else {
                     d.resolve(model);
                 }
             }
         });
         return Q.nodeify(d.promise, callback);
-    }
+    };
 
     // Bootstrap mongoose by setting up entity models
     SchemaManager.prototype.bootstrapEntitySchemas = function(callback) {
@@ -265,7 +273,7 @@
             }
             callback(null);
         });
-    }
+    };
 
     // may throw an exception.
     SchemaManager.prototype._getMongooseSchema = function(sisSchema) {
@@ -281,21 +289,41 @@
         definition[SIS.FIELD_UPDATED_BY] = { "type" : "String" };
 
         return this.mongoose.Schema(definition);
-    }
+    };
+
+    // wrap this so we can handle the error case
+    SchemaManager.prototype.getById = function(id, callback) {
+        var d = Q.defer();
+        var self = this;
+        Manager.prototype.getById.call(this, id, function(err, result) {
+            if (err) {
+                self._invalidateSchema(id);
+                d.reject(err);
+            } else {
+                d.resolve(result);
+            }
+        });
+        return Q.nodeify(d.promise, callback);
+    };
 
     // get a mongoose model back based on the sis schema
     // passed in.  sisSchema would be an object returned by
-    // calls like getByName
+    // calls like getById
     // the mongoose cached version is returned if available
     // Do not hang on to any of these objects
     SchemaManager.prototype.getEntityModel = function(sisSchema) {
         if (!sisSchema || !sisSchema.name || !sisSchema.definition) {
-            //console.log("getEntityModel: Invalid schema " + JSON.stringify(sisSchema));
             return null;
         }
         var name = sisSchema.name;
+        var schemaTime = sisSchema[SIS.FIELD_UPDATED_AT] || Date.now();
         if (name in this.mongoose.models) {
-            return this.mongoose.models[name];
+            if (this.entitySchemaToUpdateTime[name] == schemaTime) {
+                return this.mongoose.models[name];
+            } else {
+                // invalidate
+                this._invalidateSchema(name);
+            }
         }
         // convert to mongoose
         try {
@@ -313,25 +341,25 @@
                 }
             }
 
+            this.entitySchemaToUpdateTime[name] = schemaTime;
             this.mongoose.models[name] = result;
             return result;
         } catch (ex) {
-            // console.log("getEntityModel: Invalid schema " + JSON.stringify(sisSchema) + " w/ ex " + ex);
             return null;
         }
-    }
+    };
 
     SchemaManager.prototype.hasEntityModel = function(name) {
         return name in this.mongoose.models;
-    }
+    };
 
     SchemaManager.prototype.getEntityModelByName = function(name) {
         return this.mongoose.models[name];
-    }
+    };
 
     // export
     module.exports = function(mongoose, opts) {
         return new SchemaManager(mongoose, opts);
-    }
+    };
 
 })();

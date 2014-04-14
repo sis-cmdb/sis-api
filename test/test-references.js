@@ -14,40 +14,36 @@
 
  ***********************************************************/
 
-var config = require('./test-config');
-var server = require("../server")
-var should = require('should');
-var request = require('supertest');
-var async = require('async');
-var SIS = require("../util/constants");
+describe('@API - Entity References', function() {
+    var SIS = require("../util/constants");
+    var config = require('./fixtures/config');
+    var should = require('should');
+    var TestUtil = require('./fixtures/util');
+    var ApiServer = new TestUtil.TestServer();
+    var async = require('async');
 
-var mongoose = null;
-var schemaManager = null;
-var app = null;
-var httpServer = null;
-
-describe('Entity Population API', function() {
     before(function(done) {
-        server.startServer(config, function(expressApp, httpSrv) {
-            mongoose = server.mongoose;
-            schemaManager = expressApp.get(SIS.OPT_SCHEMA_MGR);
-            app = expressApp;
-            httpServer = httpSrv;
-            done();
+        ApiServer.start(config, function(e) {
+            if (e) { return done(e); }
+            ApiServer.becomeSuperUser(done);
         });
     });
 
     after(function(done) {
-        server.stopServer(httpServer, function() {
-            mongoose.connection.db.dropDatabase();
-            mongoose.connection.close();
-            done();
-        });
+        ApiServer.stop(done);
     });
 
-    describe("Array references", function() {
+    var addSchema = function(schema, callback) {
+        ApiServer.post('/api/v1/schemas')
+            .send(schema).expect(201, callback);
+    };
 
-        var createEntityManager = require("../util/entity-manager");
+    var deleteSchema = function(name, callback) {
+        ApiServer.del('/api/v1/schemas/' + name)
+            .expect(200, callback);
+    };
+
+    describe("Array references", function() {
 
         var schema_1 = {
             "name" : "ref_1",
@@ -92,12 +88,12 @@ describe('Entity Population API', function() {
 
         before(function(done) {
             // setup the schemas
-            async.map(schemas, schemaManager.add.bind(schemaManager), function(err, res) {
+            async.map(schemas, addSchema, function(err, res) {
                 if (err) {
                     console.log(JSON.stringify(err));
                     return done(err, res);
                 }
-                var req = request(app);
+                var req = ApiServer;
                 async.map(['foo', 'bar', 'baz'], function(name, callback) {
                     entity = { "name" : name }
                     req.post("/api/v1/entities/ref_1")
@@ -137,15 +133,20 @@ describe('Entity Population API', function() {
 
         after(function(done) {
             var names = schemas.map(function(s) { return s.name; });
-            async.map(names, schemaManager.delete.bind(schemaManager), done);
+            async.map(names, deleteSchema, done);
         });
 
 
         it("ref_2 should have oid reference paths", function(done) {
-            var smModel = schemaManager.getEntityModel(schema_2);
-            var refs = SIS.UTIL_GET_OID_PATHS(smModel);
-            refs.length.should.eql(1);
-            done();
+            ApiServer.get("/api/v1/schemas/ref_2")
+                .expect(200, function(err, res) {
+                should.not.exist(err);
+                var schema = res.body;
+                should.exist(schema[SIS.FIELD_REFERENCES]);
+                schema[SIS.FIELD_REFERENCES].length.should.eql(1);
+                schema[SIS.FIELD_REFERENCES][0].should.eql('ref_1');
+                done();
+            });
         });
 
         it("should fail to add a bad ref_2", function(done) {
@@ -155,7 +156,7 @@ describe('Entity Population API', function() {
                 'name' : 'bad_ref_2',
                 'refs' : ids
             };
-            request(app).post("/api/v1/entities/ref_2")
+            ApiServer.post("/api/v1/entities/ref_2")
                 .set("Content-Type", "application/json")
                 .query("populate=false")
                 .send(entity)
@@ -172,7 +173,7 @@ describe('Entity Population API', function() {
                 'name' : 'good_ref_2',
                 'refs' : ids
             };
-            var req = request(app);
+            var req = ApiServer;
             req.post("/api/v1/entities/ref_2")
                 .set("Content-Type", "application/json")
                 .send(entity)

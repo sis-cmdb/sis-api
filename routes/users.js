@@ -14,9 +14,10 @@
 
  ***********************************************************/
 
-'use strict';
 // API for schemas
 (function() {
+
+    'use strict';
 
     var ApiController = require("./apicontroller");
     var SIS = require("../util/constants");
@@ -36,7 +37,7 @@
     }
 
     // inherit
-    UserController.prototype.__proto__ = ApiController.prototype;
+    require('util').inherits(UserController, ApiController);
 
     // extend attach to also attach the token request route
     UserController.prototype.attach = function(app, prefix) {
@@ -47,25 +48,33 @@
             // hacky
             return this._finish(req, res, p, 201);
         }.bind(this));
-    }
+    };
 
     // No password hashes should be returned.
     UserController.prototype.convertToResponseObject = function(req, o) {
         if (o instanceof Array) {
-            var result = [];
-            for (var i = 0; i < o.length; ++i) {
-                var u = o[i].toObject();
+            o = o.map(function(u) {
+                u = u.toObject();
                 delete u.pw;
-                result.push(u);
-            }
-            o = u;
+                return u;
+            });
         } else {
             var u = o.toObject();
             delete u.pw;
+            // hack to convert a token
+            if (SIS.FIELD_EXPIRES in u) {
+                var d = o[SIS.FIELD_EXPIRES];
+                var timeLeft = d.getTime() - Date.now();
+                if (timeLeft <= 0) {
+                    timeLeft = 0;
+                }
+                u = o.toObject();
+                u[SIS.FIELD_EXPIRES] = timeLeft;
+            }
             o = u;
         }
         return o;
-    }
+    };
     /////////////////////////////////
 
     // all route controllers expose a setup method
@@ -75,6 +84,6 @@
         }
         var controller = new UserController(config);
         controller.attach(app, "/api/v1/users");
-    }
+    };
 
 })();
