@@ -84,6 +84,12 @@ describe('@API - Hiera API', function() {
                 }
             }
         };
+
+        before(function(done) {
+            ApiServer.del("/api/v1/hiera/" + item.name)
+                .end(done);
+        });
+
         it("Should add the hiera entry", function(done) {
             ApiServer.post("/api/v1/hiera")
                 .set("Content-Encoding", "application/json")

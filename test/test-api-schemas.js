@@ -61,7 +61,7 @@ describe('@API - Schema API', function() {
                 "definition" : {
                     "name" : "String"
                 }
-            }
+            };
             ApiServer.post("/api/v1/schemas")
                 .set("Content-type", "application/json")
                 .send(schema)
@@ -71,8 +71,8 @@ describe('@API - Schema API', function() {
 
     describe("CRUD schema", function() {
         var jsData = {
-            "name":"network_element",
-            "owner" : ["ResOps"],
+            "name":"test_network_element",
+            "owner" : ["sistest"],
             "definition": {
                 "ne_type": "String",
                 "cid":     "String",
@@ -83,6 +83,11 @@ describe('@API - Schema API', function() {
                 "owner" : ["String"]
             }
         };
+        before(function(done) {
+            ApiServer.del('/api/v1/schemas/test_network_element')
+                .end(done);
+        });
+
         it("Should create new schemas", function(done) {
 
             ApiServer.post("/api/v1/schemas")
@@ -91,7 +96,7 @@ describe('@API - Schema API', function() {
                 .expect(201, done);
         });
         it("Should get the schema", function(done) {
-            ApiServer.get("/api/v1/schemas/network_element")
+            ApiServer.get("/api/v1/schemas/test_network_element")
                 .expect(200)
                 .end(function(err, res) {
                     var data = res.body;
@@ -105,8 +110,8 @@ describe('@API - Schema API', function() {
         });
         it("Should update the schema", function(done) {
             // update jsdata
-            jsData["definition"]['cid'] = "Number";
-            ApiServer.put("/api/v1/schemas/network_element")
+            jsData.definition.cid = "Number";
+            ApiServer.put("/api/v1/schemas/test_network_element")
                 .set("Content-type", "application/json")
                 .send(jsData)
                 .expect(200)
@@ -121,22 +126,22 @@ describe('@API - Schema API', function() {
                 });
         });
         it("Should fail to change the schema name", function(done) {
-            jsData['name'] = "whatever";
-            ApiServer.put("/api/v1/schemas/network_element")
+            jsData.name = "whatever";
+            ApiServer.put("/api/v1/schemas/test_network_element")
                 .set("Content-type", "application/json")
                 .send(jsData)
                 .expect(400, done);
         });
         it("Should fail to update the schema with an invalid body", function(done) {
-            delete jsData['owner'];
-            jsData['name'] = 'network_element';
-            ApiServer.put("/api/v1/schemas/network_element")
+            delete jsData.owner;
+            jsData.name = 'network_element';
+            ApiServer.put("/api/v1/schemas/test_network_element")
                 .set("Content-type", "application/json")
                 .send(jsData)
                 .expect(400, done);
         });
         it("Should delete the schema", function(done) {
-            ApiServer.del("/api/v1/schemas/network_element")
+            ApiServer.del("/api/v1/schemas/test_network_element")
                 .expect(200, done);
         });
     });
@@ -144,9 +149,9 @@ describe('@API - Schema API', function() {
     describe("Schema search", function() {
         before(function(done) {
             // insert three schemas
-            var schemas = [{ "name":"s1", "definition": { "field" : "String" }, "owner" : "ResOps" },
-                           { "name":"s2", "definition": { "field" : "String" }, "owner" : "ResOps" },
-                           { "name":"t1", "definition": { "field" : "String" }, "owner" : "ProvOps" }];
+            var schemas = [{ "name":"s1", "definition": { "field" : "String" }, "owner" : "sistest_rops" },
+                           { "name":"s2", "definition": { "field" : "String" }, "owner" : "sistest_rops" },
+                           { "name":"t1", "definition": { "field" : "String" }, "owner" : "sistest_pops" }];
             // async magic - https://github.com/caolan/async
             async.map(schemas, function(schema, callback) {
                 ApiServer.post('/api/v1/schemas')
@@ -171,13 +176,13 @@ describe('@API - Schema API', function() {
         });
         it("Should return s1 and s2 ", function(done) {
             ApiServer.get("/api/v1/schemas")
-                .query({q : JSON.stringify({ "owner" : ["ResOps"] }) })
+                .query({q : JSON.stringify({ "owner" : ["sistest_rops"] }) })
                 .expect(200)
                 .end(function(err, res) {
                     should.exist(res.body);
                     res.body.length.should.eql(2);
                     for (var i = 0; i < 2; ++i) {
-                        res.body[i]['owner'].should.eql(['ResOps']);
+                        res.body[i].owner.should.eql(['sistest_rops']);
                     }
                     done();
                 });

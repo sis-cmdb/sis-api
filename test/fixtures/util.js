@@ -55,16 +55,25 @@
                             super_user : true,
                             email : 'sistest@sis.test'
                         };
-                        userManager.add(sisSuper, localSuper, function(e, user) {
-                            if (e) {
-                                return callback(e);
-                            }
+                        userManager.getById(sisSuper.name).then(function(user) {
                             serverData = sd;
                             serverData.schemaManager = schemaManager;
                             serverData.superUser = localSuper;
                             serverData.username = 'sistest_super';
                             serverData.password = 'sistest';
                             callback(null, serverData);
+                        }, function(dne) {
+                            userManager.add(sisSuper, localSuper, function(e, user) {
+                                if (e) {
+                                    return callback(e);
+                                }
+                                serverData = sd;
+                                serverData.schemaManager = schemaManager;
+                                serverData.superUser = localSuper;
+                                serverData.username = 'sistest_super';
+                                serverData.password = 'sistest';
+                                callback(null, serverData);
+                            });
                         });
                     });
                 } else {
@@ -129,15 +138,13 @@
                 return callback();
             }
             serverData.server.stopServer(serverData.http, function() {
-                serverData.mongoose.connection.db.dropDatabase(function() {
-                    serverData.mongoose.connection.close(callback);
-                });
+                serverData.mongoose.connection.close(callback);
             });
         };
 
         ['get', 'post', 'put', 'del'].forEach(function(method) {
-            this[method] = function(url) {
-                return this.newRequest(method, url);
+            this[method] = function(url, token) {
+                return this.newRequest(method, url, token);
             };
         }.bind(this));
 
@@ -192,5 +199,21 @@
     }
 
     module.exports.LocalTest = LocalTest;
+
+    // utilities
+    // return full - subset.  both are arrays
+    module.exports.invert = function(full, subset) {
+        return full.filter(function(item) {
+            return subset.indexOf(item) == -1;
+        });
+    };
+
+    // values
+    module.exports.objectValues = function(obj) {
+        var keys = Object.keys(obj);
+        return keys.map(function(k) {
+            return obj[k];
+        });
+    };
 
 })();

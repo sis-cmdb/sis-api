@@ -25,13 +25,13 @@ describe('Token Manager', function() {
 
     if (process.env.SIS_RUN_LONG_TESTS) {
         describe("temp tokens", function() {
-            var users = require("./fixtures/authdata").users;
+            var users = require("./fixtures/authdata").createUsers();
             before(function(done) {
                 // set the expiration time to 80 seconds (in ms).
                 SIS.AUTH_EXPIRATION_TIME = 80000;
                 var userManager = schemaManager.auth[SIS.SCHEMA_USERS];
-                var superUser = users['superman'];
-                var admin = users['admin1'];
+                var superUser = users.superman;
+                var admin = users.admin1;
                 var tokenManager = schemaManager.auth[SIS.SCHEMA_TOKENS];
                 tokenManager.model.ensureIndexes(function(e) {
                     if (e) { return done(e); }
@@ -41,7 +41,7 @@ describe('Token Manager', function() {
             after(function(done) {
                 SIS.AUTH_EXPIRATION_TIME = 1000 * 60 * 60 * 8;
                 var userManager = schemaManager.auth[SIS.SCHEMA_USERS];
-                var superUser = users['superman'];
+                var superUser = users.superman;
                 userManager.delete('admin1', superUser, done);
             });
 
@@ -51,20 +51,20 @@ describe('Token Manager', function() {
                 this.timeout(240000);
                 var userManager = schemaManager.auth[SIS.SCHEMA_USERS];
                 var tokenManager = schemaManager.auth[SIS.SCHEMA_TOKENS];
-                var user = users['admin1'];
+                var user = users.admin1;
                 userManager.createTempToken(user, function(e, token) {
                     should.not.exist(e);
                     should.exist(token);
                     'admin1'.should.eql(token[SIS.FIELD_USERNAME]);
                     setTimeout(function() {
-                        tokenManager.getById(token['name'], function(e, token) {
+                        tokenManager.getById(token.name, function(e, token) {
                             should.not.exist(e);
                             should.exist(token);
                             'admin1'.should.eql(token[SIS.FIELD_USERNAME]);
                         });
                     }, 70000);
                     setTimeout(function() {
-                        tokenManager.getById(token['name'], function(e, token) {
+                        tokenManager.getById(token.name, function(e, token) {
                             should.not.exist(token);
                             should.exist(e);
                             done();
@@ -75,11 +75,74 @@ describe('Token Manager', function() {
         });
     }
 
-    var userData = require("./fixtures/authdata");
-    var users = userData.users;
-    var addTests = userData.addTests;
-    var superTests = userData.superTests;
-    var updateTests = userData.updateTests;
+    var users = require("./fixtures/authdata").createUsers();
+    var addTests = [
+        // array defining test
+        // firstuser can add seconduser pass/fail
+        // superman can add everyone
+        ["superman", "admin1", true],
+        ["superman", "admin1_1", true],
+        ["superman", "superman2", true],
+        ["superman", "admin2", true],
+        ["superman", "admin3", true],
+        ["superman", "admin4", true],
+        ["superman", "admin5", true],
+        ["superman", "user1", true],
+        ["superman", "user2", true],
+        ["superman", "user3", true],
+        ["superman", "user4", true],
+        // admin1 - similar as admin2
+        ["admin1", "superman", false],
+        ["admin1", "admin1_1", true],
+        ["admin1", "admin2", false],
+        ["admin1", "admin3", false],
+        ["admin1", "admin4", false],
+        ["admin1", "user1", true],
+        ["admin1", "user2", false],
+        ["admin1", "user3", false],
+        // admin3
+        ["admin3", "admin2", false],
+        ["admin3", "admin4", false],
+        ["admin3", "user1", true],
+        ["admin3", "user2", false],
+        ["admin3", "user3", false],
+        // users
+        ["user3", "superman", false],
+        ["user3", "admin1", false],
+        ["user3", "admin2", false],
+        ["user3", "admin3", false],
+        ["user3", "user1", false],
+        ["user3", "user2", false]
+    ];
+
+    var superTests = addTests.filter(function(test) {
+        return test[0] == 'superman';
+    });
+
+
+    var updateTests = [
+        // test is:
+        // [userDoingTheAction, userBeingManaged, action(add, delete, update), group modified, role, pass/fail]
+
+        // adds and updates
+        // admin1 can do whatever he wants on test_g1
+        ["admin1", "admin2", 'a', 'test_g1', 'user', true],
+        ["admin1", "admin3", 'd', 'test_g1', null, true],
+        ["admin1", "user3", 'u', 'test_g1', 'admin', true],
+
+        // superman does it all
+        ["superman", "admin1", 'a', 'test_g2', 'user', true],
+        ["superman", "admin1", 'a', 'test_g2', 'admin', true],
+        ["superman", "user1", 'u', 'test_g1', 'user', true],
+
+        // admin1 only administers test_g1
+        ["admin1", "admin1_1", 'a', 'test_g2', 'user', false],
+        // can't modify a super user
+        ["admin1", "superman2", 'a', 'test_g1', 'user', false],
+
+        // user3 isn't an admin of anything
+        ["user3", "admin1", 'a', "test_g2", 'user', false]
+    ];
 
     describe("persistent tokens", function() {
         // add all users and a token in parallel
@@ -91,7 +154,7 @@ describe('Token Manager', function() {
                 var u2 = users[test[1]];
                 return function(cb) {
                     userManager.add(u2, u1, cb);
-                }
+                };
             }), done);
         });
 

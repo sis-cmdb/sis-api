@@ -22,18 +22,7 @@ describe('@API - History API', function() {
     var config = require('./fixtures/config');
     var TestUtil = require('./fixtures/util');
     var ApiServer = new TestUtil.TestServer();
-    var token = null;
-
-    before(function(done) {
-        ApiServer.start(config, function(e) {
-            if (e) { return done(e); }
-            ApiServer.becomeSuperUser(done);
-        });
-    });
-
-    after(function(done) {
-        ApiServer.stop(done);
-    });
+    var async = require('async');
 
     // test on sample entity, hooks, schemas, and hiera
     var data = [
@@ -63,7 +52,8 @@ describe('@API - History API', function() {
                 "desc" : "String"
               }
             }
-          ]
+          ],
+          del_url : "/api/v1/schemas/history_test"
         },
 
         // hooks
@@ -96,7 +86,8 @@ describe('@API - History API', function() {
               },
               "events" : ["insert", "update"]
             }
-          ]
+          ],
+          del_url : "/api/v1/hooks/hist_hook"
         },
 
         // hiera
@@ -125,7 +116,8 @@ describe('@API - History API', function() {
               }
             }
           ],
-          "type" : "hiera"
+          "type" : "hiera",
+          del_url : "/api/v1/hiera/hist_hiera"
         },
 
         // entities
@@ -148,12 +140,30 @@ describe('@API - History API', function() {
         }
     ];
 
+    before(function(done) {
+        ApiServer.start(config, function(e) {
+            if (e) { return done(e); }
+            ApiServer.becomeSuperUser(function(err) {
+                if (err) { return done(err); }
+                // delete
+                async.map(data, function(d, cb) {
+                    if (!d.del_url) { return cb(null); }
+                    ApiServer.del(d.del_url).end(cb);
+                }, done);
+            });
+        });
+    });
+
+    after(function(done) {
+        ApiServer.stop(done);
+    });
+
     data.map(function(test) {
-        var prefix = test['prefix'];
-        var idField = test['id_field'] || 'name';
-        var entries = test['entries'];
+        var prefix = test.prefix;
+        var idField = test.id_field || 'name';
+        var entries = test.entries;
         var items = [];
-        describe("Testing commits for " + test['prefix'], function() {
+        describe("Testing commits for " + test.prefix, function() {
             // insert the entries
             before(function(done) {
                 var insertItem = function(idx) {
@@ -164,22 +174,22 @@ describe('@API - History API', function() {
                     var method = 'post';
                     var status = 201;
                     if (idx > 0) {
-                        method = 'put'
+                        method = 'put';
                         url = prefix + "/" + items[idx - 1][idField];
                         status = 200;
                     }
-                    ApiServer.newRequest(method, url, token)
+                    ApiServer.newRequest(method, url)
                         .send(entries[idx])
                         .end(function(err, res) {
                             if (err) {
-                                return done(err, res)
+                                return done(err, res);
                             }
                             if (res.status != status) {
                                 return done(JSON.stringify(res.body), null);
                             }
                             should.exist(res.body);
                             should.exist(res.body[idField]);
-                            should.exist(res.body['_updated_at']);
+                            should.exist(res.body._updated_at);
                             items.push(res.body);
                             var item = res.body;
                             // ensure get matches
@@ -195,7 +205,7 @@ describe('@API - History API', function() {
                                 }, 500);
                             });
                         });
-                }
+                };
                 insertItem(0);
             });
 
@@ -204,12 +214,13 @@ describe('@API - History API', function() {
 
             it("should retrieve " + entries.length + " commit records", function(done) {
                 ApiServer.newRequest('get', prefix + "/" + items[0][idField] + "/commits")
+                    .query({ q : { date_modified : { $gte : items[0]._created_at } }})
                     .expect(200, function(err, res) {
                         should.not.exist(err);
                         should.exist(res);
                         should.exist(res.body);
-                        items.length.should.eql(res.body.length);
-                        middleItemHid = res.body[middleIdx]['_id']
+                        res.body.length.should.eql(items.length);
+                        middleItemHid = res.body[middleIdx]._id;
                         done();
                     });
             });
@@ -227,29 +238,29 @@ describe('@API - History API', function() {
                     });
             });
 
+            var createTest = function(idx) {
+                return function(done) {
+                    var utc = items[idx]._updated_at;
+                    var path = [prefix, items[idx][idField], 'revision', utc];
+                    var url = path.join("/");
+                    ApiServer.get(url)
+                        .expect(200, function(err, res) {
+                            should.not.exist(err);
+                            should.exist(res.body);
+                            res.body.should.eql(items[idx]);
+                            done();
+                        });
+                };
+            };
+
             for (var i = 0; i < entries.length; ++i) {
-
-                var createTest = function(idx) {
-                    return function(done) {
-                        var utc = items[idx]['_updated_at'];
-                        var path = [prefix, items[idx][idField], 'revision', utc];
-                        ApiServer.newRequest('get', path.join("/"))
-                            .expect(200, function(err, res) {
-                                should.not.exist(err);
-                                should.exist(res.body);
-                                res.body.should.eql(items[idx]);
-                                done();
-                            });
-                    };
-                }
-
                 it("should retrieve item " + i + " by updated_at", createTest(i));
             }
 
             it("should retrieve the middle item by time", function(done) {
                 // calculate a time between the middle item and the next item
-                var time = (items[middleIdx + 1]['_updated_at'] - items[middleIdx]['_updated_at']) / 2;
-                time += items[middleIdx]['_updated_at'];
+                var time = (items[middleIdx + 1]._updated_at - items[middleIdx]._updated_at) / 2;
+                time += items[middleIdx]._updated_at;
                 var path = [prefix, items[0][idField], 'revision', time];
                 ApiServer.newRequest('get', path.join("/"))
                     .expect(200, function(err, res) {
@@ -278,19 +289,23 @@ describe('@API - History API', function() {
             number : 1
         };
         before(function(done) {
-            ApiServer.post("/api/v1/schemas")
-                .send(schema)
-                .expect(201, function(err, res) {
-                    should.not.exist(err);
-                    ApiServer.post("/api/v1/entities/history_test_2")
-                        .send(entity).expect(201, function(err, res) {
+            ApiServer.del('/api/v1/schemas/history_test_2')
+                .end(function(err, res) {
+                ApiServer.post("/api/v1/schemas")
+                    .send(schema)
+                    .expect(201, function(err, res) {
+                        should.not.exist(err);
+                        ApiServer.post("/api/v1/entities/history_test_2")
+                            .send(entity).expect(201, function(err, res) {
+
                             should.not.exist(err);
                             entity = res.body;
                             entity.number = 2;
                             ApiServer.put("/api/v1/entities/history_test_2/" + entity._id)
                                 .send(entity).expect(200, done);
-                        });
+                    });
                 });
+            });
         });
 
         it("Should not retrieve any commits", function(done) {

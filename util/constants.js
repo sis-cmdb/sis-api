@@ -89,7 +89,6 @@ module.exports = {
     OPT_TYPE : "type",
     OPT_USE_AUTH : "auth",
     OPT_AUTH_CONFIG : "auth_config",
-    OPT_ADMIN_REQUIRED : "admin_required",
 
     ROLE_USER : "user",
     ROLE_ADMIN : "admin",
@@ -142,7 +141,6 @@ module.exports = {
         }
     },
     ERR_BAD_CREDS : function(msg) {
-        //throw new Error("WTF?!?!");
         return [401, { error : util.format("Unauthorized. %s", msg), code : 1004 }, msg];
     },
 

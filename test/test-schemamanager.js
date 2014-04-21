@@ -95,7 +95,7 @@ describe('SchemaManager', function() {
 
         entity.should.have.property('name', 'network_element');
         entity.should.have.property('definition');
-        entity['definition'].should.eql(schema['definition']);
+        entity.definition.should.eql(schema.definition);
         done();
       });
     });
@@ -137,8 +137,8 @@ describe('SchemaManager', function() {
                 "definition" : {
                     "name" : "String"
                 }
-            }
-            schema['definition'][field] = 'String';
+            };
+            schema.definition[field] = 'String';
             schemaManager.add(schema, function(err, entity) {
                 should.exist(err);
                 should.not.exist(entity);
@@ -151,7 +151,7 @@ describe('SchemaManager', function() {
             "name" : "schema1",
             "owner" : "test",
             "definition" : "Bogus"
-        }
+        };
         schemaManager.add(schema, function(err, entity) {
             should.exist(err);
             should.not.exist(entity);
@@ -165,7 +165,7 @@ describe('SchemaManager', function() {
             "definition" : {
                 "name" : "UnknownType"
             }
-        }
+        };
         schemaManager.add(schema, function(err, entity) {
             should.exist(err);
             should.not.exist(entity);
@@ -234,6 +234,7 @@ describe('SchemaManager', function() {
     it("Should return true if schema exists ", function(done) {
       schemaManager.delete(schemaName, function(err, result) {
         should.not.exist(err);
+        /* jshint expr: true */
         result.should.be.ok;
         done(err);
       });
@@ -287,15 +288,17 @@ describe('SchemaManager', function() {
 
     // create the schema and add an entity
     before(function(done) {
-        schemaManager.add(schema, function(err, result) {
-          if (err) return done(err);
-          var EntityType = schemaManager.getEntityModel(schema);
-          var doc = new EntityType(initialEntity);
-          doc.save(function(err, e) {
-            if (err) { return done(err); }
-            savedEntity = e;
-            done();
-          });
+        schemaManager.delete(schema.name, function() {
+            schemaManager.add(schema, function(err, result) {
+              if (err) return done(err);
+              var EntityType = schemaManager.getEntityModel(schema);
+              var doc = new EntityType(initialEntity);
+              doc.save(function(err, e) {
+                if (err) { return done(err); }
+                savedEntity = e;
+                done();
+              });
+            });
         });
     });
     after(function(done) {
@@ -304,9 +307,9 @@ describe('SchemaManager', function() {
 
     it("Should update the schema", function(done) {
       // delete the num field, change bool to string, add field
-      delete schema.definition['num'];
-      schema.definition['bool'] = 'String';
-      schema.definition['newBool'] = "Boolean";
+      delete schema.definition.num;
+      schema.definition.bool = 'String';
+      schema.definition.newBool = "Boolean";
       schemaManager.update(schema.name, schema, function(err, updated) {
         should.not.exist(err);
         updated = updated[1];
@@ -324,7 +327,7 @@ describe('SchemaManager', function() {
       schemaManager.getById(schema.name, function(err, entitySchema) {
         should.not.exist(err);
         var EntityType = schemaManager.getEntityModel(entitySchema);
-        EntityType.findOne({"_id" : savedEntity['_id']}, function(err, result) {
+        EntityType.findOne({"_id" : savedEntity._id}, function(err, result) {
           should.not.exist(err);
           should.exist(result);
           // ensure that the bool is removed
@@ -363,7 +366,7 @@ describe('SchemaManager', function() {
           });
           doc.save(done);
       });
-    })
+    });
   });
 
   describe("schema diff", function() {
@@ -393,7 +396,7 @@ describe('SchemaManager', function() {
         var s2 = schemaManager._getMongooseSchema(s);
         var diff = schemaManager._diffSchemas(s1, s2);
         for (var i = 0; i < diff.length; ++i) {
-            diff[i].length.should.eql(0)
+            diff[i].length.should.eql(0);
         }
         done();
     });
@@ -411,8 +414,8 @@ describe('SchemaManager', function() {
     it("should see str was removed, q added, num updated", function(done) {
         var s1 = schemaManager._getMongooseSchema(s);
         delete s.definition.str;
-        s.definition['q'] = "String";
-        s.definition['num'] = "String";
+        s.definition.q = "String";
+        s.definition.num = "String";
         var s2 = schemaManager._getMongooseSchema(s);
         var diff = schemaManager._diffSchemas(s1, s2);
         diff[1].length.should.eql(1);

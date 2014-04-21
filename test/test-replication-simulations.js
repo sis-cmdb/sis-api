@@ -54,18 +54,20 @@ describe('Replication Simulation', function() {
     };
 
     before(function(done) {
-        ApiServer.post("/api/v1/schemas").send(schema)
-            .expect(201, function(err, res) {
-            if (err) { return done(err); }
-            schema = res.body;
-            ApiServer.post("/api/v1/entities/" + schema.name)
-                .send(entity).expect(201, function(err, res) {
+        schemaManager.objectRemoved(schema).then(function() {
+            ApiServer.post("/api/v1/schemas").send(schema)
+                .expect(201, function(err, res) {
                 if (err) { return done(err); }
-                // simulate a schema update
-                schema._updated_at += 1000;
-                delete schema._id;
-                schema.definition.bool = { type : "Boolean", default : true }
-                schemaManager.model.update({ name : schema.name}, schema, done);
+                schema = res.body;
+                ApiServer.post("/api/v1/entities/" + schema.name)
+                    .send(entity).expect(201, function(err, res) {
+                    if (err) { return done(err); }
+                    // simulate a schema update
+                    schema._updated_at += 1000;
+                    delete schema._id;
+                    schema.definition.bool = { type : "Boolean", default : true };
+                    schemaManager.model.update({ name : schema.name}, schema, done);
+                });
             });
         });
     });
@@ -78,7 +80,7 @@ describe('Replication Simulation', function() {
             var entity = res.body[0];
             should.exist(entity.bool);
             done();
-        })
+        });
     });
     it("should return a 404", function(done) {
         // delete the model
@@ -87,6 +89,13 @@ describe('Replication Simulation', function() {
             // now expect a 404
             ApiServer.get("/api/v1/entities/" + schema.name)
                 .expect(404, done);
+        });
+    });
+    after(function(done) {
+        schemaManager.objectRemoved(schema).then(function() {
+            done();
+        }, function(e) {
+            done(e);
         });
     });
   });

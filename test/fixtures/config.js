@@ -26,4 +26,4 @@ module.exports = {
     app : {
         auth : true
     }
-}
+};

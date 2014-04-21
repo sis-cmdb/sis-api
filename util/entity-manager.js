@@ -30,9 +30,10 @@
         Manager.call(this, model, opts);
         this.sm = opts[SIS.OPT_SCHEMA_MGR];
         this.mixedTypes = [];
+        var self = this;
         model.schema.eachPath(function(pathName, type) {
-            if (type.instance == "Mixed") {
-                mixedTypes.push(pathName);
+            if (type.options && type.options.type == "Mixed") {
+                self.mixedTypes.push(pathName);
             }
         });
     }
@@ -167,14 +168,11 @@
     };
 
     EntityManager.prototype.applyUpdate = function(result, entity) {
-        var schema = result.schema;
         for (var k in entity) {
-            if (schema.path(k)) {
-                if (entity[k] !== null) {
-                    result[k] = this.applyPartial(result[k], entity[k]);
-                } else {
-                    delete result[k];
-                }
+            if (entity[k] !== null) {
+                result[k] = this.applyPartial(result[k], entity[k]);
+            } else {
+                delete result[k];
             }
         }
         // horribly inefficient and may be unnecessary
