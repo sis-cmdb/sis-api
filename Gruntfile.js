@@ -32,7 +32,7 @@ module.exports = function(grunt) {
         newcap: false,
         node : true
       },
-      dist: distFiles.map(function(f) { return "dist/" + f })
+      dist: distFiles.map(function(f) { return "dist/" + f; })
     },
     // Empties folders to start fresh
     clean: {
@@ -94,11 +94,79 @@ module.exports = function(grunt) {
     }
   });
 
+  // grunt.registerTask('bar', 'My Bar task', function(target) {
+  //   console.log("bar! " + target);
+  // });
+
+  grunt.registerTask('apitest', 'Run remote api tests', function(inventory) {
+    var ini = require('ini');
+    if (!inventory || !grunt.file.exists(inventory)) {
+        return grunt.fail.fatal("inventory does not exist");
+    }
+    var webInstances = [];
+    function parseGroup(conf, group) {
+        if (!conf || !conf[group]) {
+            return;
+        }
+        for (var k in conf[group]) {
+            var v = conf[group][k];
+            var line = k + '=' + v;
+            var splits = line.split(' ');
+            var host = splits.shift();
+            /* jshint loopfunc: true */
+            splits = splits.map(function(s) {
+                return s.split('=');
+            });
+            for (var i = 0; i < splits.length; ++i) {
+                if (splits[i][0] == 'ansible_ssh_host') {
+                    webInstances.push({ host : host, ip : splits[i][1], group : group });
+                    break;
+                }
+            }
+        }
+    }
+    function parseFile(file) {
+        var conf = ini.parse(grunt.file.read(file));
+        parseGroup(conf, 'sis-web');
+        parseGroup(conf, 'sis-proxy');
+    }
+    if (grunt.file.isDir(inventory)) {
+        grunt.file.recurse(inventory, parseFile);
+    } else {
+        parseFile(inventory);
+    }
+    // update the configs
+    var mochaConf = {
+        options: {
+          timeout: 60000,
+          grep: '@API',
+          clearRequireCache: true
+        },
+        src: ['test/test-*.js']
+    };
+    for (var i = 0; i < webInstances.length; ++i) {
+        var host = webInstances[i];
+        var host_fixed = host.host.replace(/\./g, '_');
+        grunt.config.set('env.' + host_fixed, {
+            SIS_REMOTE_USERNAME : 'sistest',
+            SIS_REMOTE_PASSWORD : 'sistest',
+            SIS_REMOTE_HOST : host.host,
+            SIS_REMOTE_URL : 'https://' + host.ip,
+            NODE_TLS_REJECT_UNAUTHORIZED : "0"
+        });
+        grunt.config.set('mochaTest.' + host_fixed, mochaConf);
+        grunt.task.run('env:' + host_fixed);
+        grunt.task.run('mochaTest:' + host_fixed);
+    }
+  });
+
+  grunt.registerTask('localtest', ['mochaTest:test', 'mochaTest:coverage']);
+
   grunt.registerTask('dist', [
     'env:dist',
     'clean:dist',
     'buildjson:dist',
-    'mochaTest',
+    'localtest',
     'copy:dist',
     'jshint:dist'
   ]);
@@ -106,10 +174,9 @@ module.exports = function(grunt) {
   grunt.registerTask('build', [
     'jshint',
     'buildjson',
-    'mochaTest',
+    'localtest',
   ]);
 
   grunt.registerTask('default', ['newer:jshint','build']);
-
 
 };

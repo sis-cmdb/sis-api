@@ -122,13 +122,14 @@
             }
             var result = serverData.request[method](url);
             if (method == 'post' || method == 'put') {
-                result = result.set("Content-Type", "application/json");
+                result.set("Content-Type", "application/json");
             }
             if (token) {
-                result = result.set("x-auth-token", token);
+                result.set("x-auth-token", token);
             } else if (this.authToken) {
-                result = result.set("x-auth-token", this.authToken);
+                result.set("x-auth-token", this.authToken);
             }
+            result.set('Accept', 'application/json');
             return result;
         };
 
@@ -152,7 +153,7 @@
             if (!serverData) {
                 return callback("server not started.");
             }
-            var req = serverData.request.post("/api/v1/users/auth_token")
+            var req = this.post("/api/v1/users/auth_token")
                                         .auth(username, password);
             req.expect(201, function(err, res) {
                 if (err) { return callback(err); }
