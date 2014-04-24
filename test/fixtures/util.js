@@ -155,6 +155,7 @@
             }
             var req = this.post("/api/v1/users/auth_token")
                                         .auth(username, password);
+            req.set('Content-Type', null);
             req.expect(201, function(err, res) {
                 if (err) { return callback(err); }
                 return callback(null, res.body);
