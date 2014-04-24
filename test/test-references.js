@@ -93,7 +93,6 @@ describe('@API - Entity References', function() {
             // setup the schemas
             async.map(schemas, addSchema, function(err, res) {
                 if (err) {
-                    console.log(JSON.stringify(err));
                     return done(err, res);
                 }
                 var req = ApiServer;
@@ -126,9 +125,6 @@ describe('@API - Entity References', function() {
                                 });
                         });
                 }, function(e, r) {
-                    if (e) {
-                        console.log(e);
-                    }
                     done(e, r);
                 });
             });

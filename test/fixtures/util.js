@@ -17,14 +17,17 @@
 // Helpers for tests
 (function() {
 
-    var clearCache = function() {
-        // Object.keys(require.cache).forEach(function (key) {
-        //     delete require.cache[key];
-        // });
-    };
-
     function TestServer() {
         var serverData = null;
+
+        this.setupRemote = function(url, username, password) {
+            serverData = {
+                request : require('supertest')(url),
+                username : username,
+                password : password
+            };
+            return serverData;
+        };
 
         this.start = function(config, callback) {
             if (!process.env.SIS_REMOTE_URL) {
@@ -84,11 +87,9 @@
                     !process.env.SIS_REMOTE_PASSWORD) {
                     return callback("super credentials not set.", null);
                 }
-                serverData = {
-                    request : require('supertest')(process.env.SIS_REMOTE_URL),
-                    username : process.env.SIS_REMOTE_USERNAME,
-                    password : process.env.SIS_REMOTE_PASSWORD
-                };
+                this.setupRemote(process.env.SIS_REMOTE_URL,
+                                 process.env.SIS_REMOTE_USERNAME,
+                                 process.env.SIS_REMOTE_PASSWORD);
                 return callback(null, serverData);
             }
         };
@@ -134,7 +135,6 @@
         };
 
         this.stop = function(callback) {
-            clearCache();
             if (!serverData || !serverData.local) {
                 return callback();
             }
@@ -186,7 +186,6 @@
         };
 
         this.stop = function(callback) {
-            clearCache();
             if (!dbData) {
                 return callback();
             }

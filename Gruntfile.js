@@ -69,6 +69,23 @@ module.exports = function(grunt) {
           captureFile: grunt.option('coverage_out') || '_reports/coverage.html'
         },
         src: ['test/init-tests.js', 'test/test-*.js']
+      },
+      remote : {
+        options: {
+          timeout: 60000,
+          grep: '@API',
+          clearRequireCache: true
+        },
+        src: ['test/test-*.js']
+      },
+      repl : {
+        options : {
+            timeout : 60000,
+            clearRequireCache : true
+        },
+        src : ['test/replication-tests/init-seed-data.js',
+               'test/replication-tests/test-repl-*.js',
+               'test/replication-tests/verify-seed-data.js']
       }
     }
   });
@@ -94,15 +111,8 @@ module.exports = function(grunt) {
     }
   });
 
-  // grunt.registerTask('bar', 'My Bar task', function(target) {
-  //   console.log("bar! " + target);
-  // });
-
-  grunt.registerTask('apitest', 'Run remote api tests', function(inventory) {
+  var getWebInstancesFromInventory = function(inventory) {
     var ini = require('ini');
-    if (!inventory || !grunt.file.exists(inventory)) {
-        return grunt.fail.fatal("inventory does not exist");
-    }
     var webInstances = [];
     function parseGroup(conf, group) {
         if (!conf || !conf[group]) {
@@ -135,29 +145,48 @@ module.exports = function(grunt) {
     } else {
         parseFile(inventory);
     }
+    return webInstances;
+  };
+
+  grunt.registerTask('apitest', 'Run remote api tests', function(inventory) {
+    if (!inventory || !grunt.file.exists(inventory)) {
+        return grunt.fail.fatal("inventory does not exist");
+    }
+    var webInstances = getWebInstancesFromInventory(inventory);
     // update the configs
-    var mochaConf = {
-        options: {
-          timeout: 60000,
-          grep: '@API',
-          clearRequireCache: true
-        },
-        src: ['test/test-*.js']
-    };
     for (var i = 0; i < webInstances.length; ++i) {
         var host = webInstances[i];
         var host_fixed = host.host.replace(/\./g, '_');
         grunt.config.set('env.' + host_fixed, {
             SIS_REMOTE_USERNAME : 'sistest',
             SIS_REMOTE_PASSWORD : 'sistest',
-            SIS_REMOTE_HOST : host.host,
             SIS_REMOTE_URL : 'https://' + host.ip,
             NODE_TLS_REJECT_UNAUTHORIZED : "0"
         });
-        grunt.config.set('mochaTest.' + host_fixed, mochaConf);
         grunt.task.run('env:' + host_fixed);
-        grunt.task.run('mochaTest:' + host_fixed);
+        grunt.task.run('mochaTest:remote');
     }
+  });
+
+  grunt.registerTask('repltest', 'Run replication tests', function(inventory) {
+    if (!inventory || !grunt.file.exists(inventory)) {
+        return grunt.fail.fatal("inventory does not exist");
+    }
+    var webInstances = getWebInstancesFromInventory(inventory);
+    var data = webInstances.map(function(wi) {
+        return {
+            url : 'https://' + wi.ip,
+            host : wi.host
+        };
+    });
+    grunt.config.set('env.repl', {
+        SIS_REPL_DATA: JSON.stringify(data),
+        SIS_REMOTE_USERNAME : 'sistest',
+        SIS_REMOTE_PASSWORD : 'sistest',
+        NODE_TLS_REJECT_UNAUTHORIZED : "0"
+    });
+    grunt.task.run('env:repl');
+    grunt.task.run('mochaTest:repl');
   });
 
   grunt.registerTask('localtest', ['mochaTest:test', 'mochaTest:coverage']);
