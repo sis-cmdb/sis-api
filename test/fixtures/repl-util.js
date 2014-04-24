@@ -44,12 +44,9 @@
             var entities = [];
             for (var i = 0; i < ENTITIES_PER_SCHEMA; ++i) {
                 entities.push({
-                    data : {
-                        owner : ['sis_seed'],
-                        name : 'seedtest_s' + idx + '_e' + i,
-                        number : i
-                    },
-                    schema : s.name
+                    owner : ['sis_seed'],
+                    name : 'seedtest_s' + idx + '_e' + i,
+                    number : i
                 });
             }
             result[s.name] = entities;
@@ -81,6 +78,7 @@
         for (var i = 0; i < NUM_HIERA; ++i) {
             result.push({
                 name : 'seedtest_hiera_' + i,
+                owner : ['sis_seed'],
                 hieradata : {
                     num : i,
                     num_str : i + ''
@@ -102,7 +100,12 @@
                 } else {
                     ApiServer.post(endpointUrl)
                         .send(item)
-                        .expect(201, callback);
+                        .expect(201, function(e, r) {
+                            if (e) {
+                                console.log("error posting " + item.name + ' to ' + endpointUrl);
+                            }
+                            callback(e, r);
+                        });
                 }
             });
         }
@@ -207,7 +210,7 @@
                 if (opts.data) {
                     res.body.should.eql(opts.data);
                 }
-                done();
+                cb(null, res.body);
             });
         }, callback);
     };

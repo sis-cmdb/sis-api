@@ -72,6 +72,7 @@ module.exports = function(grunt) {
       },
       remote : {
         options: {
+          reporter: 'mocha-jenkins-reporter',
           timeout: 60000,
           grep: '@API',
           clearRequireCache: true
@@ -80,6 +81,7 @@ module.exports = function(grunt) {
       },
       repl : {
         options : {
+            reporter: 'mocha-jenkins-reporter',
             timeout : 60000,
             clearRequireCache : true
         },
@@ -161,6 +163,7 @@ module.exports = function(grunt) {
             SIS_REMOTE_USERNAME : 'sistest',
             SIS_REMOTE_PASSWORD : 'sistest',
             SIS_REMOTE_URL : 'https://' + host.ip,
+            JUNIT_REPORT_PATH : 'report_apitest_' + host_fixed + '.xml',
             NODE_TLS_REJECT_UNAUTHORIZED : "0"
         });
         grunt.task.run('env:' + host_fixed);
@@ -183,6 +186,7 @@ module.exports = function(grunt) {
         SIS_REPL_DATA: JSON.stringify(data),
         SIS_REMOTE_USERNAME : 'sistest',
         SIS_REMOTE_PASSWORD : 'sistest',
+        JUNIT_REPORT_PATH : 'report_repltests.xml',
         NODE_TLS_REJECT_UNAUTHORIZED : "0"
     });
     grunt.task.run('env:repl');

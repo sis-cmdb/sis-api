@@ -22,7 +22,7 @@ describe('@Replication - Schemas', function() {
     var async = require('async');
 
     var schema = {
-        name : "test_repl_s0",
+        name : "test_repl_schema",
         owner : ["sistest"],
         track_history : false,
         definition : {
@@ -37,8 +37,11 @@ describe('@Replication - Schemas', function() {
     servers.forEach(function(server, idx) {
         describe("Replication from " + server.host, function() {
             before(function(done) {
-                // delete
-                server.del(ITEM_URL).end(done);
+                // auth and delete
+                server.becomeSuperUser(function(e, r) {
+                    if (e) { return done(e); }
+                    server.del(ITEM_URL).end(done);
+                });
             });
 
             it("should create/replicate the schema", function(done) {

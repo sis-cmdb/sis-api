@@ -23,7 +23,10 @@ describe('Init Seed Data', function() {
     it("should seed the data", function(done) {
         // only use first one
         var seedServer = servers[0];
-        replUtil.seedData(seedServer, done);
+        seedServer.becomeSuperUser(function(e, r) {
+            if (e) { return done(e); }
+            replUtil.seedData(seedServer, done);
+        });
     });
 
 });
