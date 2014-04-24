@@ -14,16 +14,16 @@
 
  ***********************************************************/
 
-// templatize this for the env
-module.exports = {
-    db: {
-        url : "mongodb://localhost/sis-test"
-    },
-    server : {
-        port : 3001,
-        address : "127.0.0.1"
-    },
-    app : {
-        auth : true
-    }
-};
+describe('Verify Seed Data', function() {
+    "use strict";
+
+    var replUtil = require('../fixtures/repl-util');
+    var servers = replUtil.loadReplicationServers();
+
+    it("should verify the seed data", function(done) {
+        // only use first one
+        var seedServer = servers[0];
+        replUtil.verifySeedData(seedServer, done);
+    });
+
+});

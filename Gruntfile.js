@@ -32,7 +32,7 @@ module.exports = function(grunt) {
         newcap: false,
         node : true
       },
-      dist: distFiles.map(function(f) { return "dist/" + f })
+      dist: distFiles.map(function(f) { return "dist/" + f; })
     },
     // Empties folders to start fresh
     clean: {
@@ -69,27 +69,137 @@ module.exports = function(grunt) {
           captureFile: grunt.option('coverage_out') || '_reports/coverage.html'
         },
         src: ['test/init-tests.js', 'test/test-*.js']
+      },
+      remote : {
+        options: {
+          reporter: 'mocha-jenkins-reporter',
+          timeout: 60000,
+          grep: '@API',
+          clearRequireCache: true
+        },
+        src: ['test/test-*.js']
+      },
+      repl : {
+        options : {
+            reporter: 'mocha-jenkins-reporter',
+            timeout : 60000,
+            clearRequireCache : true
+        },
+        src : ['test/replication-tests/init-seed-data.js',
+               'test/replication-tests/test-repl-*.js',
+               'test/replication-tests/verify-seed-data.js']
       }
     }
   });
 
   grunt.registerTask('buildjson', function(target) {
     var outfile = 'build.json';
-    var buildNum = process.env['BUILD_NUMBER'] || 'local-build';
-    var githash = process.env['GIT_COMMIT_HASH'] || 'dev-hash';
-    grunt.file.write(outfile, JSON.stringify({ build_num : buildNum, git_hash : githash }));
+    var buildNum = process.env.BUILD_NUMBER || 'local-build';
+    var githash = process.env.GIT_COMMIT_HASH || 'dev-hash';
+    var buildId = process.env.BUILD_ID || grunt.template.date(Date.now(), 'yyyy-mm-dd_HH-MM-ss');
+
+    var output = {
+        build_num : buildNum,
+        git_hash : githash,
+        build_id : buildId,
+        version : grunt.config.get('pkg.version')
+    };
+    output = JSON.stringify(output);
+    grunt.file.write(outfile, output);
     if (target == 'dist') {
         // write to dist as well
         outfile = 'dist/' + outfile;
-        grunt.file.write(outfile, JSON.stringify({ build_num : buildNum, git_hash : githash }));
+        grunt.file.write(outfile, output);
     }
   });
+
+  var getWebInstancesFromInventory = function(inventory) {
+    var ini = require('ini');
+    var webInstances = [];
+    function parseGroup(conf, group) {
+        if (!conf || !conf[group]) {
+            return;
+        }
+        for (var k in conf[group]) {
+            var v = conf[group][k];
+            var line = k + '=' + v;
+            var splits = line.split(' ');
+            var host = splits.shift();
+            /* jshint loopfunc: true */
+            splits = splits.map(function(s) {
+                return s.split('=');
+            });
+            for (var i = 0; i < splits.length; ++i) {
+                if (splits[i][0] == 'ansible_ssh_host') {
+                    webInstances.push({ host : host, ip : splits[i][1], group : group });
+                    break;
+                }
+            }
+        }
+    }
+    function parseFile(file) {
+        var conf = ini.parse(grunt.file.read(file));
+        parseGroup(conf, 'sis-web');
+        parseGroup(conf, 'sis-proxy');
+    }
+    if (grunt.file.isDir(inventory)) {
+        grunt.file.recurse(inventory, parseFile);
+    } else {
+        parseFile(inventory);
+    }
+    return webInstances;
+  };
+
+  grunt.registerTask('apitest', 'Run remote api tests', function(inventory) {
+    if (!inventory || !grunt.file.exists(inventory)) {
+        return grunt.fail.fatal("inventory does not exist");
+    }
+    var webInstances = getWebInstancesFromInventory(inventory);
+    // update the configs
+    for (var i = 0; i < webInstances.length; ++i) {
+        var host = webInstances[i];
+        var host_fixed = host.host.replace(/\./g, '_');
+        grunt.config.set('env.' + host_fixed, {
+            SIS_REMOTE_USERNAME : 'sistest',
+            SIS_REMOTE_PASSWORD : 'sistest',
+            SIS_REMOTE_URL : 'https://' + host.ip,
+            JUNIT_REPORT_PATH : 'report_apitest_' + host_fixed + '.xml',
+            NODE_TLS_REJECT_UNAUTHORIZED : "0"
+        });
+        grunt.task.run('env:' + host_fixed);
+        grunt.task.run('mochaTest:remote');
+    }
+  });
+
+  grunt.registerTask('repltest', 'Run replication tests', function(inventory) {
+    if (!inventory || !grunt.file.exists(inventory)) {
+        return grunt.fail.fatal("inventory does not exist");
+    }
+    var webInstances = getWebInstancesFromInventory(inventory);
+    var data = webInstances.map(function(wi) {
+        return {
+            url : 'https://' + wi.ip,
+            host : wi.host
+        };
+    });
+    grunt.config.set('env.repl', {
+        SIS_REPL_DATA: JSON.stringify(data),
+        SIS_REMOTE_USERNAME : 'sistest',
+        SIS_REMOTE_PASSWORD : 'sistest',
+        JUNIT_REPORT_PATH : 'report_repltests.xml',
+        NODE_TLS_REJECT_UNAUTHORIZED : "0"
+    });
+    grunt.task.run('env:repl');
+    grunt.task.run('mochaTest:repl');
+  });
+
+  grunt.registerTask('localtest', ['mochaTest:test', 'mochaTest:coverage']);
 
   grunt.registerTask('dist', [
     'env:dist',
     'clean:dist',
     'buildjson:dist',
-    'mochaTest',
+    'localtest',
     'copy:dist',
     'jshint:dist'
   ]);
@@ -97,10 +207,9 @@ module.exports = function(grunt) {
   grunt.registerTask('build', [
     'jshint',
     'buildjson',
-    'mochaTest',
+    'localtest',
   ]);
 
   grunt.registerTask('default', ['newer:jshint','build']);
-
 
 };

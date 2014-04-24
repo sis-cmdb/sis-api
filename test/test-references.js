@@ -34,8 +34,11 @@ describe('@API - Entity References', function() {
     });
 
     var addSchema = function(schema, callback) {
-        ApiServer.post('/api/v1/schemas')
-            .send(schema).expect(201, callback);
+        ApiServer.del('/api/v1/schemas/' + schema.name)
+            .end(function() {
+            ApiServer.post('/api/v1/schemas')
+                .send(schema).expect(201, callback);
+        });
     };
 
     var deleteSchema = function(name, callback) {
@@ -68,7 +71,7 @@ describe('@API - Entity References', function() {
             "definition" : {
                 "name" : "String"
             }
-        }
+        };
 
         var schema_4 = {
             "name" : "ref_4",
@@ -78,24 +81,23 @@ describe('@API - Entity References', function() {
                 "ref" : { type : "ObjectId", ref : "ref_1" },
                 "ref_multi" : [{ type : "ObjectId", ref : "ref_1" }]
             }
-        }
+        };
 
         var schemas = [schema_1, schema_2, schema_3, schema_4];
         var entities = {
             'ref_1' : [],
             'ref_3' : []
-        }
+        };
 
         before(function(done) {
             // setup the schemas
             async.map(schemas, addSchema, function(err, res) {
                 if (err) {
-                    console.log(JSON.stringify(err));
                     return done(err, res);
                 }
                 var req = ApiServer;
                 async.map(['foo', 'bar', 'baz'], function(name, callback) {
-                    entity = { "name" : name }
+                    entity = { "name" : name };
                     req.post("/api/v1/entities/ref_1")
                         .set("Content-Type", "application/json")
                         .query("populate=false")
@@ -107,7 +109,7 @@ describe('@API - Entity References', function() {
                                 return callback(err, result);
                             }
                             result = result.body;
-                            entities['ref_1'].push(result);
+                            entities.ref_1.push(result);
 
                             req.post("/api/v1/entities/ref_3")
                                 .set("Content-Type", "application/json")
@@ -118,14 +120,11 @@ describe('@API - Entity References', function() {
                                 .expect(201, function(err, result) {
                                     if (err) { return callback(err, result); }
                                     result = result.body;
-                                    entities['ref_3'].push(result);
-                                    return callback(null, true)
+                                    entities.ref_3.push(result);
+                                    return callback(null, true);
                                 });
                         });
                 }, function(e, r) {
-                    if (e) {
-                        console.log(e);
-                    }
                     done(e, r);
                 });
             });
@@ -150,8 +149,8 @@ describe('@API - Entity References', function() {
         });
 
         it("should fail to add a bad ref_2", function(done) {
-            var bad_refs = entities['ref_3'];
-            var ids = [bad_refs[0]['_id'], bad_refs[1]['_id']];
+            var bad_refs = entities.ref_3;
+            var ids = [bad_refs[0]._id, bad_refs[1]._id];
             var entity = {
                 'name' : 'bad_ref_2',
                 'refs' : ids
@@ -167,8 +166,8 @@ describe('@API - Entity References', function() {
         });
 
         it("should add a good ref_2", function(done) {
-            var good_refs = entities['ref_1'];
-            var ids = [good_refs[0]['_id'], good_refs[1]['_id']];
+            var good_refs = entities.ref_1;
+            var ids = [good_refs[0]._id, good_refs[1]._id];
             var entity = {
                 'name' : 'good_ref_2',
                 'refs' : ids
@@ -180,7 +179,7 @@ describe('@API - Entity References', function() {
                 .expect(201, function(err, result) {
                     should.not.exist(err);
                     result = result.body;
-                    var id = result['_id'];
+                    var id = result._id;
                     req.get("/api/v1/entities/ref_2/" + id)
                         .expect(200, function(e, r) {
                             result = r.body;

@@ -17,14 +17,17 @@
 // Helpers for tests
 (function() {
 
-    var clearCache = function() {
-        // Object.keys(require.cache).forEach(function (key) {
-        //     delete require.cache[key];
-        // });
-    };
-
     function TestServer() {
         var serverData = null;
+
+        this.setupRemote = function(url, username, password) {
+            serverData = {
+                request : require('supertest')(url),
+                username : username,
+                password : password
+            };
+            return serverData;
+        };
 
         this.start = function(config, callback) {
             if (!process.env.SIS_REMOTE_URL) {
@@ -55,16 +58,25 @@
                             super_user : true,
                             email : 'sistest@sis.test'
                         };
-                        userManager.add(sisSuper, localSuper, function(e, user) {
-                            if (e) {
-                                return callback(e);
-                            }
+                        userManager.getById(sisSuper.name).then(function(user) {
                             serverData = sd;
                             serverData.schemaManager = schemaManager;
                             serverData.superUser = localSuper;
                             serverData.username = 'sistest_super';
                             serverData.password = 'sistest';
                             callback(null, serverData);
+                        }, function(dne) {
+                            userManager.add(sisSuper, localSuper, function(e, user) {
+                                if (e) {
+                                    return callback(e);
+                                }
+                                serverData = sd;
+                                serverData.schemaManager = schemaManager;
+                                serverData.superUser = localSuper;
+                                serverData.username = 'sistest_super';
+                                serverData.password = 'sistest';
+                                callback(null, serverData);
+                            });
                         });
                     });
                 } else {
@@ -75,11 +87,9 @@
                     !process.env.SIS_REMOTE_PASSWORD) {
                     return callback("super credentials not set.", null);
                 }
-                serverData = {
-                    request : require('supertest')(process.env.SIS_REMOTE_URL),
-                    username : process.env.SIS_REMOTE_USERNAME,
-                    password : process.env.SIS_REMOTE_PASSWORD
-                };
+                this.setupRemote(process.env.SIS_REMOTE_URL,
+                                 process.env.SIS_REMOTE_USERNAME,
+                                 process.env.SIS_REMOTE_PASSWORD);
                 return callback(null, serverData);
             }
         };
@@ -113,31 +123,29 @@
             }
             var result = serverData.request[method](url);
             if (method == 'post' || method == 'put') {
-                result = result.set("Content-Type", "application/json");
+                result.set("Content-Type", "application/json");
             }
             if (token) {
-                result = result.set("x-auth-token", token);
+                result.set("x-auth-token", token);
             } else if (this.authToken) {
-                result = result.set("x-auth-token", this.authToken);
+                result.set("x-auth-token", this.authToken);
             }
+            result.set('Accept', 'application/json');
             return result;
         };
 
         this.stop = function(callback) {
-            clearCache();
             if (!serverData || !serverData.local) {
                 return callback();
             }
             serverData.server.stopServer(serverData.http, function() {
-                serverData.mongoose.connection.db.dropDatabase(function() {
-                    serverData.mongoose.connection.close(callback);
-                });
+                serverData.mongoose.connection.close(callback);
             });
         };
 
         ['get', 'post', 'put', 'del'].forEach(function(method) {
-            this[method] = function(url) {
-                return this.newRequest(method, url);
+            this[method] = function(url, token) {
+                return this.newRequest(method, url, token);
             };
         }.bind(this));
 
@@ -145,8 +153,9 @@
             if (!serverData) {
                 return callback("server not started.");
             }
-            var req = serverData.request.post("/api/v1/users/auth_token")
+            var req = this.post("/api/v1/users/auth_token")
                                         .auth(username, password);
+            req.set('Content-Type', null);
             req.expect(201, function(err, res) {
                 if (err) { return callback(err); }
                 return callback(null, res.body);
@@ -178,7 +187,6 @@
         };
 
         this.stop = function(callback) {
-            clearCache();
             if (!dbData) {
                 return callback();
             }
@@ -192,5 +200,21 @@
     }
 
     module.exports.LocalTest = LocalTest;
+
+    // utilities
+    // return full - subset.  both are arrays
+    module.exports.invert = function(full, subset) {
+        return full.filter(function(item) {
+            return subset.indexOf(item) == -1;
+        });
+    };
+
+    // values
+    module.exports.objectValues = function(obj) {
+        var keys = Object.keys(obj);
+        return keys.map(function(k) {
+            return obj[k];
+        });
+    };
 
 })();

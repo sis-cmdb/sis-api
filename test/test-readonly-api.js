@@ -39,16 +39,18 @@ describe('API at the Edge ', function() {
 
     before(function(done) {
         config.app = config.app || { };
-        config.app['readonly'] = true;
+        config.app.readonly = true;
         ApiServer.start(config, function(err, sd) {
             if (err) { return done(err); }
             app = sd.app;
-            sd.schemaManager.add(schema, sd.superUser, done);
+            sd.schemaManager.delete(schema.name, sd.superUser, function() {
+                sd.schemaManager.add(schema, sd.superUser, done);
+            });
         });
     });
 
     after(function(done) {
-        config.app['readonly'] = false;
+        config.app.readonly = false;
         ApiServer.stop(done);
     });
 

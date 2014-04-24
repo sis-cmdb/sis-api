@@ -22,6 +22,7 @@
 
     var jsondiff = require('jsondiffpatch');
     var SIS = require('./constants');
+    var Q = require('q');
 
     var docToPojo = function(doc) {
         return JSON.parse(JSON.stringify(doc.toObject()));
@@ -38,10 +39,12 @@
 
         this.recordHistory = function(oldDoc, newDoc, user, type, callback) {
             var id = oldDoc ? oldDoc[this.idField] : newDoc[this.idField];
+            var oid = oldDoc ? oldDoc._id : newDoc._id;
             var action = oldDoc ? (newDoc ? "update" : "delete") : "insert";
             var doc = { 'type' : type,
                         'entity_id' : id,
-                        'action' : action };
+                        'action' : action,
+                        'entity_oid' : oid };
             if (user && user[SIS.FIELD_NAME]) {
                 doc[SIS.FIELD_MODIFIED_BY] = user[SIS.FIELD_NAME];
             }
@@ -90,6 +93,39 @@
             return patched;
         };
 
+        this.getCommitsOnObject = function(id, type, timestamp) {
+            var condition = {
+                entity_id : id,
+                type : type,
+                date_modified : { $lte : timestamp },
+                action : 'insert'
+            };
+            var fields = 'date_modified entity_oid';
+            var sort = { date_modified : -1 };
+            var commits = [];
+            // result promise
+            var d = Q.defer();
+            // find the first commit
+            var query = self.model.findOne(condition).select(fields).sort(sort);
+            query.exec(function(err, first) {
+                if (err || !first) {
+                    return d.resolve([]);
+                }
+                var start_date = first.date_modified;
+                delete condition.action;
+                condition.entity_oid = first.entity_oid;
+                condition.date_modified = { $lte : timestamp, $gte : start_date };
+                fields = 'commit_data action entity_oid';
+                sort.date_modified = 1;
+                self.model.find(condition).select(fields).sort(sort).exec(function(e, commits) {
+                    commits = commits || [];
+                    d.resolve(commits);
+                });
+            });
+
+            return d.promise;
+        };
+
         this.applyDiff = function(result, callback) {
             // get the low hanging fruit ones out
             if (result.action == 'insert' || result.action == 'delete') {
@@ -98,25 +134,8 @@
                 return callback(SIS.ERR_INTERNAL("unknown commit type found " + result.action), null);
             }
             // get the commits on the object that precede this
-            var condition = {
-                entity_id : result.entity_id,
-                type : result.type,
-                date_modified : { $lt : result.date_modified }
-            };
-            var fields = 'commit_data';
-            var options = {
-                sort : { date_modified : 1 }
-            };
-            // get only the commit data sorted in ascending
-            // time
-            var query = self.model.find(condition)
-                                  .select('commit_data action')
-                                  .sort({date_modified: 1 });
-            query.exec(function(err, commits) {
-                if (err || !commits || !commits.length) {
-                    return callback(SIS.ERR_INTERNAL("Could not retrieve previous commits."), null);
-                }
-                commits.push(result);
+            this.getCommitsOnObject(result.entity_id, result.type, result.date_modified)
+                .then(function(commits) {
                 var patched = aggregateCommits(commits);
                 return callback(null, patched);
             });
@@ -145,15 +164,8 @@
         };
 
         this.getVersionByUtc = function(type, id, utc, callback) {
-            var query = {
-                'date_modified' : { $lte : utc },
-                "entity_id" : id,
-                "type" : type
-            };
-            var q = self.model.find(query)
-                .select('commit_data action').sort({date_modified: 1 });
-            q.exec(function(err, commits) {
-                if (err || !commits || !commits.length) {
+            this.getCommitsOnObject(id, type, utc).then(function(commits) {
+                if (!commits.length) {
                     callback(SIS.ERR_INTERNAL_OR_NOT_FOUND(err, "commit", utc), null);
                 } else {
                     if (commits.length == 1) {

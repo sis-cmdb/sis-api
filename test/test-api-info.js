@@ -35,8 +35,8 @@ describe('@API - Info API', function() {
                 should.not.exist(err);
                 should.exist(res.body);
                 should.not.exist(res.body.err);
-                should.exist(res.body.build_num);
-                should.exist(res.body.git_hash);
+                var keys = ['build_num', 'git_hash', 'build_id', 'version'];
+                keys.forEach(function(k) { should.exist(res.body[k]); });
                 done();
             });
     });

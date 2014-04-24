@@ -67,8 +67,9 @@ module.exports.schemas = [
     {
         name : SIS.SCHEMA_COMMITS,
         definition : {
-            type : "String",
-            entity_id : "String",
+            type : { required : true, type : "String" },
+            entity_id : { required : true, type : "String" },
+            entity_oid : { required : true, type : "String" },
             action : { type : "String", required : true, enum : SIS.EVENTS_ENUM},
             commit_data : "Mixed",
             date_modified : { type : "Number", "index" : true },

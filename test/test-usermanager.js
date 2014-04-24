@@ -36,12 +36,76 @@ describe('User Manager', function() {
         LocalTest.stop(done);
     });
 
-    var userData = require("./fixtures/authdata");
-    var users = userData.users;
-    var addTests = userData.addTests;
-    var superTests = userData.superTests;
-    var updateTests = userData.updateTests;
+    var AuthFixture = require("./fixtures/authdata");
+    var users = AuthFixture.createUsers();
 
+    var addTests = [
+        // array defining test
+        // firstuser can add seconduser pass/fail
+        // superman can add everyone
+        ["superman", "admin1", true],
+        ["superman", "admin1_1", true],
+        ["superman", "superman2", true],
+        ["superman", "admin2", true],
+        ["superman", "admin3", true],
+        ["superman", "admin4", true],
+        ["superman", "admin5", true],
+        ["superman", "user1", true],
+        ["superman", "user2", true],
+        ["superman", "user3", true],
+        ["superman", "user4", true],
+        // admin1 - similar as admin2
+        ["admin1", "superman", false],
+        ["admin1", "admin1_1", true],
+        ["admin1", "admin2", false],
+        ["admin1", "admin3", false],
+        ["admin1", "admin4", false],
+        ["admin1", "user1", true],
+        ["admin1", "user2", false],
+        ["admin1", "user3", false],
+        // admin3
+        ["admin3", "admin2", false],
+        ["admin3", "admin4", false],
+        ["admin3", "user1", true],
+        ["admin3", "user2", false],
+        ["admin3", "user3", false],
+        // users
+        ["user3", "superman", false],
+        ["user3", "admin1", false],
+        ["user3", "admin2", false],
+        ["user3", "admin3", false],
+        ["user3", "user1", false],
+        ["user3", "user2", false]
+    ];
+
+    var superTests = addTests.filter(function(test) {
+        return test[0] == 'superman';
+    });
+
+
+    var updateTests = [
+        // test is:
+        // [userDoingTheAction, userBeingManaged, action(add, delete, update), group modified, role, pass/fail]
+
+        // adds and updates
+        // admin1 can do whatever he wants on test_g1
+        ["admin1", "admin2", 'a', 'test_g1', 'user', true],
+        ["admin1", "admin3", 'd', 'test_g1', null, true],
+        ["admin1", "user3", 'u', 'test_g1', 'admin', true],
+
+        // superman does it all
+        ["superman", "admin1", 'a', 'test_g2', 'user', true],
+        ["superman", "admin1", 'a', 'test_g2', 'admin', true],
+        ["superman", "user1", 'u', 'test_g1', 'user', true],
+
+        // admin1 only administers test_g1
+        ["admin1", "admin1_1", 'a', 'test_g2', 'user', false],
+        // can't modify a super user
+        ["admin1", "superman2", 'a', 'test_g1', 'user', false],
+
+        // user3 isn't an admin of anything
+        ["user3", "admin1", 'a', "test_g2", 'user', false]
+    ];
 
     describe("user management add/delete", function() {
 
@@ -79,7 +143,7 @@ describe('User Manager', function() {
         obj = obj[1];
         should.exist(obj);
         return obj;
-    }
+    };
 
     describe("user management update fields", function() {
         // add all users in parallel
@@ -90,7 +154,7 @@ describe('User Manager', function() {
                 var u2 = users[test[1]];
                 return function(cb) {
                     userManager.add(u2, u1, cb);
-                }
+                };
             }), done);
         });
         // delete all users in parallel
@@ -101,7 +165,7 @@ describe('User Manager', function() {
                 var u2 = users[test[1]];
                 return function(cb) {
                     userManager.delete(u2[SIS.FIELD_NAME], u1, cb);
-                }
+                };
             }), done);
         });
 
@@ -164,7 +228,7 @@ describe('User Manager', function() {
                 var u2 = users[test[1]];
                 return function(cb) {
                     userManager.add(u2, u1, cb);
-                }
+                };
             }), done);
         });
         // delete all users in parallel
@@ -175,7 +239,7 @@ describe('User Manager', function() {
                 var u2 = users[test[1]];
                 return function(cb) {
                     userManager.delete(u2[SIS.FIELD_NAME], u1, cb);
-                }
+                };
             }), done);
         });
 
@@ -187,9 +251,10 @@ describe('User Manager', function() {
             var u2 = users[test[1]];
             var group = test[3];
             var role = test[4];
+            var testName = null;
             if (action == 'u') {
                 // u1 can/cannot update u2 to group role
-                var testName = util.format("%s %s update %s to %s %s",
+                testName = util.format("%s %s update %s to %s %s",
                                           u1.name, (pass ? "can" : "cannot"), u2.name, group, role);
                 it(testName, function(done) {
                     var userManager = schemaManager.auth[SIS.SCHEMA_USERS];
@@ -216,7 +281,7 @@ describe('User Manager', function() {
                 });
             } else {
                 // u1 can/canmot add/remove group to u2
-                var testName = util.format("%s %s %s %s to %s",
+                testName = util.format("%s %s %s %s to %s",
                                           u1.name, (pass ? "can" : "cannot"),
                                           (action == 'a' ? 'add' : 'remove'), group, u2.name);
                 it(testName, function(done) {

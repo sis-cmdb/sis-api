@@ -39,7 +39,6 @@ function Manager(model, opts) {
     this.idField = opts[SIS.OPT_ID_FIELD] || SIS.FIELD_NAME;
     this.type = opts[SIS.OPT_TYPE] || this.model.modelName;
     this.authEnabled = SIS.OPT_USE_AUTH in opts ? opts[SIS.OPT_USE_AUTH] : SIS.DEFAULT_OPT_USE_AUTH;
-    this.adminRequired = opts[SIS.OPT_ADMIN_REQUIRED] || false;
     // objects this manager refers to
     this.references = SIS.UTIL_GET_OID_PATHS(this.model.schema);
 }
@@ -137,13 +136,20 @@ Manager.prototype.authorize = function(evt, doc, user, mergedDoc) {
     }
     // get the permissions on the doc being added/updated/deleted
     var permission = this.getPermissionsForObject(doc, user);
-    if (permission == SIS.PERMISSION_ADMIN) {
-        return Q(mergedDoc || doc);
-    }
-    if (permission == SIS.PERMISSION_USER_ALL_GROUPS && !this.adminRequired) {
-        return Q(mergedDoc || doc);
-    } else {
+    if (permission != SIS.PERMISSION_ADMIN &&
+        permission != SIS.PERMISSION_USER_ALL_GROUPS) {
         return Q.reject(SIS.ERR_BAD_CREDS("Insufficient permissions."));
+    }
+    if (evt != SIS.EVENT_UPDATE) {
+        // insert / delete
+        return Q(doc);
+    } else {
+        var updatedPerms = this.getPermissionsForObject(mergedDoc, user);
+        if (updatedPerms != SIS.PERMISSION_ADMIN &&
+            updatedPerms != SIS.PERMISSION_USER_ALL_GROUPS) {
+            return Q.reject(SIS.ERR_BAD_CREDS("Insufficient permissions."));
+        }
+        return Q(mergedDoc);
     }
 };
 

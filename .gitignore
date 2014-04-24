@@ -8,7 +8,7 @@ lib-cov
 *.gz
 *.ignore.js
 *.pyc
-
+report*.xml
 pids
 logs
 results

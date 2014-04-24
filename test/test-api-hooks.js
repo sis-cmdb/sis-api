@@ -77,6 +77,11 @@ describe('@API - Hook API', function() {
             },
             "events": ['insert','update']
         };
+        before(function(done) {
+            ApiServer.del('/api/v1/hooks/' + hook.name)
+                .end(done);
+        });
+
         it("Should create new hook", function(done) {
             ApiServer.post("/api/v1/hooks")
                 .set('Content-Encoding', 'application/json')
@@ -95,7 +100,7 @@ describe('@API - Hook API', function() {
                 });
         });
         it("Should update the hook", function(done) {
-            hook['events'] = ['insert'];
+            hook.events = ['insert'];
             ApiServer.put("/api/v1/hooks/test_hook")
                 .set("Content-Type", "application/json")
                 .send(hook)
@@ -110,7 +115,7 @@ describe('@API - Hook API', function() {
                 });
         });
         it("Should fail to update the hook w/ invalid data", function(done) {
-            delete hook['events'];
+            delete hook.events;
             ApiServer.put("/api/v1/hooks/test_hook")
                 .set("Content-Type", "application/json")
                 .send(hook)

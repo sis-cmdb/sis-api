@@ -357,6 +357,27 @@
         return this.mongoose.models[name];
     };
 
+    SchemaManager.prototype.authorize = function(evt, doc, user, mergedDoc) {
+        if (evt == SIS.EVENT_DELETE) {
+            if (doc[SIS.FIELD_LOCKED]) {
+                return Q.reject(SIS.ERR_BAD_CREDS("Cannot delete a locked object."));
+            }
+        }
+        // get the permissions on the doc being added/updated/deleted
+        var permission = this.getPermissionsForObject(doc, user);
+        if (permission != SIS.PERMISSION_ADMIN) {
+            return Q.reject(SIS.ERR_BAD_CREDS("Insufficient permissions."));
+        } else if (evt != SIS.EVENT_UPDATE) {
+            // insert / delete and user is an admin
+            return Q(doc);
+        }
+        var updatedPerms = this.getPermissionsForObject(mergedDoc, user);
+        if (updatedPerms != SIS.PERMISSION_ADMIN) {
+            return Q.reject(SIS.ERR_BAD_CREDS("Insufficient permissions."));
+        }
+        return Q(mergedDoc);
+    };
+
     // export
     module.exports = function(mongoose, opts) {
         return new SchemaManager(mongoose, opts);

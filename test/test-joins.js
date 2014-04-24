@@ -37,10 +37,11 @@ describe('@API - Entity Join API', function() {
         var schemas = [];
         var numSchemas = 3;
         var numEnts = 50;
+        var i, j;
 
         // create 3 schemas where join_schema_1 has a ref_0 to join_schema_0
         // and join_schema_2 has a ref_0 to join_schema_0 and ref_1 to join_schema_1
-        for (var i = 0; i < numSchemas; ++i) {
+        for (i = 0; i < numSchemas; ++i) {
             var schema = {
                 "owner" : "entity_test",
                 "name" : "join_schema_" + i,
@@ -49,9 +50,9 @@ describe('@API - Entity Join API', function() {
                     "num" : "Number"
                 }
             };
-            var j = i - 1;
+            j = i - 1;
             while (j >= 0) {
-                schema.definition['ref_' + j] = { type : "ObjectId", ref: "join_schema_" + j }
+                schema.definition['ref_' + j] = { type : "ObjectId", ref: "join_schema_" + j };
                 --j;
             }
             schemas.push(schema);
@@ -61,9 +62,9 @@ describe('@API - Entity Join API', function() {
         // this becomes an array of array of entities that
         // get filled
         var entities = [];
-        for (var i = 0; i < numSchemas; ++i) {
+        for (i = 0; i < numSchemas; i++) {
             var schema_ents = [];
-            for (var j = 0; j < numEnts; ++j) {
+            for (j = 0; j < numEnts; ++j) {
                 schema_ents.push({
                     "name" : "join_ent_" + i + "_" + j,
                     "num" : ((i + 1) * 100) + j
@@ -73,8 +74,11 @@ describe('@API - Entity Join API', function() {
         }
 
         var addSchema = function(schema, callback) {
-            ApiServer.post('/api/v1/schemas')
-                .send(schema).expect(201, callback);
+            ApiServer.del('/api/v1/schemas/' + schema.name)
+                .end(function() {
+                ApiServer.post('/api/v1/schemas')
+                    .send(schema).expect(201, callback);
+            });
         };
 
         var deleteSchema = function(name, callback) {
@@ -100,7 +104,7 @@ describe('@API - Entity Join API', function() {
                             for (var k = 0; k < j_ents.length; ++k) {
                                 var ref_ent = j_ents[k];
                                 var ent = entities2Add[k];
-                                ent['ref_' + j] = ref_ent['_id'];
+                                ent['ref_' + j] = ref_ent._id;
                             }
                             j--;
                         }
@@ -113,7 +117,7 @@ describe('@API - Entity Join API', function() {
                             .send(entity)
                             .expect(201, function(e, res) {
                                 if (e) { return callback(e, null); }
-                                callback(null, res.body)
+                                callback(null, res.body);
                             });
                         }, function(err, result) {
                             if (err) {
@@ -123,7 +127,7 @@ describe('@API - Entity Join API', function() {
                             createEntities(i + 1);
                         }
                     );
-                }
+                };
                 createEntities(0);
             });
         });
@@ -143,8 +147,8 @@ describe('@API - Entity Join API', function() {
                     res.statusCode.should.eql(200);
                     should.exist(res.body);
                     res.body.length.should.eql(1);
-                    var id = res.body[0]['_id'];
-                    entities[1][2]['_id'].should.eql(id);
+                    var id = res.body[0]._id;
+                    entities[1][2]._id.should.eql(id);
                     done();
                 });
         });
@@ -159,8 +163,8 @@ describe('@API - Entity Join API', function() {
                     should.exist(res.body);
                     res.statusCode.should.eql(200);
                     res.body.length.should.eql(1);
-                    var id = res.body[0]['_id'];
-                    entities[2][1]['_id'].should.eql(id);
+                    var id = res.body[0]._id;
+                    entities[2][1]._id.should.eql(id);
                     done();
                 });
         });
@@ -172,15 +176,15 @@ describe('@API - Entity Join API', function() {
                     "ref_1.num" : { "$gt" : 204 },
                     "ref_1.ref_0.num" : { "$lt" : 106 }
                 }
-            }
+            };
             ApiServer.get("/api/v1/entities/join_schema_2")
                 .query(query)
                 .expect(200, function(err, res) {
                     should.exist(res.body);
                     res.statusCode.should.eql(200);
                     res.body.length.should.eql(1);
-                    var id = res.body[0]['_id'];
-                    entities[2][5]['_id'].should.eql(id);
+                    var id = res.body[0]._id;
+                    entities[2][5]._id.should.eql(id);
                     done();
                 });
         });
@@ -192,7 +196,7 @@ describe('@API - Entity Join API', function() {
                     "ref_1.num" : { "$gt" : 204 },
                     "ref_1.ref_1.num" : { "$lt" : 106 }
                 }
-            }
+            };
             ApiServer.get("/api/v1/entities/join_schema_2")
                 .query(query)
                 .expect(200, function(err, res) {
@@ -210,7 +214,7 @@ describe('@API - Entity Join API', function() {
                     "ref_1.num" : { "$gt" : 204 },
                     "ref_1.ref_0." : { "$lt" : 106 }
                 }
-            }
+            };
             ApiServer.get("/api/v1/entities/join_schema_2")
                 .query(query)
                 .expect(200, function(err, res) {
