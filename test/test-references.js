@@ -190,6 +190,66 @@ describe('@API - Entity References', function() {
                         });
                 });
         });
+
+        it("should be able to update arrays of refs", function(done) {
+            var good_refs = entities.ref_1;
+            var ids = [good_refs[0]._id, good_refs[1]._id];
+            var entity = {
+                'name' : 'good_ref_2_update',
+                'refs' : []
+            };
+            var req = ApiServer;
+            req.post("/api/v1/entities/ref_2")
+                .set("Content-Type", "application/json")
+                .send(entity)
+                .expect(201, function(err, result) {
+                should.not.exist(err);
+                // update the doc
+                result = result.body;
+                result.refs = ids;
+                req.put("/api/v1/entities/ref_2/" + result._id)
+                   .set("Content-Type", "application/json")
+                   .send(result)
+                   .expect(200, function(e, r) {
+                    should.not.exist(e);
+                    r = r.body;
+                    should.exist(r.refs);
+                    should.exist(r.refs[0]);
+                    should.exist(r.refs[1]);
+                    done();
+                });
+            });
+        });
+
+        it("should be able to update a ref with null", function(done) {
+            var good_refs = entities.ref_1;
+            var ids = [good_refs[0]._id, good_refs[1]._id];
+            var entity = {
+                'name' : 'good_ref_2_update',
+                'refs' : ids
+            };
+            var req = ApiServer;
+            req.post("/api/v1/entities/ref_2")
+                .set("Content-Type", "application/json")
+                .send(entity)
+                .expect(201, function(err, result) {
+                should.not.exist(err);
+                // update the doc
+                result = result.body;
+                result.refs = [null, ids[0]];
+                req.put("/api/v1/entities/ref_2/" + result._id)
+                   .set("Content-Type", "application/json")
+                   .send(result)
+                   .expect(200, function(e, r) {
+                    should.not.exist(e);
+                    r = r.body;
+                    should.exist(r.refs);
+                    should.not.exist(r.refs[0]);
+                    should.exist(r.refs[1]);
+                    done();
+                });
+            });
+        });
     });
 
 });

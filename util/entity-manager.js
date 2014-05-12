@@ -229,9 +229,13 @@
                 if (!(currObj instanceof Array)) {
                     currObj = [currObj];
                 }
+                currObj = currObj.filter(function(o) {
+                    return o !== null;
+                });
                 var errored = false;
                 currObj.map(function(obj) {
-                    if (typeof obj === 'object') {
+                    if (typeof obj === 'object' &&
+                        obj.constructor.name !== "ObjectID") {
                         if (SIS.FIELD_ID in obj) {
                             return obj[SIS.FIELD_ID];
                         } else {
