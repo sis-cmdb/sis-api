@@ -80,7 +80,9 @@ var startServer = function(config, callback) {
     });
     app.disable('etag');
 
-    mongoose.connect(nconf.get('db').url, function(err) {
+    var opts = nconf.get('db').opts || { };
+
+    mongoose.connect(nconf.get('db').url, opts, function(err) {
         if (err) {
             throw err;
         }
