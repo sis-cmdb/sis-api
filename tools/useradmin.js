@@ -66,7 +66,9 @@ function deleteUser(userManager, user, callback) {
     userManager.delete(user.name, self, callback);
 }
 
-mongoose.connect(nconf.get('db').url, function(err) {
+var opts = nconf.get('db').opts || { };
+
+mongoose.connect(nconf.get('db').url, opts, function(err) {
     if (err) {
         throw err;
     }
