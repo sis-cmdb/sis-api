@@ -26,6 +26,34 @@
     var Manager = require("./manager");
     var Q = require("q");
 
+    // patched to prevent schema changes from causing
+    // mongoose to barf.  I.e. string field changed to
+    // document
+    var patchMongoose = function(mongoose) {
+        var Document = mongoose.Document;
+        var oldInit = Document.prototype.init;
+        Document.prototype.init = function(doc, opts, fn) {
+            if (!doc) {
+                return oldInit.call(this, doc, opts, fn);
+            }
+            if (typeof doc !== 'object' || doc instanceof Array) {
+                doc = { };
+            }
+            return oldInit.call(this, doc, opts, fn);
+        };
+        var oldToObj = Document.prototype.toObject;
+        Document.prototype.toObject = function(options) {
+            if (!this._doc) {
+                return oldToObj.call(this, options);
+            }
+            if (typeof this._doc !== 'object' ||
+                !Object.keys(this._doc).length) {
+                return { };
+            }
+            return oldToObj.call(this, options);
+        };
+    };
+
     function SchemaManager(mongoose, opts) {
         this.mongoose = mongoose;
         this.entitySchemaToUpdateTime = { };
@@ -42,6 +70,7 @@
             auth[SIS.SCHEMA_TOKENS] = require("./token-manager")(this);
             this.auth = auth;
         }
+        patchMongoose(mongoose);
     }
 
     require('util').inherits(SchemaManager, Manager);

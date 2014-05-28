@@ -83,7 +83,7 @@ module.exports.schemas = [
     {
         name : SIS.SCHEMA_USERS,
         definition : {
-            name : { type : "String", required : true,  unique : true, match :  /^[a-z0-9_]+$/ },
+            name : { type : "String", required : true,  unique : true, match :  /^[a-z0-9_\-]+$/ },
             email : { type : "String", required : true,  match: /^([\w-\.]+@([\w-]+\.)+[\w-]{2,4})?$/ },
             verified : { type : "Boolean", "default" : false },
             super_user : { type : "Boolean", "default" : false },
