@@ -22,6 +22,7 @@ var SIS = require("../util/constants");
 var Q = require('q');
 var passport = require("passport");
 var webUtil = require("./webutil");
+var async = require('async');
 
 // Constructor for the ApiController base
 // The controller base attaches to an express app and
@@ -240,9 +241,56 @@ ApiController.prototype.update = function(req, res) {
 // Handler for the add request (typically POST controller_base:/)
 ApiController.prototype.add = function(req, res) {
     this.applyDefaults(req);
-    var obj = req.body;
-    var p = this.getManager(req).then(MgrPromise('add', obj, req.user));
-    this._finish(req, res, p, 201);
+    var body = req.body;
+    if (body instanceof Array) {
+        req.params.isBulk = true;
+        req.params.bulkEvenft = SIS.EVENT_INSERT;
+        if (typeof req.query.all_or_none == 'undefined') {
+            req.query.all_or_none = false;
+        }
+    }
+    var p = this.getManager(req);
+    if (req.params.isBulk) {
+        p = p.then(function(mgr) {
+            // async try to add everything
+            var d = Q.defer();
+            var memo = { success : [], errors : [] };
+            async.map(body, function(obj, cb) {
+                mgr.add(obj, req.user, function(err, res) {
+                    if (err) {
+                        memo.errors.push({ err : err, value : obj });
+                    } else {
+                        memo.success.push(res);
+                    }
+                    cb(null, memo);
+                });
+            }, function(err, res) {
+                d.resolve(memo);
+            });
+            return d.promise;
+        });
+        p = p.then(function(result) {
+            if (result.errors.length &&
+                req.query.all_or_none) {
+                if (!result.success.length) {
+                    // already done
+                    return Q(result);
+                }
+                // delete the ones that were added.
+                var d = Q.defer();
+                async.map(result.success, function(item, cb) {
+                    item.remove(cb);
+                }, d.makeNodeResolver());
+                return d.promise;
+            } else {
+                return Q(result);
+            }
+        });
+        this._finish(req, res, p, 200);
+    } else {
+        p = p.then(MgrPromise('add', body, req.user));
+        this._finish(req, res, p, 201);
+    }
 };
 
 // Attach the controller to the app at a particular base
@@ -367,7 +415,8 @@ ApiController.prototype._getSendCallback = function(req, res, code) {
     return function(err, result) {
         if (err) { return self.sendError(res, err); }
         var orig = result;
-        if (req.method == SIS.METHOD_PUT && req.params.id &&
+        if (!req.params.isBulk &&
+            req.method == SIS.METHOD_PUT && req.params.id &&
             result instanceof Array) {
             // update.. grab the second obj
             result = result[1];
@@ -375,11 +424,50 @@ ApiController.prototype._getSendCallback = function(req, res, code) {
         result = self.convertToResponseObject(req, result);
         self.sendObject(res, code, result);
         // dispatch hooks
+        var hookType = self.getType(req);
+        var hookEvt = SIS.METHODS_TO_EVENT[req.method];
         if (self.hm && req.method in SIS.METHODS_TO_EVENT) {
-            self.hm.dispatchHooks(orig, self.getType(req),
-                                  SIS.METHODS_TO_EVENT[req.method]);
+            if (!req.isBulk) {
+                self.hm.dispatchHooks(orig, hookType, hookEvt);
+            } else {
+                var success = orig.success;
+                async.map(success, function(e, item) {
+                    self.hm.dispatchHooks(item, hookType, hookEvt);
+                }, function() {
+                    // noop
+                });
+            }
         }
     };
+};
+
+ApiController.prototype._saveSingleCommit = function(req, result) {
+    var old = null;
+    var now = null;
+    switch (req.method) {
+        case SIS.METHOD_PUT:
+            // update.. result is an array
+            old = result[0];
+            now = result[1];
+            break;
+        case SIS.METHOD_POST:
+            // add
+            now = result;
+            break;
+        case SIS.METHOD_DELETE:
+            old = result;
+            break;
+        default:
+            return Q.reject(SIS.ERR_INTERNAL("invalid commit being saved"));
+    }
+    // save it
+    var d = Q.defer();
+    var type = this.getType(req);
+    this.commitManager.recordHistory(old, now, req.user, type, function(e, h) {
+        // doesn't matter for now.
+        d.resolve(result);
+    });
+    return d.promise;
 };
 
 // Save a commit to the commit log
@@ -391,33 +479,26 @@ ApiController.prototype._saveCommit = function(req) {
         if (!self.shouldSaveCommit(req)) {
             return Q(result);
         }
+
         var d = Q.defer();
-        var old = null;
-        var now = null;
-        switch (req.method) {
-            case SIS.METHOD_PUT:
-                // update.. result is an array
-                old = result[0];
-                now = result[1];
-                break;
-            case SIS.METHOD_POST:
-                // add
-                now = result;
-                break;
-            case SIS.METHOD_DELETE:
-                old = result;
-                break;
-            default:
-                d.reject(SIS.ERR_INTERNAL("invalid commit being saved"));
-                return d.promise;
+        if (req.params.isBulk) {
+            // result is a dictionary
+            if (result.success.length) {
+                // just need to write all commits
+                async.map(result.success, function(item, cb) {
+                    var p = self._saveSingleCommit(req, item);
+                    Q.nodeify(p, cb);
+                }, function(err, res) {
+                    // don't care fr now
+                    d.resolve(result);
+                });
+            } else {
+                d.resolve([]);
+            }
+            return d.promise;
+        } else {
+            return self._saveSingleCommit(req, result);
         }
-        // save it
-        var type = self.getType(req);
-        self.commitManager.recordHistory(old, now, req.user, type, function(e, h) {
-            // doesn't matter for now.
-            d.resolve(result);
-        });
-        return d.promise;
     };
 };
 
@@ -428,6 +509,7 @@ ApiController.prototype._finish = function(req, res, p, code) {
     p = p.then(this._saveCommit(req));
     return Q.nodeify(p, this._getSendCallback(req, res, code));
 };
+
 
 // Get a function that receives objects and returns a promise
 // to populate them
