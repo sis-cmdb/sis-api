@@ -247,6 +247,11 @@ ApiController.prototype.add = function(req, res) {
         req.params.bulkEvenft = SIS.EVENT_INSERT;
         if (typeof req.query.all_or_none == 'undefined') {
             req.query.all_or_none = false;
+        } else {
+            req.query.all_or_none = req.query.all_or_none == "true";
+        }
+        if (!body.length) {
+            return this.sendError(res, SIS.ERR_BAD_REQ("Array must not be empty."));
         }
     }
     var p = this.getManager(req);
@@ -280,7 +285,10 @@ ApiController.prototype.add = function(req, res) {
                 var d = Q.defer();
                 async.map(result.success, function(item, cb) {
                     item.remove(cb);
-                }, d.makeNodeResolver());
+                }, function(err, removed) {
+                    result.success = [];
+                    d.resolve(result);
+                });
                 return d.promise;
             } else {
                 return Q(result);
@@ -493,7 +501,7 @@ ApiController.prototype._saveCommit = function(req) {
                     d.resolve(result);
                 });
             } else {
-                d.resolve([]);
+                d.resolve(result);
             }
             return d.promise;
         } else {

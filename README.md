@@ -48,6 +48,8 @@ Table of Contents
 		- [Retrieving an individual commit](#retrieving-an-individual-commit-of-an-object)
 		- [Retrieving an object at a particular time](#retrieving-an-object-at-a-particular-time)
 		- [Example commit log](#example-commit-log)
+    - [Bulk Operations](#bulk-operations)
+        - [Bulk Insert](#bulk-insert)
 	- [Data Sharing and Organization](#data-sharing-and-organization)
 - [API Examples using resty](#api-examples-using-resty)
 
@@ -281,6 +283,8 @@ SIS reserves all schema names that begin with "sis_".
 
 The request body must be a valid schema object.  This method will error if a schema with the same name exists.  Adding a schema that starts with "sis_" results in an error.
 
+This endpoint also supports [bulk insert](#bulk-insert).
+
 ### Updating a schema
 
 * `PUT /api/v1/schemas/:name`
@@ -337,6 +341,8 @@ For example, to retrieve a list of entities belonging to a schema with name `sam
 * `POST /api/v1/entities/:schema_name`
 
 The request body must be a valid entity object that adheres to the schema definition of of the schema with name `schema_name`.  This method will error if the schema does not exist or the object is malformed.
+
+This endpoint also supports [bulk insert](#bulk-insert).
 
 ### Updating an entity
 
@@ -485,6 +491,8 @@ In the case of PUT and POST, the payload is sent in the request body.  When a GE
 
 The request body must be a valid hook object.  This method will error if a hook with the same name exists.
 
+This endpoint also supports [bulk insert](#bulk-insert).
+
 ### Updating a hook
 
 * `PUT /api/v1/hooks/:name`
@@ -549,6 +557,8 @@ This matches what hiera-http expects and is modeled based on the information in 
 * `POST /api/v1/hiera`
 
 The request body must be a valid hiera object as defined above.  This method will error if an entry with the same name exists.
+
+This endpoint also supports [bulk insert](#bulk-insert).
 
 ### Updating a hiera entry
 
@@ -766,6 +776,30 @@ The following is a commit log for a hiera entry that was added, updated, and del
     "_created_at": 1385599523236
 }]
 ```
+
+## Bulk Operations
+
+### Bulk Insert
+
+POST endpoints that support bulk insert also accept an array of objects instead of a single one.  When a non-empty array is sent, the following response is sent with a 200 response code.
+
+```javascript
+{
+    success : [< objects added >],
+    errors : [< error objects >]
+}
+```
+
+Error objects in the `errors` array look like the following:
+
+```javascript
+{
+    err : [ status_code, error_body ],
+    value : < object that caused the error >
+}
+```
+
+An optional `all_or_none` URL query parameter can be added to the request and has a boolean value.  When `true`, any errors will prevent any inserts from occurring and the success array will return empty.
 
 ## Data Sharing and Organization
 
