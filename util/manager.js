@@ -223,6 +223,37 @@ Manager.prototype.delete = function(id, user, callback) {
     return Q.nodeify(p, callback);
 };
 
+// Delete multiple items ensuring authority to do so
+Manager.prototype.deleteBulk = function(condition, user, callback) {
+    if (!callback && typeof user === 'function') {
+        callback = user;
+        user = null;
+    }
+    var self = this;
+    var d = Q.defer();
+    this.model.find(condition, function(err, results) {
+        if (err) { return d.reject(SIS.ERR_INTERNAL(err)); }
+        if (!results.length) {
+            return d.resolve([]);
+        }
+        async.map(results, function(item, cb) {
+            var p = self.authorize(SIS.EVENT_DELETE, item, user);
+            Q.nodeify(p, cb);
+        }, function(err, authorized) {
+            if (err) {
+                return d.reject(SIS.ERR_BAD_CREDS("One or more items cannot be removed."));
+            }
+            // do the delete
+            self.model.remove(condition, function(err) {
+                if (err) { return d.reject(SIS.ERR_INTERNAL("Failed to delete all items. " + err)); }
+                // return the deleted items
+                d.resolve(authorized);
+            });
+        });
+    });
+    return Q.nodeify(d.promise, callback);
+};
+
 // utils
 // Expects a valid object - should be called at the end of
 // a validate routine and changes the owner to an array

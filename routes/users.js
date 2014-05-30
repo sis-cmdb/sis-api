@@ -42,7 +42,8 @@
     // extend attach to also attach the token request route
     UserController.prototype.attach = function(app, prefix) {
         ApiController.prototype.attach.call(this, app, prefix);
-        app.post(prefix + "/auth_token", function(req, res) {
+        this.auth_token_path = prefix + "/auth_token";
+        app.post(this.auth_token_path, function(req, res) {
             var p = this.authenticate(req, res, 'basic')
                 .then(this.manager.createTempToken.bind(this.manager));
             // hacky
@@ -52,28 +53,19 @@
 
     // No password hashes should be returned.
     UserController.prototype.convertToResponseObject = function(req, o) {
-        if (o instanceof Array) {
-            o = o.map(function(u) {
-                u = u.toObject();
-                delete u.pw;
-                return u;
-            });
-        } else {
-            var u = o.toObject();
-            delete u.pw;
-            // hack to convert a token
-            if (SIS.FIELD_EXPIRES in u) {
-                var d = o[SIS.FIELD_EXPIRES];
-                var timeLeft = d.getTime() - Date.now();
-                if (timeLeft <= 0) {
-                    timeLeft = 0;
-                }
-                u = o.toObject();
-                u[SIS.FIELD_EXPIRES] = timeLeft;
+        var res = o.toObject();
+        if (req.method == "POST" && req.path == this.auth_token_path) {
+            // token
+            var expireDate = o[SIS.FIELD_EXPIRES];
+            var timeLeft = expireDate.getTime() - Date.now();
+            if (timeLeft <= 0) {
+                timeLeft = 0;
             }
-            o = u;
+            res[SIS.FIELD_EXPIRES] = timeLeft;
+        } else {
+            delete res.pw;
         }
-        return o;
+        return res;
     };
     /////////////////////////////////
 

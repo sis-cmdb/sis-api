@@ -64,12 +64,7 @@
             }
             return token;
         };
-        if (o instanceof Array) {
-            o = o.map(convertToken);
-        } else {
-            o = convertToken(o);
-        }
-        return o;
+        return convertToken(o);
     };
 
     // override main entry points to ensure user exists..

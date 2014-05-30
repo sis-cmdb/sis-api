@@ -225,8 +225,23 @@ ApiController.prototype.get = function(req, res) {
 ApiController.prototype.delete = function(req, res) {
     this.applyDefaults(req);
     var id = req.params.id;
-    var p = this.getManager(req).then(MgrPromise('delete', id, req.user));
-    this._finish(req, res, p, 200);
+    var p = null;
+    if (id) {
+        p = this.getManager(req).then(MgrPromise('delete', id, req.user));
+        this._finish(req, res, p, 200);
+    } else {
+        // bulk delete - query is required
+        req.params.isBulk = true;
+        var rq = this.parseQuery(req);
+        var condition = rq.query;
+        if (!condition || !Object.keys(condition).length) {
+            return this.sendError(res, SIS.ERR_BAD_REQ("Bulk delete requires a non empty query."));
+        }
+        p = this.getManager(req).then(function(mgr) {
+            return mgr.deleteBulk(condition, req.user);
+        });
+        this._finish(req, res, p, 200);
+    }
 };
 
 // Handler for the update request (typically PUT controller_base:/id)
@@ -309,7 +324,7 @@ ApiController.prototype.attach = function(app, prefix) {
         // wrap authorization around modification calls
         app.put(prefix + "/:id", this._wrapAuth(this.update));
         app.post(prefix, this._wrapAuth(this.add));
-        app.delete(prefix + "/:id", this._wrapAuth(this.delete));
+        app.delete(prefix + "/:id?", this._wrapAuth(this.delete));
         // enable the commit api if we have a commitManager
         if (this.commitManager) {
             this._enableCommitApi(app, prefix);
@@ -417,6 +432,25 @@ ApiController.prototype._enableCommitApi = function(app, prefix) {
     }.bind(this));
 };
 
+ApiController.prototype._convertToResponseObject = function(req, obj) {
+    var self = this;
+    if (req.params.isBulk && req.method == "POST") {
+        // change the success array
+        obj.success = obj.success.map(function(o) {
+            return self.convertToResponseObject(req, o);
+        });
+        return obj;
+    }
+    if (obj instanceof Array) {
+        obj = obj.map(function(o) {
+            return self.convertToResponseObject(req, o);
+        });
+    } else {
+        obj = self.convertToResponseObject(req, obj);
+    }
+    return obj;
+};
+
 // Get the callback that will send the result from the controller
 ApiController.prototype._getSendCallback = function(req, res, code) {
     var self = this;
@@ -429,7 +463,7 @@ ApiController.prototype._getSendCallback = function(req, res, code) {
             // update.. grab the second obj
             result = result[1];
         }
-        result = self.convertToResponseObject(req, result);
+        result = self._convertToResponseObject(req, result);
         self.sendObject(res, code, result);
         // dispatch hooks
         var hookType = self.getType(req);
@@ -488,12 +522,16 @@ ApiController.prototype._saveCommit = function(req) {
             return Q(result);
         }
 
-        var d = Q.defer();
         if (req.params.isBulk) {
-            // result is a dictionary
-            if (result.success.length) {
+            var d = Q.defer();
+            var items = result;
+            if (req.method == "POST") {
+                // result is a dictionary
+                items = result.success;
+            }
+            if (items.length) {
                 // just need to write all commits
-                async.map(result.success, function(item, cb) {
+                async.map(items, function(item, cb) {
                     var p = self._saveSingleCommit(req, item);
                     Q.nodeify(p, cb);
                 }, function(err, res) {
