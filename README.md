@@ -50,6 +50,7 @@ Table of Contents
 		- [Example commit log](#example-commit-log)
     - [Bulk Operations](#bulk-operations)
         - [Bulk Insert](#bulk-insert)
+        - [Bulk Delete](#bulk-delete)
 	- [Data Sharing and Organization](#data-sharing-and-organization)
 - [API Examples using resty](#api-examples-using-resty)
 
@@ -779,13 +780,12 @@ The following is a commit log for a hiera entry that was added, updated, and del
 
 ## Bulk Operations
 
-### Bulk Insert
-
-POST endpoints that support bulk insert also accept an array of objects instead of a single one.  When a non-empty array is sent, the following response is sent with a 200 response code.
+All supported bulk operations return the following response with a 200
+status.
 
 ```javascript
 {
-    success : [< objects added >],
+    success : [< objects >],
     errors : [< error objects >]
 }
 ```
@@ -799,7 +799,19 @@ Error objects in the `errors` array look like the following:
 }
 ```
 
+Objects in the `success` array have the same format as the single operation variant.  Hooks are dispatched for all items in the success array as well.
+
+### Bulk Insert
+
+POST endpoints that support bulk insert also accept an array of objects instead of a single one.  When a non-empty array is sent, the following response is sent with a 200 response code.
+
 An optional `all_or_none` URL query parameter can be added to the request and has a boolean value.  When `true`, any errors will prevent any inserts from occurring and the success array will return empty.
+
+### Bulk Delete
+
+Typically, DELETE endpoints require an ID as the last part of the URL path.  If omitted, a bulk deletion operation is performed.  Bulk deletion requires a query with the same query format as those supplied in [search](#search).
+
+A query must be present, otherwise a 400 is returned.  Any errors that occur to some items do not prevent other objects from being deleted.
 
 ## Data Sharing and Organization
 

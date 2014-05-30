@@ -121,9 +121,11 @@ describe('@API - Bulk Delete API', function() {
                     .query(query)
                     .expect(200, function(err, res) {
                         should.not.exist(err);
-                        res.body.should.be.instanceof(Array);
-                        res.body.length.should.be.eql(num);
-                        verifyDeletedItems(success, done);
+                        should.exist(res.body.success);
+                        should.exist(res.body.errors);
+                        res.body.success.should.be.instanceof(Array);
+                        res.body.success.length.should.be.eql(num);
+                        verifyDeletedItems(res.body.success, done);
                     });
             });
     });
@@ -150,9 +152,9 @@ describe('@API - Bulk Delete API', function() {
                     .query(query)
                     .expect(200, function(err, res) {
                         should.not.exist(err);
-                        res.body.should.be.instanceof(Array);
-                        res.body.length.should.be.eql(num / 2);
-                        verifyDeletedItems(res, done);
+                        res.body.success.should.be.instanceof(Array);
+                        res.body.success.length.should.be.eql(num / 2);
+                        verifyDeletedItems(res.body.success, done);
                     });
             });
     });
@@ -169,7 +171,7 @@ describe('@API - Bulk Delete API', function() {
             });
         });
 
-        it("should add test_g1 entities, but not test_g2", function(done) {
+        it("should delete test_g1 entities, but not test_g2", function(done) {
             var start = 4000, num = 20;
             var items = createItems(start, num);
             var failStart = 5000;
@@ -192,9 +194,11 @@ describe('@API - Bulk Delete API', function() {
                     var token = userToTokens.admin1.name;
                     ApiServer.del("/api/v1/entities/" + schema.name, token)
                     .query(query)
-                    .expect(401, function(err, res) {
+                    .expect(200, function(err, res) {
                         should.not.exist(err);
-                        done();
+                        res.body.success.length.should.eql(num);
+                        res.body.errors.length.should.eql(failNum);
+                        verifyDeletedItems(res.body.success, done);
                     });
                 });
         });

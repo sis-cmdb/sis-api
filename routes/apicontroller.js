@@ -232,13 +232,36 @@ ApiController.prototype.delete = function(req, res) {
     } else {
         // bulk delete - query is required
         req.params.isBulk = true;
+        var self = this;
         var rq = this.parseQuery(req);
         var condition = rq.query;
         if (!condition || !Object.keys(condition).length) {
             return this.sendError(res, SIS.ERR_BAD_REQ("Bulk delete requires a non empty query."));
         }
         p = this.getManager(req).then(function(mgr) {
-            return mgr.deleteBulk(condition, req.user);
+            return webUtil.flattenCondition(condition,self.sm,mgr)
+                .then(function(flattenedCondition) {
+                // get them
+                return mgr.getAll(flattenedCondition, { })
+                .then(function(items) {
+                    var memo = { success : [], errors : [] };
+                    if (!items.length) { return Q(memo); }
+                    var d = Q.defer();
+                    async.map(items, function(item, cb) {
+                        mgr.delete(item[mgr.idField], req.user, function(err, i) {
+                            if (err) {
+                                memo.errors.push({err : err, value : item });
+                            } else {
+                                memo.success.push(i);
+                            }
+                            cb(null, memo);
+                        });
+                    }, function() {
+                        d.resolve(memo);
+                    });
+                    return d.promise;
+                });
+            });
         });
         this._finish(req, res, p, 200);
     }
@@ -434,7 +457,7 @@ ApiController.prototype._enableCommitApi = function(app, prefix) {
 
 ApiController.prototype._convertToResponseObject = function(req, obj) {
     var self = this;
-    if (req.params.isBulk && req.method == "POST") {
+    if (req.params.isBulk) {
         // change the success array
         obj.success = obj.success.map(function(o) {
             return self.convertToResponseObject(req, o);
@@ -524,11 +547,7 @@ ApiController.prototype._saveCommit = function(req) {
 
         if (req.params.isBulk) {
             var d = Q.defer();
-            var items = result;
-            if (req.method == "POST") {
-                // result is a dictionary
-                items = result.success;
-            }
+            var items = result.success;
             if (items.length) {
                 // just need to write all commits
                 async.map(items, function(item, cb) {
