@@ -106,7 +106,7 @@
             }
             // set the model object to have owners
             modelObj.definition[SIS.FIELD_OWNER] = ["String"];
-            var mongooseSchema = this.mongoose.Schema(modelObj.definition);
+            var mongooseSchema = new this.mongoose.Schema(modelObj.definition, { collection : "__test__" });
             // set the references
             var refs = SIS.UTIL_GET_OID_PATHS(mongooseSchema);
             modelObj[SIS.FIELD_REFERENCES] = refs.map(function(ref) {
@@ -317,7 +317,7 @@
         definition[SIS.FIELD_CREATED_BY] = { "type" : "String" };
         definition[SIS.FIELD_UPDATED_BY] = { "type" : "String" };
 
-        return this.mongoose.Schema(definition);
+        return this.mongoose.Schema(definition, { collection : sisSchema.name });
     };
 
     // wrap this so we can handle the error case
