@@ -25,8 +25,18 @@
     var Q = require('q');
 
     var docToPojo = function(doc) {
-        return JSON.parse(JSON.stringify(doc.toObject()));
+        if (typeof doc.toObject === 'function') {
+            doc = doc.toObject();
+        }
+        return JSON.parse(JSON.stringify(doc));
     };
+
+    var differ = jsondiff.create({
+        objectHash: function(obj) {
+            // serialize the objects within an array to JSON
+            return JSON.stringify(obj);
+        }
+    });
 
     // Take in a schemaManager
     function CommitManager(schemaManager) {
@@ -59,7 +69,9 @@
                     break;
                 case 'update':
                     // oldDoc is an object, newDoc is a doc
-                    doc.commit_data = jsondiff.diff(oldDoc, docToPojo(newDoc));
+                    var left = docToPojo(oldDoc);
+                    var right = docToPojo(newDoc);
+                    doc.commit_data = differ.diff(left, right);
                     doc.date_modified = newDoc[SIS.FIELD_UPDATED_AT];
                     break;
                 default:
