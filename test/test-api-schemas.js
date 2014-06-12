@@ -188,5 +188,92 @@ describe('@API - Schema API', function() {
                 });
         });
     });
+
+    describe("Schema regex", function() {
+        it("Should fail for bad regex", function(done) {
+            var failures = [
+                "/foo",
+                "foo",
+                "abc*",
+                "//",
+                "//g",
+            ];
+            failures = failures.map(function(f, idx) {
+                return {
+                    name : "regex_fail_" + idx,
+                    owner : ['sistest'],
+                    definition : {
+                        name : { type : "String", match : f }
+                    }
+                };
+            });
+            async.map(failures, function(schema, callback) {
+                ApiServer.post("/api/v1/schemas")
+                    .send(schema).expect(400, callback);
+            }, done);
+        });
+
+        it("Should add valid regex", function(done) {
+            var success = [
+                "/foo/",
+                "/^[0-9]+$/i",
+                "/\\//"
+            ];
+            success = success.map(function(s, idx) {
+                return {
+                    name : "regex_success_" + idx,
+                    owner : ['sistest'],
+                    definition : {
+                        name : { type : "String", match : s }
+                    }
+                };
+            });
+            async.map(success, function(schema, callback) {
+                ApiServer.post("/api/v1/schemas")
+                    .send(schema).expect(201, function(err, res) {
+                        should.not.exist(err);
+                        ApiServer.del("/api/v1/schemas/" + schema.name)
+                            .expect(200, callback);
+                    });
+            }, done);
+        });
+
+        it("Should add a digits only field", function(done) {
+            var schema = {
+                name : "regex_digits",
+                owner : ["sistest"],
+                definition : {
+                    digits : { type : "String", match : "/^[0-9]+$/" }
+                }
+            };
+            var entities = [
+                ["alkdjfa", 400],
+                ["400", 201],
+                ["502laksdjfa", 400],
+                ["lkaadflkj2094852", 400],
+                // mongoose always passes these
+                ["", 201],
+                ["0", 201]
+            ];
+            ApiServer.post("/api/v1/schemas")
+            .send(schema).expect(201, function(err, res) {
+                async.map(entities, function(e, cb) {
+                    var entity = { digits : e[0] };
+                    var code = e[1];
+                    ApiServer.post("/api/v1/entities/regex_digits")
+                    .send(entity).expect(code, function(err, res) {
+                        if (err) {
+                            console.log(JSON.stringify(e));
+                        }
+                        cb(err, res);
+                    });
+                }, function(err, res) {
+                    should.not.exist(err);
+                    ApiServer.del("/api/v1/schemas/regex_digits")
+                        .expect(200, done);
+                });
+            });
+        });
+    });
 });
 

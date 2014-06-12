@@ -26,6 +26,30 @@
     var Manager = require("./manager");
     var Q = require("q");
 
+    var toRegex = function(str) {
+        try {
+            if (str instanceof RegExp) {
+                return str;
+            }
+            if (!str || str[0] != '/') {
+                return null;
+            }
+            var splits = str.split('/');
+            if (splits.length < 3 || splits[0]) {
+                return null;
+            }
+            var flags = splits.pop();
+            splits.shift();
+            var regex = splits.join("/");
+            if (!regex) {
+                return null;
+            }
+            return new RegExp(regex, flags);
+        } catch(ex) {
+        }
+        return null;
+    };
+
     // patched to prevent schema changes from causing
     // mongoose to barf.  I.e. string field changed to
     // document
@@ -51,6 +75,18 @@
                 return { };
             }
             return oldToObj.call(this, options);
+        };
+        var SchemaString = mongoose.SchemaTypes.String;
+        var oldMatch = SchemaString.prototype.match;
+        SchemaString.prototype.match = function(regExp, message) {
+            if (typeof regExp === 'string') {
+                var regex = toRegex(regExp);
+                if (!regex) {
+                    return this;
+                }
+                regExp = regex;
+            }
+            return oldMatch.call(this, regExp, message);
         };
     };
 
@@ -111,6 +147,15 @@
             var refs = SIS.UTIL_GET_OID_PATHS(mongooseSchema);
             modelObj[SIS.FIELD_REFERENCES] = refs.map(function(ref) {
                 return ref.ref;
+            });
+
+            mongooseSchema.eachPath(function(path, schemaType) {
+                if (schemaType.instance == "String" &&
+                    schemaType.options && schemaType.options.match) {
+                    if (!toRegex(schemaType.options.match)) {
+                        throw "match " + schemaType.options.match;
+                    }
+                }
             });
 
         } catch (ex) {
