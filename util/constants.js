@@ -66,6 +66,7 @@ module.exports = {
     FIELD_LOCKED_FIELDS : "locked_fields",
     FIELD_TRACK_HISTORY : "track_history",
     FIELD_REFERENCES : "_references",
+    FIELD_DESCRIPTION : "description",
 
     // schema names
     SCHEMA_SCHEMAS : "sis_schemas",

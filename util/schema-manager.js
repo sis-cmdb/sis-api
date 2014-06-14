@@ -234,6 +234,7 @@
         }, false);
 
         currentSchema[SIS.FIELD_OWNER] = sisSchema[SIS.FIELD_OWNER];
+        currentSchema[SIS.FIELD_DESCRIPTION] = sisSchema[SIS.FIELD_DESCRIPTION];
         if (SIS.FIELD_LOCKED in sisSchema) {
             currentSchema[SIS.FIELD_LOCKED] = sisSchema[SIS.FIELD_LOCKED];
         }
