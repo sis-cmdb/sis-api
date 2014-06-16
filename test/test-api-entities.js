@@ -263,4 +263,105 @@ describe('@API - Entity API', function() {
         });
     });
 
+    describe("Entity locking", function() {
+        var schema = {
+            "name":"test_locked_entity",
+            "owner" : ["sistest"],
+            "definition": {
+                "str":   "String",
+                "num":   "Number"
+            }
+        };
+        var initial = {
+            "str" : "foo",
+            "num" : 20
+        };
+        var entityId = null;
+        before(function(done) {
+            ApiServer.del("/api/v1/schemas/" + schema.name)
+                .end(function() {
+                ApiServer.post('/api/v1/schemas')
+                    .send(schema).expect(201, function(err, result) {
+                    if (err) { return done(err, result); }
+                    ApiServer.post("/api/v1/entities/test_locked_entity")
+                        .send(initial)
+                        .expect(201, function(err, res) {
+                        var entity = res.body;
+                        entityId = entity._id;
+                        should.exist(entity);
+                        should.exist(entity.str);
+                        should.exist(entity.num);
+                        should.exist(entity.sis_locked);
+                        done(err, result);
+                    });
+                });
+            });
+        });
+        it("should lock the entity", function(done) {
+            var locked = {
+                sis_locked : true
+            };
+            ApiServer.put("/api/v1/entities/test_locked_entity/" + entityId)
+                .send(locked).expect(200, function(err, res) {
+                should.not.exist(err);
+                var entity = res.body;
+                should.exist(entity);
+                entity.str.should.eql("foo");
+                entity.num.should.eql(20);
+                /* jshint expr: true */
+                entity.sis_locked.should.be.ok;
+                done(err, res);
+            });
+        });
+        it("should fail to delete the entity", function(done) {
+            ApiServer.del("/api/v1/entities/test_locked_entity/" + entityId)
+                .expect(401, function(err, res) {
+                    done(err, res);
+                });
+        });
+        it("should update the entity", function(done) {
+            var data = {
+                str : "bar",
+                num : 10
+            };
+            ApiServer.put("/api/v1/entities/test_locked_entity/" + entityId)
+                .send(data).expect(200, function(err, res) {
+                should.not.exist(err);
+                var entity = res.body;
+                should.exist(entity);
+                entity.str.should.eql("bar");
+                entity.num.should.eql(10);
+                /* jshint expr: true */
+                entity.sis_locked.should.be.ok;
+                done(err, res);
+            });
+        });
+        it("should unlock the entity", function(done) {
+            var data = {
+                sis_locked : false
+            };
+            ApiServer.put("/api/v1/entities/test_locked_entity/" + entityId)
+                .send(data).expect(200, function(err, res) {
+                should.not.exist(err);
+                var entity = res.body;
+                should.exist(entity);
+                entity.str.should.eql("bar");
+                entity.num.should.eql(10);
+                /* jshint expr: true */
+                entity.sis_locked.should.not.be.ok;
+                done(err, res);
+            });
+        });
+        it("should delete the entity", function(done) {
+            ApiServer.del("/api/v1/entities/test_locked_entity/" + entityId)
+            .expect(200, function(err, res) {
+                done(err, res);
+            });
+        });
+        after(function(done) {
+            ApiServer.del("/api/v1/schemas/" + schema.name)
+                      .expect(200, done);
+        });
+    });
+
 });

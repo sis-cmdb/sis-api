@@ -148,10 +148,10 @@
 
     EntityManager.prototype.authorize = function(evt, doc, user, mergedDoc) {
         if (!this.authEnabled) {
-            return Q(mergedDoc || doc);
+            return Manager.prototype.authorize.call(this, evt, doc, user, mergedDoc);
         }
         if (user[SIS.FIELD_SUPERUSER]) {
-            return Q(mergedDoc || doc);
+            return Manager.prototype.authorize.call(this, evt, doc, user, mergedDoc);
         }
         // authorize against entity subset or schema
         var ownerSubset = getOwnerSubset(user, this.schema);

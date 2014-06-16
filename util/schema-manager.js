@@ -362,6 +362,7 @@
         definition[SIS.FIELD_UPDATED_AT] = { "type" : "Number" };
         definition[SIS.FIELD_CREATED_BY] = { "type" : "String" };
         definition[SIS.FIELD_UPDATED_BY] = { "type" : "String" };
+        definition[SIS.FIELD_LOCKED] = { type : "Boolean", required : true, "default" : false };
 
         return this.mongoose.Schema(definition, { collection : sisSchema.name });
     };

@@ -52,7 +52,8 @@ module.exports.schemas = [
             retry_delay : { type : "Number", min : 1, max : 60, "default" : 1 },
             events : { type : [{ type : "String", enum : SIS.EVENTS_ENUM }], required : true },
             owner : { type : ["String"] },
-            entity_type : "String"
+            entity_type : { type: "String", required: true },
+            sis_locked : { type : "Boolean", required : true, "default" : false },
         }
     },
     // sis_hiera
