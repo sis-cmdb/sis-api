@@ -22,7 +22,6 @@ var SIS = require("../util/constants");
 var Q = require('q');
 var passport = require("passport");
 var webUtil = require("./webutil");
-var async = require('async');
 
 // Constructor for the ApiController base
 // The controller base attaches to an express app and
@@ -246,20 +245,21 @@ ApiController.prototype.delete = function(req, res) {
                 .then(function(items) {
                     var memo = { success : [], errors : [] };
                     if (!items.length) { return Q(memo); }
-                    var d = Q.defer();
-                    async.map(items, function(item, cb) {
-                        mgr.delete(item[mgr.idField], req.user, function(err, i) {
-                            if (err) {
+                    var promises = items.map(function(item) {
+                        var d = Q.defer();
+                        mgr.delete(item[mgr.idField], req.user)
+                            .then(function(result) {
+                                memo.success.push(item);
+                                d.resolve(memo);
+                            }, function(err) {
                                 memo.errors.push({err : err, value : item });
-                            } else {
-                                memo.success.push(i);
-                            }
-                            cb(null, memo);
-                        });
-                    }, function() {
-                        d.resolve(memo);
+                                d.resolve(memo);
+                            });
+                        return d.promise;
                     });
-                    return d.promise;
+                    return Q.all(promises).then(function() {
+                        return Q(memo);
+                    });
                 });
             });
         });
@@ -296,21 +296,22 @@ ApiController.prototype.add = function(req, res) {
     if (req.params.isBulk) {
         p = p.then(function(mgr) {
             // async try to add everything
-            var d = Q.defer();
             var memo = { success : [], errors : [] };
-            async.map(body, function(obj, cb) {
-                mgr.add(obj, req.user, function(err, res) {
-                    if (err) {
-                        memo.errors.push({ err : err, value : obj });
-                    } else {
-                        memo.success.push(res);
-                    }
-                    cb(null, memo);
+            var promises = body.map(function(obj) {
+                var d = Q.defer();
+                mgr.add(obj, req.user)
+                .then(function(result) {
+                    memo.success.push(result);
+                    d.resolve(memo);
+                }, function(err) {
+                    memo.errors.push({err : err, value : obj});
+                    d.resolve(memo);
                 });
-            }, function(err, res) {
-                d.resolve(memo);
+                return d.promise;
             });
-            return d.promise;
+            return Q.all(promises).then(function() {
+                return Q(memo);
+            });
         });
         p = p.then(function(result) {
             if (result.errors.length &&
@@ -320,14 +321,18 @@ ApiController.prototype.add = function(req, res) {
                     return Q(result);
                 }
                 // delete the ones that were added.
-                var d = Q.defer();
-                async.map(result.success, function(item, cb) {
-                    item.remove(cb);
-                }, function(err, removed) {
-                    result.success = [];
-                    d.resolve(result);
+                // TODO: single bulk op on mongo
+                var promises = result.success.map(function(toDelete) {
+                    var d = Q.defer();
+                    toDelete.remove(function() {
+                        d.resolve(true);
+                    });
+                    return d.promise;
                 });
-                return d.promise;
+                return Q.all(promises).then(function() {
+                    result.success = [];
+                    return Q(result);
+                });
             } else {
                 return Q(result);
             }
@@ -390,9 +395,13 @@ ApiController.prototype._wrapAuth = function(func) {
         }
         var p = this.authenticate(req, res, SIS.SCHEMA_TOKENS);
         var self = this;
-        Q.nodeify(p, function(err, auth) {
-            if (err) { return self.sendError(res, err); }
+        p.then(function(auth) {
             func.call(self, req, res);
+        }, function(err) {
+            return self.sendError(res, err);
+        })
+        .catch(function(err) {
+            return self.sendError(res, SIS.ERR_INTERNAL(err));
         });
     }.bind(this);
 };
@@ -496,10 +505,8 @@ ApiController.prototype._getSendCallback = function(req, res, code) {
                 self.hm.dispatchHooks(orig, hookType, hookEvt);
             } else {
                 var success = orig.success;
-                async.map(success, function(e, item) {
+                success.forEach(function(item) {
                     self.hm.dispatchHooks(item, hookType, hookEvt);
-                }, function() {
-                    // noop
                 });
             }
         }
@@ -546,21 +553,20 @@ ApiController.prototype._saveCommit = function(req) {
         }
 
         if (req.params.isBulk) {
-            var d = Q.defer();
             var items = result.success;
             if (items.length) {
                 // just need to write all commits
-                async.map(items, function(item, cb) {
-                    var p = self._saveSingleCommit(req, item);
-                    Q.nodeify(p, cb);
-                }, function(err, res) {
-                    // don't care fr now
-                    d.resolve(result);
+                var promises = items.map(function(item) {
+                    return self._saveSingleCommit(req, item);
+                });
+                return Q.all(promises).then(function() {
+                    return Q(result);
+                }, function() {
+                    return Q(result);
                 });
             } else {
-                d.resolve(result);
+                return Q(result);
             }
-            return d.promise;
         } else {
             return self._saveSingleCommit(req, result);
         }
@@ -572,7 +578,14 @@ ApiController.prototype._saveCommit = function(req) {
 // request handler
 ApiController.prototype._finish = function(req, res, p, code) {
     p = p.then(this._saveCommit(req));
-    return Q.nodeify(p, this._getSendCallback(req, res, code));
+    var cb = this._getSendCallback(req, res, code);
+    p.then(function(result) {
+        cb(null, result);
+    })
+    .catch(function(err) {
+        cb(err);
+    })
+    .done();
 };
 
 

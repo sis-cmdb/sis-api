@@ -19,14 +19,13 @@
     'use strict';
     // node http lib
     var http = require('http');
-    // async js for parallel hook exec
-    var async = require('async');
     // simplified http req
     var request = require('request');
 
 
     var SIS = require('./constants');
     var Manager = require("./manager");
+    var Q = require("q");
 
     /////////////////////////////////
     // Hook Manager
@@ -71,26 +70,26 @@
     };
     /////////////////////////////////
 
-    var sendRequest = function(options, retry_count, delay, callback) {
+    var sendRequest = function(options, retry_count, delay, d) {
         request(options, function(err, res) {
             if (err || !res || res.statusCode >= 300) {
                 if (retry_count <= 0) {
                     // done with error
-                    return callback(SIS.ERR_INTERNAL(err), null);
+                    return d.reject(SIS.ERR_INTERNAL(err));
                 } else {
                     // retry
                     setTimeout(function() {
-                        sendRequest(options, retry_count - 1, delay, callback);
+                        sendRequest(options, retry_count - 1, delay, d);
                     }, delay * 1000);
                 }
             } else {
                 // success!
-                return callback(null, res.body);
+                return d.resolve(res.body);
             }
         });
     };
 
-    var dispatchHook = function(hook, entity, event, callback) {
+    var dispatchHook = function(hook, entity, event) {
         if (typeof entity.toObject === 'function') {
             entity = entity.toObject();
         }
@@ -115,7 +114,9 @@
         } else {
             options.json = data;
         }
-        sendRequest(options, hook.retry_count || 0, hook.retry_delay || 1, callback);
+        var d = Q.defer();
+        sendRequest(options, hook.retry_count || 0, hook.retry_delay || 1, d);
+        return d.promise;
     };
 
     // hook dispatching methods
@@ -134,9 +135,14 @@
             if (err) {
                 callback(SIS.ERR_NOT_FOUND(err), null);
             } else {
-                async.map(hooks, function(hook, cb) {
-                    dispatchHook(hook, entity, event, cb);
-                }, callback);
+                var promises = hooks.map(function(hook) {
+                    return dispatchHook(hook, entity, event);
+                });
+                Q.all(promises).then(function(res) {
+                    callback(null, res);
+                }, function(err) {
+                    callback(err);
+                });
             }
         });
     };

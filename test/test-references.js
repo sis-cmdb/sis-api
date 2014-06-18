@@ -182,6 +182,7 @@ describe('@API - Entity References', function() {
                     var id = result._id;
                     req.get("/api/v1/entities/ref_2/" + id)
                         .expect(200, function(e, r) {
+                            should.not.exist(e);
                             result = r.body;
                             should.exist(result.refs);
                             should.exist(result.refs[0]);
@@ -250,6 +251,47 @@ describe('@API - Entity References', function() {
                 });
             });
         });
+    });
+
+    describe("Non existent schemas", function() {
+
+        var schema1 = {
+            name : "test_populate_schema_1",
+            owner : ["sistest"],
+            definition : {
+                name : "String",
+                other : { type : "ObjectId", ref : "test_populate_schema_2" }
+            }
+        };
+
+        var schema2 = {
+            name : "test_populate_schema_2",
+            owner : ["sistest"],
+            definition : {
+                name : "String"
+            }
+        };
+
+        before(function(done) {
+            addSchema(schema1, function(err, res) {
+                if (err) { return done(err); }
+                // add an entity
+                ApiServer.post("/api/v1/entities/test_populate_schema_1")
+                    .send({ name : "test"}).expect(201, done);
+            });
+        });
+
+        it("should fetch entities without test_populate_schema_2", function(done) {
+            ApiServer.get("/api/v1/entities/test_populate_schema_1")
+                .expect(200, function(err, res) {
+                should.not.exist(err);
+                res = res.body;
+                res.should.be.instanceof(Array);
+                res.length.should.eql(1);
+                done();
+            });
+        });
+
     });
 
 });

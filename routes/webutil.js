@@ -23,7 +23,6 @@
     var SIS = require("../util/constants");
     var Q = require("q");
     var util = require("util");
-    var async = require('async');
 
     // authorization using user and pass via the user manager
     var _verifyUserPass = function(user, pass, done) {
@@ -143,13 +142,13 @@
         return idObj._id.toString();
     };
 
-    var getQueryIdsCallback = function(callback) {
+    var getQueryIdsCallback = function(d) {
         return function(e, ids) {
             if (e) {
-                return callback(SIS.ERR_INTERNAL(e), null);
+                return d.reject(SIS.ERR_INTERNAL(e));
             }
             ids = ids.map(stripOutId);
-            callback(null, ids);
+            d.resolve(ids);
         };
     };
 
@@ -159,7 +158,7 @@
         return result;
     };
 
-    // provides callback with an array of object ids that match a given condition
+    // returns a promise for an array of object ids that match a given condition
     // at the model's schemaPath.  remainingPath is the path left over
     // in the query.
     // for instance, a query for ref_field.num - schema path would be
@@ -167,24 +166,25 @@
     // the model that knows about the ref_field and which other model it
     // belongs to.
     var getObjectIds = function(schemaPath, condition, remainingPath,
-                                sm, model, callback) {
+                                sm, model) {
         // get the ObjectId schemaType from mongoose
         var oidType = model.schema.path(schemaPath);
         var opts = oidType.options;
         if (!opts || !opts.ref) {
             // just return an empty array
-            return callback(null, []);
+            return Q([]);
         }
+        var d = Q.defer();
         sm.getEntityModelAsync(opts.ref, function(err, sisModel) {
             if (err) {
-                return callback(err, null);
+                return d.reject(err);
             }
             // need to check if the remainingPath is another reference
             // or the actual path
             var path = sisModel.schema.path(remainingPath);
             if (path) {
                 // we can query this since it is a property of the model
-                sisModel.find(getFindCond(remainingPath, condition), '_id', getQueryIdsCallback(callback));
+                sisModel.find(getFindCond(remainingPath, condition), '_id', getQueryIdsCallback(d));
             } else {
                 // need to see if we're looking to join another set of object ids
                 var references = SIS.UTIL_GET_OID_PATHS(sisModel.schema).filter(function(ref) {
@@ -195,53 +195,55 @@
                 if (!references.length) {
                     // no object ids referenced by this nested model, so the
                     // path is invalid.. bail
-                    return callback(null, []);
+                    return d.resolve([]);
                 } else {
-                    // recursive call to getObjectIds callback
-                    var getRecursionCallback = function(ref, cb) {
-                        return function(e, ids) {
-                            if (e) {
-                                return cb(e, null);
-                            } else if (!ids.length) {
-                                return cb(null, ids);
-                            } else if (ids.length == 1) {
-                                // no need for $in
-                                sisModel.find(getFindCond(ref, ids[0]), '_id',
-                                              getQueryIdsCallback(cb));
-                            } else {
-                                // need in..
-                                sisModel.find(getFindCond(ref, { "$in" : ids }), '_id',
-                                              getQueryIdsCallback(cb));
-                            }
-                        };
-                    };
                     // find out which reference matches the remainingPath
                     var found = false;
+                    path = null;
+                    var ref = null;
                     for (var i = 0; i < references.length; ++i) {
-                        var ref = references[i];
+                        ref = references[i];
                         path = ref + ".";
                         if (remainingPath.indexOf(path) === 0) {
                             found = true;
-                            // if it's path._id then we can just query this
-                            if (remainingPath == path + "_id") {
-                                sisModel.find(getFindCond(remainingPath, condition), '_id',
-                                              getQueryIdsCallback(callback));
-                            } else {
-                                // nested so we need to get the ids and then
-                                // issue an $in query for this path
-                                var nestedRemain = remainingPath.substring(path.length);
-                                getObjectIds(references[i], condition, nestedRemain,
-                                             sm, sisModel, getRecursionCallback(ref, callback));
-                            }
+                            break;
                         }
                     }
-                    if (!found) {
+                    if (found) {
+                        // if it's path._id then we can just query this
+                        if (remainingPath == path + "_id") {
+                            sisModel.find(getFindCond(remainingPath, condition), '_id',
+                                          getQueryIdsCallback(d));
+                        } else {
+                            // nested so we need to get the ids and then
+                            // issue an $in query for this path
+                            var nestedRemain = remainingPath.substring(path.length);
+                            var inner = getObjectIds(references[i], condition, nestedRemain,
+                                                     sm, sisModel);
+                            inner.then(function(ids) {
+                                if (!ids.length) {
+                                    d.resolve(ids);
+                                } else if (ids.length == 1) {
+                                    // no need for $in
+                                    sisModel.find(getFindCond(ref, ids[0]), '_id',
+                                                  getQueryIdsCallback(d));
+                                } else {
+                                    // need in..
+                                    sisModel.find(getFindCond(ref, { "$in" : ids }), '_id',
+                                                  getQueryIdsCallback(d));
+                                }
+                            }, function(err) {
+                                d.reject(err);
+                            });
+                        }
+                    } else {
                         // path is invalid.  just return empty
-                        return callback(null, []);
+                        return d.resolve([]);
                     }
                 }
             }
         });
+        return d.promise;
     };
 
     var addIdsToFlattenedCondition = function(flattened, path, ids) {
@@ -320,41 +322,35 @@
             }
         }
         if (found) {
-            var d = Q.defer();
             // need to flatten the condition
             // convert all keys in the fieldToPath to
             // path => [id]
             var fieldKeys = Object.keys(fieldToPath);
-            async.map(fieldKeys, function(key, callback) {
+            var promises = fieldKeys.map(function(key) {
                 var schemaPath = fieldToPath[key][0];
                 var cond = fieldToPath[key][1];
                 var remainingPath = key.substring(schemaPath.length + 1);
-                getObjectIds(schemaPath, cond, remainingPath,
-                             schemaManager, mgr.model, callback);
-            }, function(err, results) {
-                // results is an array of tuples key -> condition
-                if (err) {
-                    d.reject(err);
-                } else {
-                    var refConds = {};
-                    for (var i = 0; i < results.length; ++i) {
-                        var key = fieldKeys[i];
-                        var path = fieldToPath[key][0];
-                        var ids = results[i];
-                        addIdsToFlattenedCondition(refConds, path, ids);
-                    }
-                    for (var k in refConds) {
-                        var v = refConds[k];
-                        if (v instanceof Array) {
-                            flattened[k] = { "$in" : v };
-                        } else {
-                            flattened[k] = v;
-                        }
-                    }
-                    d.resolve(flattened);
-                }
+                return getObjectIds(schemaPath, cond, remainingPath,
+                                    schemaManager, mgr.model);
             });
-            return d.promise;
+            return Q.all(promises).then(function(results) {
+                var refConds = {};
+                for (var i = 0; i < results.length; ++i) {
+                    var key = fieldKeys[i];
+                    var path = fieldToPath[key][0];
+                    var ids = results[i];
+                    addIdsToFlattenedCondition(refConds, path, ids);
+                }
+                for (var k in refConds) {
+                    var v = refConds[k];
+                    if (v instanceof Array) {
+                        flattened[k] = { "$in" : v };
+                    } else {
+                        flattened[k] = v;
+                    }
+                }
+                return Q(flattened);
+            });
         } else {
             return Q(condition);
         }

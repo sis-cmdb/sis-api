@@ -20,7 +20,6 @@
 
 var Q = require('q');
 var SIS = require('./constants');
-var async = require('async');
 
 // Constructor for a Manager base
 // A manager is responsible for communicating with
@@ -87,29 +86,48 @@ Manager.prototype.count = function(condition, callback) {
 
 // Populate the object/array of objects one level deep
 Manager.prototype.populate = function(toPopulate, schemaManager) {
-    var fields = this._getPopulateFields();
-    if (!fields) {
+    var schemaNameToPaths = this._getPopulateFields();
+    if (!schemaNameToPaths) {
         return Q(toPopulate);
     }
-    // ensure the fields exist
-    var refs = this.references;
-    var refsToLoad = [];
-    refs.forEach(function(ref) {
-        if (!schemaManager.hasEntityModel(ref)) {
-            refsToLoad.push(ref);
-        }
-    });
-    var d = Q.defer();
-    var self = this;
-    if (!refsToLoad.length) {
+    // ensure the schemas exist
+    var schemasToLoad = Object.keys(schemaNameToPaths)
+        .filter(function(schemaName) {
+            return !schemaManager.hasEntityModel(schemaName);
+        });
+
+    if (!schemasToLoad.length) {
+        var d = Q.defer();
+        var fields = this._getFieldsFromPopulateObject(schemaNameToPaths);
         this.model.populate(toPopulate, fields, this._getModCallback(d));
+        return d.promise;
     } else {
-        async.map(refsToLoad, schemaManager.getEntityModelAsync.bind(schemaManager),
-        function(err, res) {
-            self.model.populate(toPopulate, fields, self._getModCallback(d));
+        var self = this;
+        // need to try loading up some schemas
+        // as they may be available due to DB replication
+        var loadPromises = schemasToLoad.map(function(schemaName) {
+            var loadDefer = Q.defer();
+            schemaManager.getEntityModelAsync(schemaName).then(function() {
+                loadDefer.resolve(schemaName);
+            }, function() {
+                // err
+                delete schemaNameToPaths[schemaName];
+                loadDefer.resolve(schemaName);
+            });
+            return loadDefer.promise;
+        });
+        return Q.all(loadPromises).then(function() {
+            var d = Q.defer();
+            var loadedSchemas = Object.keys(schemaNameToPaths);
+            if (!loadedSchemas.length) {
+                d.resolve(toPopulate);
+            } else {
+                var fields = self._getFieldsFromPopulateObject(schemaNameToPaths);
+                self.model.populate(toPopulate, fields, self._getModCallback(d));
+            }
+            return d.promise;
         });
     }
-    return d.promise;
 };
 
 // get a single object by id.
@@ -366,9 +384,18 @@ Manager.prototype._getPopulateFields = function() {
     if (!this.references.length) {
         return null;
     }
-    return this.references.map(function(ref) {
-        return ref.path;
-    }).join(" ");
+    return this.references.reduce(function(result, ref) {
+        result[ref.ref] = result[ref.ref] || [];
+        result[ref.ref].push(ref.path);
+        return result;
+    }, { });
+};
+
+Manager.prototype._getFieldsFromPopulateObject = function(refToPaths) {
+    var refs = Object.keys(refToPaths);
+    return refs.reduce(function(result, ref) {
+        return result.concat(refToPaths[ref]);
+    }, []);
 };
 
 // returns a promise function that accepts a document from

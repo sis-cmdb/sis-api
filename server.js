@@ -17,6 +17,9 @@
 var express = require('express');
 var mongoose = require('mongoose');
 var bodyParser = require('body-parser');
+var Q = require("q");
+var SIS = require("./util/constants");
+
 var app = null;
 
 // routes we want to include
@@ -53,13 +56,30 @@ var defaultConfig = {
     }
 };
 
+// patch Q.js
+function doneNodeify(obj, nodeback) {
+    var promise = Q(obj);
+    if (!nodeback) {
+        return promise;
+    }
+    promise.then(function(result) {
+        nodeback(null, result);
+    })
+    .catch(function(err) {
+        // console.log("caught " + JSON.stringify(err) + " " + typeof(err));
+        nodeback(err);
+    })
+    .done();
+}
+
+Q.nodeify = doneNodeify;
+
 var startServer = function(config, callback) {
     'use strict';
 
     var passport = require("passport");
     var webUtil = require("./routes/webutil");
     var nconf = require('nconf');
-    var SIS = require('./util/constants');
 
     nconf.env('__').argv();
     nconf.defaults(config);
@@ -79,6 +99,7 @@ var startServer = function(config, callback) {
         res.send(200);
     });
     app.disable('etag');
+    app.enable('trust proxy');
 
     var opts = nconf.get('db').opts || { };
 
@@ -86,6 +107,8 @@ var startServer = function(config, callback) {
         if (err) {
             throw err;
         }
+
+        mongoose.connection.on('error', console.error.bind(console, 'MongoDB connection error:'));
 
         // express app settings
         var appConfig = nconf.get('app') || {};
@@ -106,11 +129,13 @@ var startServer = function(config, callback) {
             cfg[SIS.OPT_SCHEMA_MGR] = schemaManager;
             cfg[SIS.OPT_USE_AUTH] = app.get(SIS.OPT_USE_AUTH);
             app.set(SIS.OPT_SCHEMA_MGR, schemaManager);
+
             // setup the routes
             routes.map(function(routeName) {
                 var route = require("./routes/" + routeName);
                 route.setup(app, cfg);
             });
+
             // listen
             var httpServer = app.listen(nconf.get('server').port, function(err) {
                 if (callback) {
