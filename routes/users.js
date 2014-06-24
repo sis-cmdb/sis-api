@@ -53,7 +53,10 @@
 
     // No password hashes should be returned.
     UserController.prototype.convertToResponseObject = function(req, o) {
-        var res = o.toObject();
+        var res = o;
+        if (typeof res.toObject == 'function') {
+            res = o.toObject();
+        }
         if (req.method == "POST" && req.path == this.auth_token_path) {
             // token
             var expireDate = o[SIS.FIELD_EXPIRES];

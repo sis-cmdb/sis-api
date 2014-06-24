@@ -52,14 +52,13 @@
             var model = self.sm.getEntityModel(schema);
             var manager = createEntityManager(model, schema, self.opts);
             req.sisManager = manager;
+            self.useLean = !model.schema._sis_defaultpaths.length;
             d.resolve(manager);
         }, function(e) {
             d.reject(e);
         });
         return d.promise;
     };
-
-    EntityController.prototype.useLean = false;
 
     EntityController.prototype.shouldSaveCommit = function(req) {
         return req.sisManager &&

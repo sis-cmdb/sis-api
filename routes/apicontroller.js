@@ -51,6 +51,7 @@ function ApiController(opts) {
     if (opts[SIS.OPT_FIRE_HOOKS]) {
         this.hm = require('../util/hook-manager')(this.sm);
     }
+    this.useLean = true;
 }
 
 // overrides
@@ -178,8 +179,6 @@ var MgrPromise = function(func) {
     };
 };
 
-ApiController.prototype.useLean = true;
-
 // Handler for the getAll request (typically GET controller_base/)
 ApiController.prototype.getAll = function(req, res) {
     this.applyDefaults(req);
@@ -223,19 +222,18 @@ ApiController.prototype.get = function(req, res) {
     var id = req.params.id;
     var self = this;
     var options = { };
-    var p = this.getManager(req)
-                .then(function(mgr) {
-                    if (self.parsePopulate(req)) {
-                        return mgr.getPopulateFields(self.sm).then(function(populateFields) {
-                            if (populateFields) {
-                                options.populate = populateFields;
-                            }
-                            return mgr.getById(id, options);
-                        });
-                    } else {
-                        return mgr.getById(id);
-                    }
-                });
+    var p = this.getManager(req).then(function(mgr) {
+        if (self.parsePopulate(req)) {
+            return mgr.getPopulateFields(self.sm).then(function(populateFields) {
+                if (populateFields) {
+                    options.populate = populateFields;
+                }
+                return mgr.getById(id, options);
+            });
+        } else {
+            return mgr.getById(id);
+        }
+    });
 
     this._finish(req, res, p, 200);
 };
