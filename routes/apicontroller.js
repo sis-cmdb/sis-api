@@ -178,6 +178,8 @@ var MgrPromise = function(func) {
     };
 };
 
+ApiController.prototype.useLean = true;
+
 // Handler for the getAll request (typically GET controller_base/)
 ApiController.prototype.getAll = function(req, res) {
     this.applyDefaults(req);
@@ -189,21 +191,29 @@ ApiController.prototype.getAll = function(req, res) {
     var fields = rq.fields;
     var condition = rq.query;
     var self = this;
-    var p = this.getManager(req)
-                .then(function(mgr) {
-                    return webUtil.flattenCondition(condition,self.sm,mgr)
-                        .then(function(flattenedCondition) {
-                            return mgr.count(flattenedCondition).then(function(c) {
-                                c = c || 0;
-                                res.setHeader(SIS.HEADER_TOTAL_COUNT, c);
-                                if (!c || c < options.offset) {
-                                    return Q([]);
-                                }
-                                return mgr.getAll(flattenedCondition, options, fields)
-                                    .then(self._getPopulatePromise(req, mgr));
-                            });
+    var p = this.getManager(req).then(function(mgr) {
+        return webUtil.flattenCondition(condition,self.sm,mgr)
+            .then(function(flattenedCondition) {
+                return mgr.count(flattenedCondition).then(function(c) {
+                    c = c || 0;
+                    res.setHeader(SIS.HEADER_TOTAL_COUNT, c);
+                    if (!c || c < options.offset) {
+                        return Q([]);
+                    }
+                    options.lean = self.useLean;
+                    if (self.parsePopulate(req)) {
+                        return mgr.getPopulateFields(self.sm).then(function(populateFields) {
+                            if (populateFields) {
+                                options.populate = populateFields;
+                            }
+                            return mgr.getAll(flattenedCondition, options, fields);
                         });
-                    });
+                    } else {
+                        return mgr.getAll(flattenedCondition, options, fields);
+                    }
+                });
+            });
+        });
     this._finish(req, res, p, 200);
 };
 
@@ -212,9 +222,19 @@ ApiController.prototype.get = function(req, res) {
     this.applyDefaults(req);
     var id = req.params.id;
     var self = this;
+    var options = { };
     var p = this.getManager(req)
                 .then(function(mgr) {
-                    return mgr.getById(id).then(self._getPopulatePromise(req, mgr));
+                    if (self.parsePopulate(req)) {
+                        return mgr.getPopulateFields(self.sm).then(function(populateFields) {
+                            if (populateFields) {
+                                options.populate = populateFields;
+                            }
+                            return mgr.getById(id, options);
+                        });
+                    } else {
+                        return mgr.getById(id);
+                    }
                 });
 
     this._finish(req, res, p, 200);
@@ -591,11 +611,11 @@ ApiController.prototype._finish = function(req, res, p, code) {
 
 // Get a function that receives objects and returns a promise
 // to populate them
-ApiController.prototype._getPopulatePromise = function(req, m) {
+ApiController.prototype._getPopulatePromise = function(req, mgr) {
     var self = this;
     return function(results) {
         if (self.parsePopulate(req)) {
-            return m.populate(results, self.sm);
+            return mgr.populate(results, self.sm);
         } else {
             return Q(results);
         }

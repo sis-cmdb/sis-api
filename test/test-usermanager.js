@@ -293,7 +293,7 @@ describe('User Manager', function() {
                     } else {
                         copy.roles[group] = role;
                     }
-                    userManager.getById(u2.name, function(e1, o1) {
+                    userManager.getById(u2.name).done(function(o1) {
                         userManager.update(u2.name, copy, u1, function(err, obj) {
                             if (pass) {
                                 obj = validateUpdate(err, obj);
@@ -308,7 +308,7 @@ describe('User Manager', function() {
                                     });
                                 } else {
                                     obj.roles[group].should.eql(role);
-                                    userManager.getById(obj.name, function(e, o) {
+                                    userManager.getById(obj.name).done(function(o) {
                                         o.toObject().should.eql(obj.toObject());
                                         // revert
                                         delete copy.roles[group];

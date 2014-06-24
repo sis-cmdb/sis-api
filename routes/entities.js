@@ -36,7 +36,6 @@
         SIS.UTIL_MERGE_SHALLOW(opts, config);
         this.opts = opts;
         ApiController.call(this, this.opts);
-        this.managerCache = { };
     }
 
     // inherit
@@ -49,19 +48,18 @@
         var name = this.getType(req);
         var self = this;
         var d = Q.defer();
-        this.sm.getById(name, function(e, schema) {
-            if (e) {
-                d.reject(e);
-            } else {
-                var model = self.sm.getEntityModel(schema);
-                var manager = createEntityManager(model, schema.toObject(), self.opts);
-                self.managerCache[name] = manager;
-                req.sisManager = manager;
-                d.resolve(manager);
-            }
+        this.sm.getById(name, { lean : true }).done(function(schema) {
+            var model = self.sm.getEntityModel(schema);
+            var manager = createEntityManager(model, schema, self.opts);
+            req.sisManager = manager;
+            d.resolve(manager);
+        }, function(e) {
+            d.reject(e);
         });
         return d.promise;
     };
+
+    EntityController.prototype.useLean = false;
 
     EntityController.prototype.shouldSaveCommit = function(req) {
         return req.sisManager &&

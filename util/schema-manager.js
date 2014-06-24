@@ -88,6 +88,8 @@
             }
             return oldMatch.call(this, regExp, message);
         };
+
+        //
     };
 
     function SchemaManager(mongoose, opts) {
@@ -321,7 +323,7 @@
     SchemaManager.prototype.getEntityModelAsync = function(name, callback) {
         var d = Q.defer();
         var self = this;
-        this.model.findOne({name: name}, function(err, schema) {
+        this.model.findOne({name: name}, null, { lean : true }, function(err, schema) {
             if (err) {
                 d.reject(SIS.ERR_BAD_REQ("Schema not found with name " + name));
             } else {
@@ -368,18 +370,16 @@
     };
 
     // wrap this so we can handle the error case
-    SchemaManager.prototype.getById = function(id, callback) {
+    SchemaManager.prototype.getById = function(id, options) {
         var d = Q.defer();
         var self = this;
-        Manager.prototype.getById.call(this, id, function(err, result) {
-            if (err) {
-                self._invalidateSchema(id);
-                d.reject(err);
-            } else {
-                d.resolve(result);
-            }
+        Manager.prototype.getById.call(this, id, options).done(function(result) {
+            d.resolve(result);
+        }, function(err) {
+            self._invalidateSchema(id);
+            d.reject(err);
         });
-        return Q.nodeify(d.promise, callback);
+        return d.promise;
     };
 
     // get a mongoose model back based on the sis schema
@@ -410,6 +410,16 @@
                 this[SIS.FIELD_UPDATED_AT] = Date.now();
                 next();
             });
+
+            // precalculate sis data and store on the schema
+            schema._sis_references = SIS.UTIL_GET_OID_PATHS(schema);
+            var pathsWithDefaultVal = [];
+            schema.eachPath(function(pathName, schemaType) {
+                if (schemaType.default()) {
+                    pathsWithDefaultVal.push(pathName);
+                }
+            });
+            schema._sis_defaultpaths = pathsWithDefaultVal;
 
             if ('indexes' in sisSchema) {
                 for (var i = 0; i < sisSchema.indexes.length; ++i) {

@@ -271,7 +271,8 @@
     };
 
     EntityManager.prototype.ensureReferences = function(obj) {
-        if (!this.references.length || !obj) {
+        var references = this.getReferences();
+        if (!references.length || !obj) {
             return Q(obj);
         }
         // convert to POJO
@@ -281,7 +282,7 @@
         }
         // ensure the references exist
         var self = this;
-        var promises = this.references.map(function(ref) {
+        var promises = references.map(function(ref) {
             return self.getEnsureReferencePromise(ref, obj);
         });
         return Q.all(promises).then(function() {

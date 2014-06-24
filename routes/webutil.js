@@ -85,6 +85,8 @@
                 }
             }
             return userManager.getById(t[SIS.FIELD_USERNAME]);
+        }, function(e) {
+            return Q.reject(e);
         });
         return Q.nodeify(p, done);
     };
@@ -281,15 +283,16 @@
     // "flatten" a query to deal with all joins
     // returns a promise for the flattened query
     module.exports.flattenCondition = function(condition, schemaManager, mgr) {
+        var references = mgr.getReferences();
         if (!condition || typeof condition !== 'object' ||
-            !mgr.references || !mgr.references.length) {
+            !references || !references.length) {
             return Q(condition);
         }
         var keys = Object.keys(condition);
         if (!keys.length) {
             return Q(condition);
         }
-        var paths = mgr.references.filter(function(ref) {
+        var paths = references.filter(function(ref) {
             return ref.type != 'arr';
         }).map(function(ref) {
             return ref.path;

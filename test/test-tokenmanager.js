@@ -71,18 +71,16 @@ describe('Token Manager', function() {
                     should.exist(token);
                     'admin1'.should.eql(token[SIS.FIELD_USERNAME]);
                     setTimeout(function() {
-                        tokenManager.getById(token.name, function(e, token) {
-                            should.not.exist(e);
+                        tokenManager.getById(token.name).done(function(token) {
                             should.exist(token);
                             'admin1'.should.eql(token[SIS.FIELD_USERNAME]);
-                        });
+                        }, function(err) { done(err); });
                     }, 70000);
                     setTimeout(function() {
-                        tokenManager.getById(token.name, function(e, token) {
+                        tokenManager.getById(token.name).done(function(token) {
                             should.not.exist(token);
-                            should.exist(e);
                             done();
-                        });
+                        }, function(e) { done(e); });
                     }, 185000);
                 });
             });
@@ -216,10 +214,12 @@ describe('Token Manager', function() {
                 userManager.delete(u2[SIS.FIELD_NAME], u1, function(e, u) {
                     should.not.exist(e);
                     should.exist(u);
-                    tokenManager.getAll({username : u[SIS.FIELD_NAME]}, null, null, function(e, res) {
-                        should.not.exist(e);
+                    tokenManager.getAll({username : u[SIS.FIELD_NAME]}, null, null)
+                    .done(function(res) {
                         res.length.should.eql(0);
                         done();
+                    }, function(err) {
+                        done(err);
                     });
                 });
             });

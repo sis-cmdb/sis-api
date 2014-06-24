@@ -51,14 +51,12 @@ var jsonFile = process.argv[3];
 var user = JSON.parse(fs.readFileSync(jsonFile, 'utf8'));
 
 function updateUser(userManager, user, callback) {
-    userManager.getById(user.name, function(err, u) {
-        if (err) {
-            // user does not exist.
-            userManager.add(user, self, callback);
-        } else {
-            // user exists
-            userManager.update(u.name, user, self, callback);
-        }
+    userManager.getById(user.name).done(function(u) {
+        // user exists
+        userManager.update(u.name, user, self, callback);
+    }, function(err) {
+        // user does not exist.
+        userManager.add(user, self, callback);
     });
 }
 

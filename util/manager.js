@@ -38,9 +38,11 @@ function Manager(model, opts) {
     this.idField = opts[SIS.OPT_ID_FIELD] || SIS.FIELD_NAME;
     this.type = opts[SIS.OPT_TYPE] || this.model.modelName;
     this.authEnabled = SIS.OPT_USE_AUTH in opts ? opts[SIS.OPT_USE_AUTH] : SIS.DEFAULT_OPT_USE_AUTH;
-    // objects this manager refers to
-    this.references = SIS.UTIL_GET_OID_PATHS(this.model.schema);
 }
+
+Manager.prototype.getReferences = function() {
+    return this.model.schema._sis_references;
+};
 
 // return a string if validation fails
 Manager.prototype.validate = function(obj, isUpdate) {
@@ -65,10 +67,10 @@ Manager.prototype.objectRemoved = function(obj) {
 
 /** Common methods - rare to override these **/
 // get all the objects belonging to the model.
-Manager.prototype.getAll = function(condition, options, fields, callback) {
+Manager.prototype.getAll = function(condition, options, fields) {
     var d = Q.defer();
     this.model.find(condition, fields, options, this._getFindCallback(d, null));
-    return Q.nodeify(d.promise, callback);
+    return d.promise;
 };
 
 // Count the number of objects specified by the query
@@ -84,11 +86,10 @@ Manager.prototype.count = function(condition, callback) {
     return d.promise;
 };
 
-// Populate the object/array of objects one level deep
-Manager.prototype.populate = function(toPopulate, schemaManager) {
+Manager.prototype.getPopulateFields = function(schemaManager) {
     var schemaNameToPaths = this._getPopulateFields();
     if (!schemaNameToPaths) {
-        return Q(toPopulate);
+        return Q(null);
     }
     // ensure the schemas exist
     var schemasToLoad = Object.keys(schemaNameToPaths)
@@ -97,10 +98,8 @@ Manager.prototype.populate = function(toPopulate, schemaManager) {
         });
 
     if (!schemasToLoad.length) {
-        var d = Q.defer();
         var fields = this._getFieldsFromPopulateObject(schemaNameToPaths);
-        this.model.populate(toPopulate, fields, this._getModCallback(d));
-        return d.promise;
+        return Q(fields);
     } else {
         var self = this;
         // need to try loading up some schemas
@@ -120,27 +119,73 @@ Manager.prototype.populate = function(toPopulate, schemaManager) {
             var d = Q.defer();
             var loadedSchemas = Object.keys(schemaNameToPaths);
             if (!loadedSchemas.length) {
-                d.resolve(toPopulate);
+                d.resolve(null);
             } else {
                 var fields = self._getFieldsFromPopulateObject(schemaNameToPaths);
-                self.model.populate(toPopulate, fields, self._getModCallback(d));
+                d.resolve(fields);
             }
             return d.promise;
         });
     }
 };
 
+// // Populate the object/array of objects one level deep
+// Manager.prototype.populate = function(toPopulate, schemaManager) {
+//     var schemaNameToPaths = this._getPopulateFields();
+//     if (!schemaNameToPaths) {
+//         return Q(toPopulate);
+//     }
+//     // ensure the schemas exist
+//     var schemasToLoad = Object.keys(schemaNameToPaths)
+//         .filter(function(schemaName) {
+//             return !schemaManager.hasEntityModel(schemaName);
+//         });
+
+//     if (!schemasToLoad.length) {
+//         var d = Q.defer();
+//         var fields = this._getFieldsFromPopulateObject(schemaNameToPaths);
+//         this.model.populate(toPopulate, fields, this._getModCallback(d));
+//         return d.promise;
+//     } else {
+//         var self = this;
+//         // need to try loading up some schemas
+//         // as they may be available due to DB replication
+//         var loadPromises = schemasToLoad.map(function(schemaName) {
+//             var loadDefer = Q.defer();
+//             schemaManager.getEntityModelAsync(schemaName).then(function() {
+//                 loadDefer.resolve(schemaName);
+//             }, function() {
+//                 // err
+//                 delete schemaNameToPaths[schemaName];
+//                 loadDefer.resolve(schemaName);
+//             });
+//             return loadDefer.promise;
+//         });
+//         return Q.all(loadPromises).then(function() {
+//             var d = Q.defer();
+//             var loadedSchemas = Object.keys(schemaNameToPaths);
+//             if (!loadedSchemas.length) {
+//                 d.resolve(toPopulate);
+//             } else {
+//                 var fields = self._getFieldsFromPopulateObject(schemaNameToPaths);
+//                 self.model.populate(toPopulate, fields, self._getModCallback(d));
+//             }
+//             return d.promise;
+//         });
+//     }
+// };
+
 // get a single object by id.
-Manager.prototype.getById = function(id, callback) {
+Manager.prototype.getById = function(id, options) {
     var q = {}; q[this.idField] = id;
-    return this.getSingleByCondition(q, id, callback);
+    return this.getSingleByCondition(q, id, options);
 };
 
 // Get a single object that has certain properties.
-Manager.prototype.getSingleByCondition = function(condition, name, callback) {
+Manager.prototype.getSingleByCondition = function(condition, name, options) {
     var d = Q.defer();
-    this.model.findOne(condition, this._getFindCallback(d, name));
-    return Q.nodeify(d.promise, callback);
+    this.model.findOne(condition, null, options, this._getFindCallback(d, name));
+    return d.promise;
 };
 
 // Authorize a user to operate on a particular document
@@ -381,10 +426,11 @@ Manager.prototype._getModCallback = function(d) {
 
 // Get the fields that need populating
 Manager.prototype._getPopulateFields = function() {
-    if (!this.references.length) {
+    var references = this.getReferences();
+    if (!references.length) {
         return null;
     }
-    return this.references.reduce(function(result, ref) {
+    return references.reduce(function(result, ref) {
         result[ref.ref] = result[ref.ref] || [];
         result[ref.ref].push(ref.path);
         return result;

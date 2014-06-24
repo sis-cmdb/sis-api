@@ -59,7 +59,9 @@
                 if (timeLeft <= 0) {
                     timeLeft = 0;
                 }
-                token = token.toObject();
+                if (typeof token.toObject === "function") {
+                    token = token.toObject();
+                }
                 token[SIS.FIELD_EXPIRES] = timeLeft;
             }
             return token;

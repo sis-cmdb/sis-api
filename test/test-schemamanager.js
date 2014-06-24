@@ -242,8 +242,11 @@ describe('SchemaManager', function() {
 
     it("Should no longer exist ", function(done) {
       // ensure it is null
-      schemaManager.getById(schemaName, function(err, result) {
-        should.not.exist(result);
+      schemaManager.getById(schemaName)
+      .done(function(result) {
+        done(result);
+      }, function(err) {
+        // expect it to not exist
         done();
       });
     });
@@ -316,16 +319,15 @@ describe('SchemaManager', function() {
         should.exist(updated.definition);
         should.exist(updated.definition.newBool);
         should.not.exist(updated.definition.num);
-        schemaManager.getById(schema.name, function(e,o) {
+        schemaManager.getById(schema.name).done(function(o) {
             updated.toObject().should.eql(o.toObject());
             done();
-        });
+        }, function(e) { done(e); });
       });
     });
 
     it("Should retrieve the existing entity", function(done) {
-      schemaManager.getById(schema.name, function(err, entitySchema) {
-        should.not.exist(err);
+      schemaManager.getById(schema.name).done(function(entitySchema) {
         var EntityType = schemaManager.getEntityModel(entitySchema);
         EntityType.findOne({"_id" : savedEntity._id}, function(err, result) {
           should.not.exist(err);
@@ -334,12 +336,11 @@ describe('SchemaManager', function() {
           should.not.exist(result.num);
           done();
         });
-      });
+      }, function(err) { done(err); });
     });
 
     it("Should not save the initial entity num field " + JSON.stringify(initialEntity), function(done) {
-      schemaManager.getById(schema.name, function(err, entitySchema) {
-        should.not.exist(err);
+      schemaManager.getById(schema.name).done(function(entitySchema) {
         var EntityType = schemaManager.getEntityModel(entitySchema);
         var doc = new EntityType(initialEntity);
         var docSchema = doc.schema;
@@ -350,12 +351,11 @@ describe('SchemaManager', function() {
             should.not.exist(e.num);
             done();
         });
-      });
+      }, function(err) { done(err); });
     });
 
     it("Should save an updated entity", function(done) {
-      schemaManager.getById(schema.name, function(err, entitySchema) {
-        should.not.exist(err);
+      schemaManager.getById(schema.name).done(function(entitySchema) {
         var EntityType = schemaManager.getEntityModel(entitySchema);
         var doc = new EntityType({
           "str" : "new",
@@ -365,7 +365,7 @@ describe('SchemaManager', function() {
           "bool" : "became a string"
           });
           doc.save(done);
-      });
+      }, function(err) { done(err); });
     });
   });
 

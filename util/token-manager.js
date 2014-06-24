@@ -123,10 +123,7 @@
         var username = doc[SIS.FIELD_USERNAME];
         var d = Q.defer();
         var self = this;
-        this.sm.auth[SIS.SCHEMA_USERS].getById(username, function(e, tokenUser) {
-            if (e) {
-                return d.reject(e);
-            }
+        this.sm.auth[SIS.SCHEMA_USERS].getById(username).done(function(tokenUser) {
             if (tokenUser[SIS.FIELD_SUPERUSER] && !doc[SIS.FIELD_EXPIRES]) {
                 // super users cannot have a persistent token.  too much power
                 return d.reject(SIS.ERR_BAD_REQ("Super users cannot have persistent tokens."));
@@ -135,6 +132,8 @@
                 return d.resolve(mergedDoc || doc);
             }
             return d.reject(SIS.ERR_BAD_CREDS("Only admins of the user or the user can manage the token."));
+        }, function(e) {
+            d.reject(e);
         });
         return d.promise;
     };

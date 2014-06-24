@@ -201,9 +201,9 @@ describe('HookManager', function() {
         entity.should.have.property('name', 'test_hook');
         JSON.stringify(entity.owner).should.eql(JSON.stringify(["Test"]));
         entity.should.have.property('entity_type', 'Schema');
-        entity['target'].should.eql(hook.target);
+        entity.target.should.eql(hook.target);
 
-        JSON.stringify(entity['events']).should.eql(JSON.stringify(hook.events));
+        JSON.stringify(entity.events).should.eql(JSON.stringify(hook.events));
         done();
       });
     });
@@ -243,6 +243,7 @@ describe('HookManager', function() {
     it("Should return true if hook exists ", function(done) {
       hookManager.delete(hookName, function(err, result) {
         should.not.exist(err);
+        /* jshint expr: true */
         result.should.be.ok;
         done(err);
       });
@@ -250,8 +251,11 @@ describe('HookManager', function() {
 
     it("Should no longer exist ", function(done) {
       // ensure it is null
-      hookManager.getById(hookName, function(err, result) {
+      hookManager.getById(hookName).done(function(result) {
         should.not.exist(result);
+        done("should not exist");
+      }, function(err) {
+        // expected this
         done();
       });
     });
@@ -300,8 +304,8 @@ describe('HookManager', function() {
         updated = updated[1];
         JSON.stringify(updated.owner).should.eql(JSON.stringify(["Bob"]));
         updated.should.have.property('entity_type','EntityA');
-        updated['target'].should.eql(updatedHook.target);
-        JSON.stringify(updated['events']).should.eql(JSON.stringify(updatedHook.events));
+        updated.target.should.eql(updatedHook.target);
+        JSON.stringify(updated.events).should.eql(JSON.stringify(updatedHook.events));
 
         done();
       });

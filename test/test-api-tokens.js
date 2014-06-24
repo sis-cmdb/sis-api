@@ -121,6 +121,10 @@ describe('@API - Authorization API Tokens', function() {
                     var reqToken = userToTokens[name][0].name;
                     ApiServer.get('/api/v1/users/' + pass + '/tokens', reqToken)
                         .expect(200, function(err, res) {
+                        if (err) {
+                            console.log(JSON.stringify(err));
+                            console.log(JSON.stringify(res.body));
+                        }
                         should.not.exist(err);
                         res.body.should.be.an.instanceOf(Array);
                         done();
