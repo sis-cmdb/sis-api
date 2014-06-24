@@ -21,7 +21,7 @@ describe("Hook Dispatch", function() {
     var TestUtil = require('./fixtures/util');
     var ApiServer = new TestUtil.TestServer();
 
-    before(function(done) {
+    it("Should setup fixtures", function(done) {
         ApiServer.start(config, function(e) {
             if (e) { return done(e); }
             ApiServer.becomeSuperUser(done);
@@ -61,7 +61,7 @@ describe("Hook Dispatch", function() {
             var postCount = 0;
             hookServer.post('/hook_retry', function(req, res) {
                 should.exist(req.body);
-                if (postCount == 0) {
+                if (!postCount) {
                     postCount++;
                     res.send(400, "Need to retry.");
                 } else {
@@ -120,13 +120,13 @@ describe("Hook Dispatch", function() {
             doneCallback = doneCb;
             hook.target.action = "POST";
             hook.target.url = "http://localhost:3335/hook_retry";
-            hook['retry_count'] = 5;
-            hook['retry_delay'] = 1;
+            hook.retry_count = 5;
+            hook.retry_delay = 1;
             hook.events.push(SIS.EVENT_UPDATE);
             ApiServer.put('/api/v1/hooks/' + hook.name)
                 .send(hook).expect(200, function(err, result) {
                 if (err) { return done(err); }
-                hiera_data.hieradata['field3'] = 'foo';
+                hiera_data.hieradata.field3 = 'foo';
                 ApiServer.put("/api/v1/hiera/hiera_key")
                     .set('Content-Encoding', 'application/json')
                     .send(hiera_data)

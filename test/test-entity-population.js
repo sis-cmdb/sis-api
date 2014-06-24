@@ -22,7 +22,7 @@ describe('@API - Entity Population API', function() {
     var TestUtil = require('./fixtures/util');
     var ApiServer = new TestUtil.TestServer();
 
-    before(function(done) {
+    it("Should setup fixtures", function(done) {
         ApiServer.start(config, function(e) {
             if (e) { return done(e); }
             ApiServer.becomeSuperUser(done);

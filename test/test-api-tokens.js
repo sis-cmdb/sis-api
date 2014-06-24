@@ -14,7 +14,7 @@
 
  ***********************************************************/
 
-describe('@API - Authorization API', function() {
+describe('@API - Authorization API Tokens', function() {
     var should = require('should');
     var async = require('async');
 
@@ -25,7 +25,7 @@ describe('@API - Authorization API', function() {
 
     var ApiServer = new TestUtil.TestServer();
 
-    before(function(done) {
+    it("Should setup fixtures", function(done) {
         ApiServer.start(config, function(err) {
             if (err) { return done(err); }
             // issue create requests

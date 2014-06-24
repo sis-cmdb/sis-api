@@ -21,7 +21,7 @@ describe('@API - Info API', function() {
     var TestUtil = require('./fixtures/util');
     var ApiServer = new TestUtil.TestServer();
 
-    before(function(done) {
+    it("Should setup fixtures", function(done) {
         ApiServer.start(config, done);
     });
 

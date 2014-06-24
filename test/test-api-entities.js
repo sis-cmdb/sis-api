@@ -21,7 +21,7 @@ describe('@API - Entity API', function() {
     var TestUtil = require('./fixtures/util');
     var ApiServer = new TestUtil.TestServer();
 
-    before(function(done) {
+    it("Should setup fixtures", function(done) {
         ApiServer.start(config, function(e) {
             if (e) { return done(e); }
             ApiServer.becomeSuperUser(done);
@@ -94,7 +94,7 @@ describe('@API - Entity API', function() {
 
         var createEndCallback = function(done) {
             return function(err, res) {
-                if (err) { done(err); }
+                if (err) { return done(err); }
                 should.exist(res.body);
                 should.exist(res.body._id);
                 if (!entityId) {

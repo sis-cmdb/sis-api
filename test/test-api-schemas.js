@@ -23,7 +23,7 @@ describe('@API - Schema API', function() {
     var ApiServer = new TestUtil.TestServer();
     var async = require('async');
 
-    before(function(done) {
+    it("Should setup fixtures", function(done) {
         ApiServer.start(config, function(e) {
             if (e) { return done(e); }
             ApiServer.becomeSuperUser(done);

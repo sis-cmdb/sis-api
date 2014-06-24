@@ -37,7 +37,7 @@ describe('API at the Edge ', function() {
     var ApiServer = new TestUtil.TestServer();
     var app = null;
 
-    before(function(done) {
+    it("Should setup fixtures", function(done) {
         config.app = config.app || { };
         config.app.readonly = true;
         ApiServer.start(config, function(err, sd) {

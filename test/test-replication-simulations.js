@@ -26,7 +26,7 @@ describe('Replication Simulation', function() {
 
   var schemaManager = null;
 
-  before(function(done) {
+  it("Should setup fixtures", function(done) {
     ApiServer.start(config, function(err, serverData) {
         if (err) { return done(err); }
         schemaManager = serverData.schemaManager;

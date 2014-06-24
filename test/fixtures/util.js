@@ -145,7 +145,11 @@
 
         ['get', 'post', 'put', 'del'].forEach(function(method) {
             this[method] = function(url, token) {
-                return this.newRequest(method, url, token);
+                var result = this.newRequest(method, url, token);
+                if (method == 'del') {
+                    result.set('Content-Length', 0);
+                }
+                return result;
             };
         }.bind(this));
 
@@ -154,7 +158,8 @@
                 return callback("server not started.");
             }
             var req = this.post("/api/v1/users/auth_token")
-                                        .auth(username, password);
+                                        .auth(username, password)
+                                        .send("auth");
             req.set('Content-Type', null);
             req.expect(201, function(err, res) {
                 if (err) { return callback(err); }

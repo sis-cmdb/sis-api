@@ -30,7 +30,7 @@ describe('@API - Bulk Insert API', function() {
         }
     };
 
-    before(function(done) {
+    it("Should setup fixtures", function(done) {
         ApiServer.start(config, function(e) {
             if (e) { return done(e); }
             ApiServer.becomeSuperUser(function(e) {

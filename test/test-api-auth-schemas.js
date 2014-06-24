@@ -14,7 +14,7 @@
 
  ***********************************************************/
 
-describe('@API - Authorization API', function() {
+describe('@API - Authorization API Schemas', function() {
     var should = require('should');
     var async = require('async');
 
@@ -31,7 +31,7 @@ describe('@API - Authorization API', function() {
     var userToTokens = { };
     var superToken = null;
 
-    before(function(done) {
+    it("Should setup fixtures", function(done) {
         ApiServer.start(config, function(err) {
             if (err) { return done(err); }
             // issue create requests
