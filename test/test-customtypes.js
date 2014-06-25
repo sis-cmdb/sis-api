@@ -64,7 +64,7 @@ describe('@API - Custom Types', function() {
             ApiServer.del('/api/v1/schemas/test_host')
                 .end(function() {
                 ApiServer.post("/api/v1/schemas")
-                    .set('Content-Encoding', 'application/json')
+                    .set('content-type', 'application/json')
                     .send(schema)
                     .expect(201, done);
             });
@@ -81,7 +81,7 @@ describe('@API - Custom Types', function() {
                 ip : "10.1.1.1/24"
             };
             ApiServer.post("/api/v1/entities/test_host")
-                .set('Content-Encoding', 'application/json')
+                .set('content-type', 'application/json')
                 .send(entity)
                 .expect(201, function(e, res) {
                     should.not.exist(e);
@@ -98,7 +98,7 @@ describe('@API - Custom Types', function() {
                 ip : "2001:0:ce49:7601:e866:efff:62c3:fffe/100"
             };
             ApiServer.post("/api/v1/entities/test_host")
-                .set('Content-Encoding', 'application/json')
+                .set('content-type', 'application/json')
                 .send(entity)
                 .expect(201, function(e, res) {
                     should.not.exist(e);
@@ -139,7 +139,7 @@ describe('@API - Custom Types', function() {
 
         before(function(done) {
             ApiServer.post("/api/v1/schemas")
-                .set('Content-Encoding', 'application/json')
+                .set('content-type', 'application/json')
                 .send(schema)
                 .expect(201, done);
         });
@@ -155,7 +155,7 @@ describe('@API - Custom Types', function() {
                 ips : ["10.1.1.1/24", "2001:0:ce49:7601:e866:efff:62c3:fffe/100"]
             };
             ApiServer.post("/api/v1/entities/test_host")
-                .set('Content-Encoding', 'application/json')
+                .set('content-type', 'application/json')
                 .send(entity)
                 .expect(201, function(e, res) {
                     should.not.exist(e);

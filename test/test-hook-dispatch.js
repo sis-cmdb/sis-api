@@ -111,7 +111,7 @@ describe("Hook Dispatch", function() {
         it("Should dispatch the hiera hook", function(doneCb) {
             doneCallback = doneCb;
             ApiServer.post("/api/v1/hiera")
-                .set('Content-Encoding', 'application/json')
+                .set('content-type', 'application/json')
                 .send(hiera_data)
                 .end(function(err, res) { });
         });
@@ -128,7 +128,7 @@ describe("Hook Dispatch", function() {
                 if (err) { return done(err); }
                 hiera_data.hieradata.field3 = 'foo';
                 ApiServer.put("/api/v1/hiera/hiera_key")
-                    .set('Content-Encoding', 'application/json')
+                    .set('content-type', 'application/json')
                     .send(hiera_data)
                     .end(function(err, res) { });
             });
@@ -198,7 +198,7 @@ describe("Hook Dispatch", function() {
         it("Should dispatch the schema hook", function(doneCb) {
             doneCallback = doneCb;
             ApiServer.post("/api/v1/schemas")
-                .set('Content-Encoding', 'application/json')
+                .set('content-type', 'application/json')
                 .send(hookSchema)
                 .end(function(err, res) { });
         });

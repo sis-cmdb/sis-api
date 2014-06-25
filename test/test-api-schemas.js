@@ -91,7 +91,7 @@ describe('@API - Schema API', function() {
         it("Should create new schemas", function(done) {
 
             ApiServer.post("/api/v1/schemas")
-                .set('Content-Encoding', 'application/json')
+                .set('Content-Type', 'application/json')
                 .send(jsData)
                 .expect(201, done);
         });

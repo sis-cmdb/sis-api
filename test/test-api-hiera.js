@@ -92,7 +92,7 @@ describe('@API - Hiera API', function() {
 
         it("Should add the hiera entry", function(done) {
             ApiServer.post("/api/v1/hiera")
-                .set("Content-Encoding", "application/json")
+                .set("Content-Type", "application/json")
                 .send(item)
                 .expect(201, done);
         });

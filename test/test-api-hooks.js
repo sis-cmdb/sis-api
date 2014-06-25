@@ -84,7 +84,7 @@ describe('@API - Hook API', function() {
 
         it("Should create new hook", function(done) {
             ApiServer.post("/api/v1/hooks")
-                .set('Content-Encoding', 'application/json')
+                .set('content-type', 'application/json')
                 .send(hook)
                 .expect(201, done);
         });

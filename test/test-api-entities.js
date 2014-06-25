@@ -109,7 +109,7 @@ describe('@API - Entity API', function() {
 
         it("Should add the entity ", function(done) {
             ApiServer.post("/api/v1/entities/" + schema.name)
-                .set('Content-Encoding', 'application/json')
+                .set('Content-Type', 'application/json')
                 .send(expectedEntity)
                 .expect(201)
                 .end(createEndCallback(done));
@@ -117,14 +117,14 @@ describe('@API - Entity API', function() {
 
         it("Should retrieve the added entity ", function(done) {
             ApiServer.get("/api/v1/entities/" + schema.name + "/" + entityId)
-                .set('Content-Encoding', 'application/json')
+                .set('Content-Type', 'application/json')
                 .expect(200, createEndCallback(done));
         });
 
         it("Should update the str to foobar ", function(done) {
             expectedEntity.str = "foobar";
             ApiServer.put("/api/v1/entities/" + schema.name + "/" + entityId)
-                .set('Content-Encoding', 'application/json')
+                .set('Content-Type', 'application/json')
                 .send(expectedEntity)
                 .expect(200)
                 .end(createEndCallback(done));
@@ -138,7 +138,7 @@ describe('@API - Entity API', function() {
                 "arr" : "not an array"
             };
             ApiServer.post("/api/v1/entities/" + schema.name)
-                .set('Content-Encoding', 'application/json')
+                .set('Content-Type', 'application/json')
                 .send(invalid)
                 .expect(400, function(e, r) {
                     done();
