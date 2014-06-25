@@ -41,7 +41,7 @@
                             mongoose : server.mongoose,
                             http : http,
                             app : app,
-                            request : require('supertest')('http://localhost:' + config.server.port),
+                            request : require('supertest')('http://127.0.0.1:' + config.server.port),
                             local : true
                         };
 

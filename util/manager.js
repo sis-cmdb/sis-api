@@ -129,52 +129,6 @@ Manager.prototype.getPopulateFields = function(schemaManager) {
     }
 };
 
-// // Populate the object/array of objects one level deep
-// Manager.prototype.populate = function(toPopulate, schemaManager) {
-//     var schemaNameToPaths = this._getPopulateFields();
-//     if (!schemaNameToPaths) {
-//         return Q(toPopulate);
-//     }
-//     // ensure the schemas exist
-//     var schemasToLoad = Object.keys(schemaNameToPaths)
-//         .filter(function(schemaName) {
-//             return !schemaManager.hasEntityModel(schemaName);
-//         });
-
-//     if (!schemasToLoad.length) {
-//         var d = Q.defer();
-//         var fields = this._getFieldsFromPopulateObject(schemaNameToPaths);
-//         this.model.populate(toPopulate, fields, this._getModCallback(d));
-//         return d.promise;
-//     } else {
-//         var self = this;
-//         // need to try loading up some schemas
-//         // as they may be available due to DB replication
-//         var loadPromises = schemasToLoad.map(function(schemaName) {
-//             var loadDefer = Q.defer();
-//             schemaManager.getEntityModelAsync(schemaName).then(function() {
-//                 loadDefer.resolve(schemaName);
-//             }, function() {
-//                 // err
-//                 delete schemaNameToPaths[schemaName];
-//                 loadDefer.resolve(schemaName);
-//             });
-//             return loadDefer.promise;
-//         });
-//         return Q.all(loadPromises).then(function() {
-//             var d = Q.defer();
-//             var loadedSchemas = Object.keys(schemaNameToPaths);
-//             if (!loadedSchemas.length) {
-//                 d.resolve(toPopulate);
-//             } else {
-//                 var fields = self._getFieldsFromPopulateObject(schemaNameToPaths);
-//                 self.model.populate(toPopulate, fields, self._getModCallback(d));
-//             }
-//             return d.promise;
-//         });
-//     }
-// };
-
 // get a single object by id.
 Manager.prototype.getById = function(id, options) {
     var q = {}; q[this.idField] = id;
@@ -277,12 +231,11 @@ Manager.prototype.delete = function(id, user, callback) {
         user = null;
     }
     var self = this;
-    var p = this.getById(id)
-                .then(function(obj) {
-                    return self.authorize(SIS.EVENT_DELETE, obj, user);
-                })
-                .then(this._remove.bind(this))
-                .then(this.objectRemoved.bind(this));
+    var p = this.getById(id, { lean : true }).then(function(obj) {
+            return self.authorize(SIS.EVENT_DELETE, obj, user);
+        })
+        .then(this._remove.bind(this))
+        .then(this.objectRemoved.bind(this));
     return Q.nodeify(p, callback);
 };
 
@@ -385,7 +338,8 @@ Manager.prototype.applyPartial = function (full, partial) {
 // document removed if successful
 Manager.prototype._remove = function(doc) {
     var d = Q.defer();
-    doc.remove(function(e, r) {
+    var q = {}; q[this.idField] = doc[this.idField];
+    this.model.remove(q, function(e, r) {
         if (e) {
             d.reject(SIS.ERR_INTERNAL(e));
         } else {

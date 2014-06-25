@@ -223,6 +223,7 @@ ApiController.prototype.get = function(req, res) {
     var self = this;
     var options = { };
     var p = this.getManager(req).then(function(mgr) {
+        options.lean = self.useLean;
         if (self.parsePopulate(req)) {
             return mgr.getPopulateFields(self.sm).then(function(populateFields) {
                 if (populateFields) {
@@ -231,7 +232,7 @@ ApiController.prototype.get = function(req, res) {
                 return mgr.getById(id, options);
             });
         } else {
-            return mgr.getById(id);
+            return mgr.getById(id, options);
         }
     });
 
@@ -259,7 +260,7 @@ ApiController.prototype.delete = function(req, res) {
             return webUtil.flattenCondition(condition,self.sm,mgr)
                 .then(function(flattenedCondition) {
                 // get them
-                return mgr.getAll(flattenedCondition, { })
+                return mgr.getAll(flattenedCondition, { lean : true })
                 .then(function(items) {
                     var memo = { success : [], errors : [] };
                     if (!items.length) { return Q(memo); }
