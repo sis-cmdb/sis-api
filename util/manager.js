@@ -62,28 +62,51 @@ Manager.prototype.applyUpdate = function(doc, updateObj) {
 // Returns a promise with the object removed.
 Manager.prototype.objectRemoved = function(obj) {
     // default just returns a fullfilled promise
-    return Promise.resolve(obj);
+    return obj;
 };
 
 /** Common methods - rare to override these **/
+// Get a single object that has certain properties.
+Manager.prototype.getSingleByCondition = function(condition, name, options) {
+    return this.model.findOneAsync(condition, null, options)
+    .bind(this).then(function(result) {
+        if (!result) {
+            return Promise.reject(SIS.ERR_NOT_FOUND(this.type, name));
+        }
+        return Promise.resolve(result);
+    })
+    .catch(function(err) {
+        if (err instanceof Array) {
+            return Promise.reject(err);
+        }
+        if (err.name == "CastError") {
+            err = SIS.ERR_NOT_FOUND(this.type, name);
+        } else {
+            err = SIS.ERR_INTERNAL(err);
+        }
+        return Promise.reject(err);
+    });
+};
+
+// get a single object by id.
+Manager.prototype.getById = function(id, options) {
+    var q = {}; q[this.idField] = id;
+    return this.getSingleByCondition(q, id, options);
+};
+
 // get all the objects belonging to the model.
 Manager.prototype.getAll = function(condition, options, fields) {
-    var d = Promise.pending();
-    this.model.find(condition, fields, options, this._getFindCallback(d, null));
-    return d.promise;
+    return this.model.findAsync(condition, fields, options);
 };
 
 // Count the number of objects specified by the query
 Manager.prototype.count = function(condition, callback) {
-    var d = Promise.pending();
-    this.model.count(condition, function(err, c) {
-        if (err || !c) {
-            d.resolve(0);
-        } else {
-            d.resolve(c);
-        }
-    });
-    return d.promise;
+    return this.model.countAsync(condition).bind(this)
+        .then(function(count) {
+            return [count, condition, this];
+        }).catch(function(err) {
+            return [0, condition, this];
+        });
 };
 
 Manager.prototype.getPopulateFields = function(schemaManager) {
@@ -108,7 +131,7 @@ Manager.prototype.getPopulateFields = function(schemaManager) {
             var loadDefer = Promise.pending();
             schemaManager.getEntityModelAsync(schemaName).then(function() {
                 loadDefer.resolve(schemaName);
-            }, function() {
+            }).catch(function() {
                 // err
                 delete schemaNameToPaths[schemaName];
                 loadDefer.resolve(schemaName);
@@ -116,30 +139,15 @@ Manager.prototype.getPopulateFields = function(schemaManager) {
             return loadDefer.promise;
         });
         return Promise.all(loadPromises).then(function() {
-            var d = Promise.pending();
             var loadedSchemas = Object.keys(schemaNameToPaths);
             if (!loadedSchemas.length) {
-                d.resolve(null);
+                return null;
             } else {
                 var fields = self._getFieldsFromPopulateObject(schemaNameToPaths);
-                d.resolve(fields);
+                return fields;
             }
-            return d.promise;
         });
     }
-};
-
-// get a single object by id.
-Manager.prototype.getById = function(id, options) {
-    var q = {}; q[this.idField] = id;
-    return this.getSingleByCondition(q, id, options);
-};
-
-// Get a single object that has certain properties.
-Manager.prototype.getSingleByCondition = function(condition, name, options) {
-    var d = Promise.pending();
-    this.model.findOne(condition, null, options, this._getFindCallback(d, name));
-    return d.promise;
 };
 
 // Authorize a user to operate on a particular document
@@ -234,7 +242,7 @@ Manager.prototype.delete = function(id, user, callback) {
             return self.authorize(SIS.EVENT_DELETE, obj, user);
         })
         .then(this._remove.bind(this))
-        .then(this.objectRemoved.bind(this));
+        .tap(this.objectRemoved.bind(this));
     return p.nodeify(callback);
 };
 
@@ -336,28 +344,10 @@ Manager.prototype.applyPartial = function (full, partial) {
 // Return a promise that removes the document and returns the
 // document removed if successful
 Manager.prototype._remove = function(doc) {
-    var d = Promise.pending();
     var q = {}; q[this.idField] = doc[this.idField];
-    this.model.remove(q, function(e, r) {
-        if (e) {
-            d.reject(SIS.ERR_INTERNAL(e));
-        } else {
-            d.resolve(doc);
-        }
+    return this.model.removeAsync(q).then(function() {
+        return doc;
     });
-    return d.promise;
-};
-
-// Return the callback for the model getters
-Manager.prototype._getFindCallback = function(d, id) {
-    var self = this;
-    return function(err, result) {
-        if (err || !result) {
-            d.reject(SIS.ERR_INTERNAL_OR_NOT_FOUND(err, self.type, id));
-        } else {
-            d.resolve(result);
-        }
-    };
 };
 
 // Return the callback for the model modifier methods
@@ -406,20 +396,19 @@ Manager.prototype._merge = function(doc, update) {
 // Save the object and return a promise that is fulfilled
 // with the saved document
 Manager.prototype._save = function(obj) {
-    var d = Promise.pending();
     if (!obj) {
-        d.reject(SIS.ERR_BAD_REQ("invalid data"));
-    } else {
-        var m = obj;
-        if (!(obj instanceof this.model)) {
-            try {
-                m = new this.model(obj);
-            } catch (ex) {
-                return d.reject(SIS.ERR_BAD_REQ(ex));
-            }
-        }
-        m.save(this._getModCallback(d));
+        return Promise.reject(SIS.ERR_BAD_REQ("invalid data"));
     }
+    var m = obj;
+    if (!(obj instanceof this.model)) {
+        try {
+            m = new this.model(obj);
+        } catch (ex) {
+            return d.reject(SIS.ERR_BAD_REQ(ex));
+        }
+    }
+    var d = Promise.pending();
+    m.save(this._getModCallback(d));
     return d.promise;
 };
 

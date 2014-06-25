@@ -74,7 +74,7 @@
     var _verifySisToken = function(token, done) {
         var tokenManager = this.auth[SIS.SCHEMA_TOKENS];
         var userManager = this.auth[SIS.SCHEMA_USERS];
-        var p = tokenManager.getById(token).then(function(t) {
+        var p = tokenManager.getById(token, {lean : true}).then(function(t) {
             // check if the token has expired
             if (t[SIS.FIELD_EXPIRES]) {
                 var expires = t[SIS.FIELD_EXPIRES];
@@ -84,7 +84,7 @@
                     return Promise.reject(SIS.ERR_BAD_CREDS("Token has expired."));
                 }
             }
-            return userManager.getById(t[SIS.FIELD_USERNAME]);
+            return userManager.getById(t[SIS.FIELD_USERNAME], {lean : true});
         });
         return p.nodeify(done);
     };
@@ -284,11 +284,11 @@
         var references = mgr.getReferences();
         if (!condition || typeof condition !== 'object' ||
             !references || !references.length) {
-            return Promise.resolve(condition);
+            return Promise.resolve([condition, mgr]);
         }
         var keys = Object.keys(condition);
         if (!keys.length) {
-            return Promise.resolve(condition);
+            return Promise.resolve([condition, mgr]);
         }
         var paths = references.filter(function(ref) {
             return ref.type != 'arr';
@@ -305,7 +305,7 @@
             var key = keys[k];
             if (key[key.length - 1] == '.') {
                 // invalid query - just let it flow.
-                return Promise.resolve(condition);
+                return Promise.resolve([condition, mgr]);
             }
             // compare with the references - probably a better way to do
             // this ;)
@@ -350,10 +350,10 @@
                         flattened[k] = v;
                     }
                 }
-                return Promise.resolve(flattened);
+                return Promise.resolve([flattened, mgr]);
             });
         } else {
-            return Promise.resolve(condition);
+            return Promise.resolve([condition, mgr]);
         }
     };
 

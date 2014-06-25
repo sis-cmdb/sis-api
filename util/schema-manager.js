@@ -429,6 +429,8 @@
 
             this.entitySchemaToUpdateTime[name] = schemaTime;
             this.mongoose.models[name] = result;
+            // promisify the mongoose model
+            Promise.promisifyAll(result);
             return result;
         } catch (ex) {
             return null;

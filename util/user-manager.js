@@ -71,7 +71,7 @@
 
     UserManager.prototype.getVerifiedUser = function(username, pw, callback) {
         var self = this;
-        var p = this.getById(username).then(function(u) {
+        var p = this.getById(username, { lean : true }).then(function(u) {
             pw = self.hashPw(pw);
             if (u[SIS.FIELD_PW] != pw) {
                 return Promise.reject(SIS.ERR_BAD_CREDS("Invalid password."));

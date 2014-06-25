@@ -166,19 +166,6 @@ ApiController.prototype.parsePopulate = function(req) {
     }
 };
 
-// A helper that returns a function meant for promise chaining.
-// The func parameter is a string which is a method name to
-// call on the manager.
-// The function returned takes receives a manager and
-// calls the func method on the manager with the additional
-// arguments.
-var MgrPromise = function(func) {
-    var argsToFunc = Array.prototype.slice.call(arguments, 1);
-    return function(manager) {
-        return manager[func].apply(manager, argsToFunc);
-    };
-};
-
 // Handler for the getAll request (typically GET controller_base/)
 ApiController.prototype.getAll = function(req, res) {
     this.applyDefaults(req);
@@ -189,30 +176,28 @@ ApiController.prototype.getAll = function(req, res) {
     }
     var fields = rq.fields;
     var condition = rq.query;
-    var self = this;
-    var p = this.getManager(req).then(function(mgr) {
-        return webUtil.flattenCondition(condition,self.sm,mgr)
-            .then(function(flattenedCondition) {
-                return mgr.count(flattenedCondition).then(function(c) {
-                    c = c || 0;
-                    res.setHeader(SIS.HEADER_TOTAL_COUNT, c);
-                    if (!c || c < options.offset) {
-                        return Promise.resolve([]);
-                    }
-                    options.lean = self.useLean;
-                    if (self.parsePopulate(req)) {
-                        return mgr.getPopulateFields(self.sm).then(function(populateFields) {
-                            if (populateFields) {
-                                options.populate = populateFields;
-                            }
-                            return mgr.getAll(flattenedCondition, options, fields);
-                        });
-                    } else {
-                        return mgr.getAll(flattenedCondition, options, fields);
-                    }
-                });
+    var p = this.getManager(req).bind(this).then(function(mgr) {
+        return webUtil.flattenCondition(condition,this.sm,mgr);
+    }).spread(function(flattenedCondition, mgr) {
+        return mgr.count(flattenedCondition);
+    }).spread(function(c, flattenedCondition, mgr) {
+        c = c || 0;
+        res.setHeader(SIS.HEADER_TOTAL_COUNT, c);
+        if (!c || c < options.offset) {
+            return Promise.resolve([]);
+        }
+        options.lean = this.useLean;
+        if (this.parsePopulate(req)) {
+            return mgr.getPopulateFields(this.sm).then(function(populateFields) {
+                if (populateFields) {
+                    options.populate = populateFields;
+                }
+                return mgr.getAll(flattenedCondition, options, fields);
             });
-        });
+        } else {
+            return mgr.getAll(flattenedCondition, options, fields);
+        }
+    });
     this._finish(req, res, p, 200);
 };
 
@@ -220,12 +205,10 @@ ApiController.prototype.getAll = function(req, res) {
 ApiController.prototype.get = function(req, res) {
     this.applyDefaults(req);
     var id = req.params.id;
-    var self = this;
-    var options = { };
-    var p = this.getManager(req).then(function(mgr) {
-        options.lean = self.useLean;
-        if (self.parsePopulate(req)) {
-            return mgr.getPopulateFields(self.sm).then(function(populateFields) {
+    var p = this.getManager(req).bind(this).then(function(mgr) {
+        var options = { lean : this.useLean };
+        if (this.parsePopulate(req)) {
+            return mgr.getPopulateFields(this.sm).then(function(populateFields) {
                 if (populateFields) {
                     options.populate = populateFields;
                 }
@@ -245,7 +228,7 @@ ApiController.prototype.delete = function(req, res) {
     var id = req.params.id;
     var p = null;
     if (id) {
-        p = this.getManager(req).then(MgrPromise('delete', id, req.user));
+        p = this.getManager(req).call('delete', id, req.user);
         this._finish(req, res, p, 200);
     } else {
         // bulk delete - query is required
@@ -256,30 +239,30 @@ ApiController.prototype.delete = function(req, res) {
         if (!condition || !Object.keys(condition).length) {
             return this.sendError(res, SIS.ERR_BAD_REQ("Bulk delete requires a non empty query."));
         }
-        p = this.getManager(req).then(function(mgr) {
-            return webUtil.flattenCondition(condition,self.sm,mgr)
-                .then(function(flattenedCondition) {
-                // get them
-                return mgr.getAll(flattenedCondition, { lean : true })
-                .then(function(items) {
-                    var memo = { success : [], errors : [] };
-                    if (!items.length) { return Promise.resolve(memo); }
-                    var promises = items.map(function(item) {
-                        var d = Promise.pending();
-                        mgr.delete(item[mgr.idField], req.user)
-                            .then(function(result) {
-                                memo.success.push(item);
-                                d.resolve(memo);
-                            }, function(err) {
-                                memo.errors.push({err : err, value : item });
-                                d.resolve(memo);
-                            });
-                        return d.promise;
+        p = this.getManager(req).bind({}).then(function(mgr) {
+            this.mgr = mgr;
+            return webUtil.flattenCondition(condition,self.sm,mgr);
+        }).spread(function(flattenedCondition, mgr) {
+            // get them
+            return mgr.getAll(flattenedCondition, { lean : true });
+        }).then(function(items) {
+            var mgr = this.mgr;
+            var memo = { success : [], errors : [] };
+            if (!items.length) { return Promise.resolve(memo); }
+            var promises = items.map(function(item) {
+                var d = Promise.pending();
+                mgr.delete(item[mgr.idField], req.user)
+                    .then(function(result) {
+                        memo.success.push(item);
+                        d.resolve(memo);
+                    }).catch(function(err) {
+                        memo.errors.push({err : err, value : item });
+                        d.resolve(memo);
                     });
-                    return Promise.all(promises).then(function() {
-                        return Promise.resolve(memo);
-                    });
-                });
+                return d.promise;
+            });
+            return Promise.all(promises).then(function() {
+                return Promise.resolve(memo);
             });
         });
         this._finish(req, res, p, 200);
@@ -291,7 +274,7 @@ ApiController.prototype.update = function(req, res) {
     this.applyDefaults(req);
     var id = req.params.id;
     var obj = req.body;
-    var p = this.getManager(req).then(MgrPromise('update', id, obj, req.user));
+    var p = this.getManager(req).call('update', id, obj, req.user);
     this._finish(req, res, p, 200);
 };
 
@@ -358,7 +341,7 @@ ApiController.prototype.add = function(req, res) {
         });
         this._finish(req, res, p, 200);
     } else {
-        p = p.then(MgrPromise('add', body, req.user));
+        p = p.call('add', body, req.user);
         this._finish(req, res, p, 201);
     }
 };
@@ -385,11 +368,6 @@ ApiController.prototype.attach = function(app, prefix) {
 ApiController.prototype.authenticate = function(req, res, type) {
     var d = Promise.pending();
     var self = this;
-    var next = function(err) {
-        if (err) {
-            d.reject(err);
-        }
-    };
     passport.authenticate(type, {session : false}, function(err, user) {
         if (err) {
             d.reject(SIS.ERR_BAD_CREDS("" + err));
@@ -399,7 +377,7 @@ ApiController.prototype.authenticate = function(req, res, type) {
             req.user = user;
             d.resolve(user);
         }
-    })(req, res, next);
+    })(req, res);
     return d.promise;
 };
 
@@ -416,12 +394,10 @@ ApiController.prototype._wrapAuth = function(func) {
         var self = this;
         p.then(function(auth) {
             func.call(self, req, res);
-        }, function(err) {
-            return self.sendError(res, err);
         })
         .catch(function(err) {
-            return self.sendError(res, SIS.ERR_INTERNAL(err));
-        });
+            return self.sendError(res, err);
+        }).done();
     }.bind(this);
 };
 
@@ -565,9 +541,8 @@ ApiController.prototype._saveSingleCommit = function(req, result) {
 ApiController.prototype._saveCommit = function(req) {
     // need to return a promise that saves history
     // but returns the initial object passed to it
-    var self = this;
     return function(result) {
-        if (!self.shouldSaveCommit(req)) {
+        if (!this.shouldSaveCommit(req)) {
             return Promise.resolve(result);
         }
 
@@ -576,8 +551,8 @@ ApiController.prototype._saveCommit = function(req) {
             if (items.length) {
                 // just need to write all commits
                 var promises = items.map(function(item) {
-                    return self._saveSingleCommit(req, item);
-                });
+                    return this._saveSingleCommit(req, item);
+                }.bind(this));
                 return Promise.all(promises).then(function() {
                     return Promise.resolve(result);
                 }, function() {
@@ -587,16 +562,16 @@ ApiController.prototype._saveCommit = function(req) {
                 return Promise.resolve(result);
             }
         } else {
-            return self._saveSingleCommit(req, result);
+            return this._saveSingleCommit(req, result);
         }
-    };
+    }.bind(this);
 };
 
 // Do the final steps of the request
 // p is the promise that receives the object from the
 // request handler
 ApiController.prototype._finish = function(req, res, p, code) {
-    p = p.then(this._saveCommit(req));
+    p = p.tap(this._saveCommit(req));
     var cb = this._getSendCallback(req, res, code);
     p.then(function(result) {
         cb(null, result);
@@ -605,20 +580,6 @@ ApiController.prototype._finish = function(req, res, p, code) {
         cb(err);
     })
     .done();
-};
-
-
-// Get a function that receives objects and returns a promise
-// to populate them
-ApiController.prototype._getPopulatePromise = function(req, mgr) {
-    var self = this;
-    return function(results) {
-        if (self.parsePopulate(req)) {
-            return mgr.populate(results, self.sm);
-        } else {
-            return Promise.resolve(results);
-        }
-    };
 };
 
 // export it

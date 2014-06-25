@@ -72,7 +72,7 @@
     // override main entry points to ensure user exists..
     TokenController.prototype.ensureUser = function(req) {
         var uid = req.params.uid;
-        return this.userManager.getById(uid);
+        return this.userManager.getById(uid, { lean : true });
     };
 
     var fixBody = function(req) {
