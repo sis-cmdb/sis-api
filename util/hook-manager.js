@@ -25,7 +25,7 @@
 
     var SIS = require('./constants');
     var Manager = require("./manager");
-    var Q = require("q");
+    var Promise = require("bluebird");
 
     /////////////////////////////////
     // Hook Manager
@@ -114,7 +114,7 @@
         } else {
             options.json = data;
         }
-        var d = Q.defer();
+        var d = Promise.pending();
         sendRequest(options, hook.retry_count || 0, hook.retry_delay || 1, d);
         return d.promise;
     };
@@ -138,7 +138,7 @@
                 var promises = hooks.map(function(hook) {
                     return dispatchHook(hook, entity, event);
                 });
-                Q.all(promises).then(function(res) {
+                Promise.all(promises).then(function(res) {
                     callback(null, res);
                 }, function(err) {
                     callback(err);

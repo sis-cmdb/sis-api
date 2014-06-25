@@ -18,7 +18,7 @@
 
 'use strict';
 
-var Q = require('q');
+var Promise = require("bluebird");
 var SIS = require('./constants');
 
 // Constructor for a Manager base
@@ -62,20 +62,20 @@ Manager.prototype.applyUpdate = function(doc, updateObj) {
 // Returns a promise with the object removed.
 Manager.prototype.objectRemoved = function(obj) {
     // default just returns a fullfilled promise
-    return Q(obj);
+    return Promise.resolve(obj);
 };
 
 /** Common methods - rare to override these **/
 // get all the objects belonging to the model.
 Manager.prototype.getAll = function(condition, options, fields) {
-    var d = Q.defer();
+    var d = Promise.pending();
     this.model.find(condition, fields, options, this._getFindCallback(d, null));
     return d.promise;
 };
 
 // Count the number of objects specified by the query
 Manager.prototype.count = function(condition, callback) {
-    var d = Q.defer();
+    var d = Promise.pending();
     this.model.count(condition, function(err, c) {
         if (err || !c) {
             d.resolve(0);
@@ -89,7 +89,7 @@ Manager.prototype.count = function(condition, callback) {
 Manager.prototype.getPopulateFields = function(schemaManager) {
     var schemaNameToPaths = this._getPopulateFields();
     if (!schemaNameToPaths) {
-        return Q(null);
+        return Promise.resolve(null);
     }
     // ensure the schemas exist
     var schemasToLoad = Object.keys(schemaNameToPaths)
@@ -99,13 +99,13 @@ Manager.prototype.getPopulateFields = function(schemaManager) {
 
     if (!schemasToLoad.length) {
         var fields = this._getFieldsFromPopulateObject(schemaNameToPaths);
-        return Q(fields);
+        return Promise.resolve(fields);
     } else {
         var self = this;
         // need to try loading up some schemas
         // as they may be available due to DB replication
         var loadPromises = schemasToLoad.map(function(schemaName) {
-            var loadDefer = Q.defer();
+            var loadDefer = Promise.pending();
             schemaManager.getEntityModelAsync(schemaName).then(function() {
                 loadDefer.resolve(schemaName);
             }, function() {
@@ -115,8 +115,8 @@ Manager.prototype.getPopulateFields = function(schemaManager) {
             });
             return loadDefer.promise;
         });
-        return Q.all(loadPromises).then(function() {
-            var d = Q.defer();
+        return Promise.all(loadPromises).then(function() {
+            var d = Promise.pending();
             var loadedSchemas = Object.keys(schemaNameToPaths);
             if (!loadedSchemas.length) {
                 d.resolve(null);
@@ -137,7 +137,7 @@ Manager.prototype.getById = function(id, options) {
 
 // Get a single object that has certain properties.
 Manager.prototype.getSingleByCondition = function(condition, name, options) {
-    var d = Q.defer();
+    var d = Promise.pending();
     this.model.findOne(condition, null, options, this._getFindCallback(d, name));
     return d.promise;
 };
@@ -148,25 +148,25 @@ Manager.prototype.getSingleByCondition = function(condition, name, options) {
 Manager.prototype.authorize = function(evt, doc, user, mergedDoc) {
     if (evt == SIS.EVENT_DELETE) {
         if (doc[SIS.FIELD_LOCKED]) {
-            return Q.reject(SIS.ERR_BAD_CREDS("Cannot delete a locked object."));
+            return Promise.reject(SIS.ERR_BAD_CREDS("Cannot delete a locked object."));
         }
     }
     // get the permissions on the doc being added/updated/deleted
     var permission = this.getPermissionsForObject(doc, user);
     if (permission != SIS.PERMISSION_ADMIN &&
         permission != SIS.PERMISSION_USER_ALL_GROUPS) {
-        return Q.reject(SIS.ERR_BAD_CREDS("Insufficient permissions."));
+        return Promise.reject(SIS.ERR_BAD_CREDS("Insufficient permissions."));
     }
     if (evt != SIS.EVENT_UPDATE) {
         // insert / delete
-        return Q(doc);
+        return Promise.resolve(doc);
     } else {
         var updatedPerms = this.getPermissionsForObject(mergedDoc, user);
         if (updatedPerms != SIS.PERMISSION_ADMIN &&
             updatedPerms != SIS.PERMISSION_USER_ALL_GROUPS) {
-            return Q.reject(SIS.ERR_BAD_CREDS("Insufficient permissions."));
+            return Promise.reject(SIS.ERR_BAD_CREDS("Insufficient permissions."));
         }
-        return Q(mergedDoc);
+        return Promise.resolve(mergedDoc);
     }
 };
 
@@ -178,13 +178,12 @@ Manager.prototype.add = function(obj, user, callback) {
     }
     var err = this.validate(obj, false, user);
     if (err) {
-        return Q.nodeify(Q.reject(SIS.ERR_BAD_REQ(err)),
-                         callback);
+        return Promise.reject(SIS.ERR_BAD_REQ(err)).nodeify(callback);
     }
     var p = this.authorize(SIS.EVENT_INSERT, obj, user)
         .then(this._addByFields(user, SIS.EVENT_INSERT))
         .then(this._save.bind(this));
-    return Q.nodeify(p, callback);
+    return p.nodeify(callback);
 };
 
 // Ensures the user can update the object and then update it
@@ -195,11 +194,11 @@ Manager.prototype.update = function(id, obj, user, callback) {
     }
     var err = this.validate(obj, true, user);
     if (err) {
-        return Q.nodeify(Q.reject(SIS.ERR_BAD_REQ(err)),
-                         callback);
+        return Promise.reject(SIS.ERR_BAD_REQ(err)).nodeify(callback);
     }
     if (this.idField in obj && id != obj[this.idField]) {
-        return Q.nodeify(Q.reject(SIS.ERR_BAD_REQ(this.idField + " cannot be changed.")), callback);
+        err = SIS.ERR_BAD_REQ(this.idField + " cannot be changed.");
+        return Promise.reject(err).nodeify(callback);
     }
     var self = this;
     var p = this.getById(id)
@@ -217,11 +216,11 @@ Manager.prototype.update = function(id, obj, user, callback) {
                 .then(self._addByFields(user, SIS.EVENT_UPDATE))
                 .then(self._save.bind(self))
                 .then(function(updated) {
-                    return Q([old, updated]);
+                    return Promise.resolve([old, updated]);
                 });
             return innerP;
         });
-    return Q.nodeify(p, callback);
+    return p.nodeify(callback);
 };
 
 // Ensures the user can delete the object and then delete it
@@ -236,7 +235,7 @@ Manager.prototype.delete = function(id, user, callback) {
         })
         .then(this._remove.bind(this))
         .then(this.objectRemoved.bind(this));
-    return Q.nodeify(p, callback);
+    return p.nodeify(callback);
 };
 
 // utils
@@ -337,7 +336,7 @@ Manager.prototype.applyPartial = function (full, partial) {
 // Return a promise that removes the document and returns the
 // document removed if successful
 Manager.prototype._remove = function(doc) {
-    var d = Q.defer();
+    var d = Promise.pending();
     var q = {}; q[this.idField] = doc[this.idField];
     this.model.remove(q, function(e, r) {
         if (e) {
@@ -401,13 +400,13 @@ Manager.prototype._getFieldsFromPopulateObject = function(refToPaths) {
 // returns a promise function that accepts a document from
 // find and applies the update
 Manager.prototype._merge = function(doc, update) {
-    return Q(this.applyUpdate(doc, update));
+    return Promise.resolve(this.applyUpdate(doc, update));
 };
 
 // Save the object and return a promise that is fulfilled
 // with the saved document
-Manager.prototype._save = function(obj, callback) {
-    var d = Q.defer();
+Manager.prototype._save = function(obj) {
+    var d = Promise.pending();
     if (!obj) {
         d.reject(SIS.ERR_BAD_REQ("invalid data"));
     } else {
@@ -421,7 +420,7 @@ Manager.prototype._save = function(obj, callback) {
         }
         m.save(this._getModCallback(d));
     }
-    return Q.nodeify(d.promise, callback);
+    return d.promise;
 };
 
 // Returns a function that receives a document and fills in
@@ -429,7 +428,7 @@ Manager.prototype._save = function(obj, callback) {
 Manager.prototype._addByFields = function(user, event) {
     return function(doc) {
         if (!user || !doc) {
-            return Q(doc);
+            return Promise.resolve(doc);
         }
         if (event == SIS.EVENT_UPDATE) {
             doc[SIS.FIELD_UPDATED_BY] = user[SIS.FIELD_NAME];
@@ -437,7 +436,7 @@ Manager.prototype._addByFields = function(user, event) {
             doc[SIS.FIELD_CREATED_BY] = user[SIS.FIELD_NAME];
             doc[SIS.FIELD_UPDATED_BY] = user[SIS.FIELD_NAME];
         }
-        return Q(doc);
+        return Promise.resolve(doc);
     };
 };
 

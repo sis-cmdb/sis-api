@@ -22,7 +22,7 @@
     var ApiController = require("./apicontroller");
     var SIS = require("../util/constants");
     var passport = require("passport");
-    var Q = require("q");
+    var Promise = require("bluebird");
 
     /////////////////////////////////
     // User controller

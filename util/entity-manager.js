@@ -19,7 +19,7 @@
     'use strict';
 
     var Manager = require("./manager");
-    var Q = require("q");
+    var Promise = require("bluebird");
     var SIS = require("./constants");
 
     //////////
@@ -155,7 +155,7 @@
         // authorize against entity subset or schema
         var ownerSubset = getOwnerSubset(user, this.schema);
         if (!ownerSubset.length) {
-            return Q.reject(SIS.ERR_BAD_CREDS("Insufficient privileges to operate on entities in this schema."));
+            return Promise.reject(SIS.ERR_BAD_CREDS("Insufficient privileges to operate on entities in this schema."));
         }
         if (!doc[SIS.FIELD_OWNER] || !doc[SIS.FIELD_OWNER].length) {
             doc[SIS.FIELD_OWNER] = ownerSubset;
@@ -189,13 +189,13 @@
             path = refPaths[i];
             if (!(path in currObj)) {
                 // no id @ path - it's ok
-                return Q(true);
+                return Promise.resolve(true);
             }
             currObj = currObj[path];
         }
         if (!currObj) {
             // no value @ path - it's ok
-            return Q(true);
+            return Promise.resolve(true);
         }
         path = ref.path;
         var schema = this.model.schema;
@@ -207,10 +207,10 @@
                 if (SIS.FIELD_ID in currObj) {
                     currObj = currObj[SIS.FIELD_ID];
                 } else {
-                    return Q.reject(SIS.ERR_BAD_REQ("Reference Object has no _id"));
+                    return Promise.reject(SIS.ERR_BAD_REQ("Reference Object has no _id"));
                 }
             }
-            d = Q.defer();
+            d = Promise.pending();
             this.sm.getEntityModelAsync(refModelName, function(err, model) {
                 if (err) { return d.reject(err); }
                 if (!model) {
@@ -248,9 +248,9 @@
                 return obj;
             });
             if (errored) {
-                return Q.reject(SIS.ERR_BAD_REQ("Reference Object has no _id field"));
+                return Promise.reject(SIS.ERR_BAD_REQ("Reference Object has no _id field"));
             }
-            d = Q.defer();
+            d = Promise.pending();
             this.sm.getEntityModelAsync(refModelName, function(err, model) {
                 if (err) { return d.reject(err); }
                 if (!model) {
@@ -273,7 +273,7 @@
     EntityManager.prototype.ensureReferences = function(obj) {
         var references = this.getReferences();
         if (!references.length || !obj) {
-            return Q(obj);
+            return Promise.resolve(obj);
         }
         // convert to POJO
         var result = obj;
@@ -285,16 +285,15 @@
         var promises = references.map(function(ref) {
             return self.getEnsureReferencePromise(ref, obj);
         });
-        return Q.all(promises).then(function() {
-            return Q(result);
+        return Promise.all(promises).then(function() {
+            return Promise.resolve(result);
         });
     };
 
-    EntityManager.prototype._save = function(obj, callback) {
+    EntityManager.prototype._save = function(obj) {
         // ensure references
-        var p = this.ensureReferences(obj)
-            .then(Manager.prototype._save.bind(this));
-        return Q.nodeify(p, callback);
+        return this.ensureReferences(obj)
+                   .then(Manager.prototype._save.bind(this));
     };
     //////////
 

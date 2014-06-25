@@ -19,7 +19,7 @@
 'use strict';
 
 var SIS = require("../util/constants");
-var Q = require('q');
+var Promise = require("bluebird");
 var passport = require("passport");
 var webUtil = require("./webutil");
 
@@ -59,9 +59,9 @@ function ApiController(opts) {
 // Subclasses can assign a manager to the 'manager' property.
 ApiController.prototype.getManager = function(req) {
     if (this.manager) {
-        return Q(this.manager);
+        return Promise.resolve(this.manager);
     } else {
-        return Q.reject(SIS.ERR_INTERNAL("Error fetching object"));
+        return Promise.reject(SIS.ERR_INTERNAL("Error fetching object"));
     }
 };
 
@@ -102,12 +102,12 @@ ApiController.prototype.sendError = function(res, err) {
         console.log(JSON.stringify(err));
         err = [500, err];
     }
-    res.jsonp(err[0], err[1]);
+    res.json(err[0], err[1]);
 };
 
 // Send a response with the specified code and data
 ApiController.prototype.sendObject = function(res, code, obj) {
-    res.jsonp(code, obj);
+    res.json(code, obj);
 };
 
 // Parse the query parameters for a given req
@@ -197,7 +197,7 @@ ApiController.prototype.getAll = function(req, res) {
                     c = c || 0;
                     res.setHeader(SIS.HEADER_TOTAL_COUNT, c);
                     if (!c || c < options.offset) {
-                        return Q([]);
+                        return Promise.resolve([]);
                     }
                     options.lean = self.useLean;
                     if (self.parsePopulate(req)) {
@@ -263,9 +263,9 @@ ApiController.prototype.delete = function(req, res) {
                 return mgr.getAll(flattenedCondition, { lean : true })
                 .then(function(items) {
                     var memo = { success : [], errors : [] };
-                    if (!items.length) { return Q(memo); }
+                    if (!items.length) { return Promise.resolve(memo); }
                     var promises = items.map(function(item) {
-                        var d = Q.defer();
+                        var d = Promise.pending();
                         mgr.delete(item[mgr.idField], req.user)
                             .then(function(result) {
                                 memo.success.push(item);
@@ -276,8 +276,8 @@ ApiController.prototype.delete = function(req, res) {
                             });
                         return d.promise;
                     });
-                    return Q.all(promises).then(function() {
-                        return Q(memo);
+                    return Promise.all(promises).then(function() {
+                        return Promise.resolve(memo);
                     });
                 });
             });
@@ -317,7 +317,7 @@ ApiController.prototype.add = function(req, res) {
             // async try to add everything
             var memo = { success : [], errors : [] };
             var promises = body.map(function(obj) {
-                var d = Q.defer();
+                var d = Promise.pending();
                 mgr.add(obj, req.user)
                 .then(function(result) {
                     memo.success.push(result);
@@ -328,8 +328,8 @@ ApiController.prototype.add = function(req, res) {
                 });
                 return d.promise;
             });
-            return Q.all(promises).then(function() {
-                return Q(memo);
+            return Promise.all(promises).then(function() {
+                return Promise.resolve(memo);
             });
         });
         p = p.then(function(result) {
@@ -337,23 +337,23 @@ ApiController.prototype.add = function(req, res) {
                 req.query.all_or_none) {
                 if (!result.success.length) {
                     // already done
-                    return Q(result);
+                    return Promise.resolve(result);
                 }
                 // delete the ones that were added.
                 // TODO: single bulk op on mongo
                 var promises = result.success.map(function(toDelete) {
-                    var d = Q.defer();
+                    var d = Promise.pending();
                     toDelete.remove(function() {
                         d.resolve(true);
                     });
                     return d.promise;
                 });
-                return Q.all(promises).then(function() {
+                return Promise.all(promises).then(function() {
                     result.success = [];
-                    return Q(result);
+                    return Promise.resolve(result);
                 });
             } else {
-                return Q(result);
+                return Promise.resolve(result);
             }
         });
         this._finish(req, res, p, 200);
@@ -383,7 +383,7 @@ ApiController.prototype.attach = function(app, prefix) {
 // The type specifies which kind of authentication to use
 // and should have already been registered with passport
 ApiController.prototype.authenticate = function(req, res, type) {
-    var d = Q.defer();
+    var d = Promise.pending();
     var self = this;
     var next = function(err) {
         if (err) {
@@ -549,10 +549,10 @@ ApiController.prototype._saveSingleCommit = function(req, result) {
             old = result;
             break;
         default:
-            return Q.reject(SIS.ERR_INTERNAL("invalid commit being saved"));
+            return Promise.reject(SIS.ERR_INTERNAL("invalid commit being saved"));
     }
     // save it
-    var d = Q.defer();
+    var d = Promise.pending();
     var type = this.getType(req);
     this.commitManager.recordHistory(old, now, req.user, type, function(e, h) {
         // doesn't matter for now.
@@ -568,7 +568,7 @@ ApiController.prototype._saveCommit = function(req) {
     var self = this;
     return function(result) {
         if (!self.shouldSaveCommit(req)) {
-            return Q(result);
+            return Promise.resolve(result);
         }
 
         if (req.params.isBulk) {
@@ -578,13 +578,13 @@ ApiController.prototype._saveCommit = function(req) {
                 var promises = items.map(function(item) {
                     return self._saveSingleCommit(req, item);
                 });
-                return Q.all(promises).then(function() {
-                    return Q(result);
+                return Promise.all(promises).then(function() {
+                    return Promise.resolve(result);
                 }, function() {
-                    return Q(result);
+                    return Promise.resolve(result);
                 });
             } else {
-                return Q(result);
+                return Promise.resolve(result);
             }
         } else {
             return self._saveSingleCommit(req, result);
@@ -616,7 +616,7 @@ ApiController.prototype._getPopulatePromise = function(req, mgr) {
         if (self.parsePopulate(req)) {
             return mgr.populate(results, self.sm);
         } else {
-            return Q(results);
+            return Promise.resolve(results);
         }
     };
 };

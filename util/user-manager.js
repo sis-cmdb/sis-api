@@ -20,7 +20,7 @@
 
     var SIS = require("./constants");
     var Manager = require("./manager");
-    var Q = require("q");
+    var Promise = require("bluebird");
     var crypto = require('crypto');
     var jsondiff = require("jsondiffpatch");
 
@@ -41,7 +41,7 @@
             expires : Date.now() + SIS.AUTH_EXPIRATION_TIME
         };
         var p = tm.add(token, user);
-        return Q.nodeify(p, callback);
+        return p.nodeify(callback);
     };
 
     UserManager.prototype.hashPw = function(pw) {
@@ -74,12 +74,12 @@
         var p = this.getById(username).then(function(u) {
             pw = self.hashPw(pw);
             if (u[SIS.FIELD_PW] != pw) {
-                return Q.reject(SIS.ERR_BAD_CREDS("Invalid password."));
+                return Promise.reject(SIS.ERR_BAD_CREDS("Invalid password."));
             } else {
-                return Q(u);
+                return Promise.resolve(u);
             }
         });
-        return Q.nodeify(p, callback);
+        return p.nodeify(callback);
     };
 
     UserManager.prototype.getOrCreateEmptyUser = function(userObj, superUser, callback) {
@@ -110,43 +110,43 @@
 
     UserManager.prototype.authorize = function(evt, doc, user, mergedDoc) {
         if (!this.authEnabled) {
-            return Q(mergedDoc || doc);
+            return Promise.resolve(mergedDoc || doc);
         }
         if (!user) {
-            return Q.reject(SIS.ERR_BAD_CREDS("User is null."));
+            return Promise.reject(SIS.ERR_BAD_CREDS("User is null."));
         }
         // super users do it all
         if (user[SIS.FIELD_SUPERUSER]) {
-            return Q(mergedDoc || doc);
+            return Promise.resolve(mergedDoc || doc);
         }
         if (!user[SIS.FIELD_ROLES]) {
-            return Q.reject(SIS.ERR_BAD_CREDS("User has no roles."));
+            return Promise.reject(SIS.ERR_BAD_CREDS("User has no roles."));
         }
         // doc is a user object
         switch (evt) {
             case SIS.EVENT_INSERT:
             case SIS.EVENT_DELETE:
                 if (doc[SIS.FIELD_SUPERUSER] && !user[SIS.FIELD_SUPERUSER]) {
-                    return Q.reject(SIS.ERR_BAD_CREDS("Only superusers can " + evt + " superusers."));
+                    return Promise.reject(SIS.ERR_BAD_CREDS("Only superusers can " + evt + " superusers."));
                 }
                 if (!SIS.UTIL_ENSURE_ROLE_SUBSET(user[SIS.FIELD_ROLES], doc[SIS.FIELD_ROLES], true)) {
-                    return Q.reject(SIS.ERR_BAD_CREDS("Cannot " + evt + " user unless admin of all roles."));
+                    return Promise.reject(SIS.ERR_BAD_CREDS("Cannot " + evt + " user unless admin of all roles."));
                 }
                 if (doc[SIS.FIELD_NAME] == user[SIS.FIELD_NAME]) {
-                    return Q.reject(SIS.ERR_BAD_CREDS("Cannot " + evt + " a user with the same name."));
+                    return Promise.reject(SIS.ERR_BAD_CREDS("Cannot " + evt + " a user with the same name."));
                 }
-                return Q(doc);
+                return Promise.resolve(doc);
             default: // update
                 // if changing roles, then an admin of the roles being added/removed
                 // are allowed..
                 if (doc[SIS.FIELD_SUPERUSER] && !user[SIS.FIELD_SUPERUSER] ||
                     mergedDoc[SIS.FIELD_SUPERUSER] && !user[SIS.FIELD_SUPERUSER]) {
-                    return Q.reject(SIS.ERR_BAD_CREDS("Only superusers can update superusers."));
+                    return Promise.reject(SIS.ERR_BAD_CREDS("Only superusers can update superusers."));
                 }
                 if (!SIS.UTIL_ROLES_EQUAL(doc, mergedDoc)) {
                     // changing roles
                     if (doc[SIS.FIELD_NAME] == user[SIS.FIELD_NAME]) {
-                        return Q.reject(SIS.ERR_BAD_CREDS("User's cannot change their own roles."));
+                        return Promise.reject(SIS.ERR_BAD_CREDS("User's cannot change their own roles."));
                     }
                     // need to get the diffs..
                     var k;
@@ -156,7 +156,7 @@
                     for (k in roleDiff) {
                         // need to make sure the user is an admin of the role being added/deleted/updated
                         if (!(k in userRoles) || userRoles[k] != SIS.ROLE_ADMIN) {
-                            return Q.reject(SIS.ERR_BAD_CREDS(user[SIS.FIELD_NAME] + " is not an admin of role " + k));
+                            return Promise.reject(SIS.ERR_BAD_CREDS(user[SIS.FIELD_NAME] + " is not an admin of role " + k));
                         }
                     }
                     // non role fields can't be changed here.
@@ -164,27 +164,27 @@
                         if (k != SIS.FIELD_ROLES && k != SIS.FIELD_UPDATED_BY) {
                             if (k in mergedDoc && mergedDoc[k].toString() != doc[k].toString()) {
                                 // can't change this field.
-                                return Q.reject(SIS.ERR_BAD_CREDS("Only the user or a super user can change non role fields. (" + k + ")"));
+                                return Promise.reject(SIS.ERR_BAD_CREDS("Only the user or a super user can change non role fields. (" + k + ")"));
                             }
                         }
                     }
                 } else {
                     // not changing roles.. only fields
                     if (doc[SIS.FIELD_NAME] != user[SIS.FIELD_NAME]) {
-                        return Q.reject(SIS.ERR_BAD_CREDS("Only the user or a super user can change non role fields."));
+                        return Promise.reject(SIS.ERR_BAD_CREDS("Only the user or a super user can change non role fields."));
                     }
                     if (SIS.FIELD_VERIFIED in doc && doc[SIS.FIELD_VERIFIED] != mergedDoc[SIS.FIELD_VERIFIED]) {
-                        return Q.reject(SIS.ERR_BAD_REQ("Cannot change verified state of self."));
+                        return Promise.reject(SIS.ERR_BAD_REQ("Cannot change verified state of self."));
                     }
                 }
-                return Q(mergedDoc);
+                return Promise.resolve(mergedDoc);
         } // end switch
     };
 
     UserManager.prototype.objectRemoved = function(user) {
         // remove all tokens where username = user[name];
         var tokenManager = this.sm.auth[SIS.SCHEMA_TOKENS];
-        var d = Q.defer();
+        var d = Promise.pending();
         tokenManager.model.remove({username : user[SIS.FIELD_NAME]}, function(err) {
             if (err) {
                 d.reject(SIS.ERR_INTERNAL("Unable to clear tokens for user."));

@@ -24,7 +24,7 @@
 
     var SIS = require("./constants");
     var Manager = require("./manager");
-    var Q = require("q");
+    var Promise = require("bluebird");
 
     var toRegex = function(str) {
         try {
@@ -247,7 +247,7 @@
         if (!defChanged) {
             // definition didn't change so we don't need to delete any models
             // or anything
-            return Q(currentSchema);
+            return Promise.resolve(currentSchema);
         }
 
         // update the def and cache
@@ -257,7 +257,7 @@
 
 
         if (!pathsToDelete.length) {
-            return Q(currentSchema);
+            return Promise.resolve(currentSchema);
         }
 
         var lockedFields = currentSchema[SIS.FIELD_LOCKED_FIELDS] || [];
@@ -266,13 +266,13 @@
         for (var i = 0; i < pathsToDelete.length; ++i) {
             var path = pathsToDelete[i];
             if (lockedFields.indexOf(path) != -1) {
-                return Q.reject(SIS.ERR_BAD_REQ("Cannot remove field " + path));
+                return Promise.reject(SIS.ERR_BAD_REQ("Cannot remove field " + path));
             }
             pathsObj[path] = "";
         }
 
         // need to unset the paths
-        var d = Q.defer();
+        var d = Promise.pending();
         currentMongooseModel.update({},{ $unset : pathsObj}, {multi: true, safe : true, strict: false},
             function(err) {
                 if (err) {
@@ -298,7 +298,7 @@
         // exposed by very quick tests that create a collection
         // requiring an index and then drop it shortly after.
         // TODO: needs verification / less hackiness
-        var d = Q.defer();
+        var d = Promise.pending();
         model.collection.dropIndexes(function(err, reply) {
             model.collection.drop(function(err, reply) {
                 // mongoose throws an error if the collection isn't found..
@@ -321,7 +321,7 @@
     };
 
     SchemaManager.prototype.getEntityModelAsync = function(name, callback) {
-        var d = Q.defer();
+        var d = Promise.pending();
         var self = this;
         this.model.findOne({name: name}, null, { lean : true }, function(err, schema) {
             if (err) {
@@ -335,7 +335,7 @@
                 }
             }
         });
-        return Q.nodeify(d.promise, callback);
+        return d.promise.nodeify(callback);
     };
 
     // Bootstrap mongoose by setting up entity models
@@ -371,7 +371,7 @@
 
     // wrap this so we can handle the error case
     SchemaManager.prototype.getById = function(id, options) {
-        var d = Q.defer();
+        var d = Promise.pending();
         var self = this;
         Manager.prototype.getById.call(this, id, options).done(function(result) {
             d.resolve(result);
@@ -446,22 +446,22 @@
     SchemaManager.prototype.authorize = function(evt, doc, user, mergedDoc) {
         if (evt == SIS.EVENT_DELETE) {
             if (doc[SIS.FIELD_LOCKED]) {
-                return Q.reject(SIS.ERR_BAD_CREDS("Cannot delete a locked object."));
+                return Promise.reject(SIS.ERR_BAD_CREDS("Cannot delete a locked object."));
             }
         }
         // get the permissions on the doc being added/updated/deleted
         var permission = this.getPermissionsForObject(doc, user);
         if (permission != SIS.PERMISSION_ADMIN) {
-            return Q.reject(SIS.ERR_BAD_CREDS("Insufficient permissions."));
+            return Promise.reject(SIS.ERR_BAD_CREDS("Insufficient permissions."));
         } else if (evt != SIS.EVENT_UPDATE) {
             // insert / delete and user is an admin
-            return Q(doc);
+            return Promise.resolve(doc);
         }
         var updatedPerms = this.getPermissionsForObject(mergedDoc, user);
         if (updatedPerms != SIS.PERMISSION_ADMIN) {
-            return Q.reject(SIS.ERR_BAD_CREDS("Insufficient permissions."));
+            return Promise.reject(SIS.ERR_BAD_CREDS("Insufficient permissions."));
         }
-        return Q(mergedDoc);
+        return Promise.resolve(mergedDoc);
     };
 
     // export

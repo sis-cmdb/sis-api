@@ -17,7 +17,7 @@
 var express = require('express');
 var mongoose = require('mongoose');
 var bodyParser = require('body-parser');
-var Q = require("q");
+var Promise = require("bluebird");
 var SIS = require("./util/constants");
 
 var app = null;
@@ -55,24 +55,6 @@ var defaultConfig = {
         }
     }
 };
-
-// patch Q.js
-function doneNodeify(obj, nodeback) {
-    var promise = Q(obj);
-    if (!nodeback) {
-        return promise;
-    }
-    promise.then(function(result) {
-        nodeback(null, result);
-    })
-    .catch(function(err) {
-        // console.log("caught " + JSON.stringify(err) + " " + typeof(err));
-        nodeback(err);
-    })
-    .done();
-}
-
-Q.nodeify = doneNodeify;
 
 var startServer = function(config, callback) {
     'use strict';

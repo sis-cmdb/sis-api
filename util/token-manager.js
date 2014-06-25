@@ -20,7 +20,7 @@
 
     var SIS = require("./constants");
     var Manager = require("./manager");
-    var Q = require("q");
+    var Promise = require("bluebird");
     var crypto = require("crypto");
     var hat = require('hat');
 
@@ -43,12 +43,12 @@
         }
         var err = this.validate(obj, false, user);
         if (err) {
-            return Q.nodeify(Q.reject(SIS.ERR_BAD_REQ(err)),
-                             callback);
+            err = SIS.ERR_BAD_REQ(err);
+            return Promise.reject(err).nodeify(callback);
         }
         var p = this.authorize(SIS.EVENT_INSERT, obj, user)
                     .then(this.createToken.bind(this));
-        return Q.nodeify(p, callback);
+        return p.nodeify(callback);
     };
 
     TokenManager.prototype.validate = function(obj, isUpdate, user) {
@@ -61,7 +61,7 @@
     TokenManager.prototype.createToken = function(token) {
         // save token
         var self = this;
-        var d = Q.defer();
+        var d = Promise.pending();
         var createTokenHelper = function() {
             token.name = hat();
             var doc = new self.model(token);
@@ -99,29 +99,29 @@
     // only the user, super user
     TokenManager.prototype.authorize = function(evt, doc, user, mergedDoc) {
         if (!doc[SIS.FIELD_USERNAME]) {
-            return Q.reject(SIS.ERR_BAD_REQ("Missing username in token."));
+            return Promise.reject(SIS.ERR_BAD_REQ("Missing username in token."));
         }
         if (mergedDoc && mergedDoc[SIS.FIELD_USERNAME] != doc[SIS.FIELD_USERNAME]) {
-            return Q.reject(SIS.ERR_BAD_REQ("Cannot change the username of the token."));
+            return Promise.reject(SIS.ERR_BAD_REQ("Cannot change the username of the token."));
         }
         if (mergedDoc && mergedDoc[SIS.FIELD_EXPIRES]) {
-            return Q.reject(SIS.ERR_BAD_REQ("Cannot change a temporary token."));
+            return Promise.reject(SIS.ERR_BAD_REQ("Cannot change a temporary token."));
         }
         if (doc[SIS.FIELD_EXPIRES] && doc[SIS.FIELD_USERNAME] != user[SIS.FIELD_NAME]) {
-            return Q.reject(SIS.ERR_BAD_REQ("Cannot create a temp token for another user."));
+            return Promise.reject(SIS.ERR_BAD_REQ("Cannot create a temp token for another user."));
         }
         if (!this.authEnabled) {
-            return Q(mergedDoc || doc);
+            return Promise.resolve(mergedDoc || doc);
         }
         if (!user) {
-            return Q.reject(SIS.ERR_BAD_CREDS("User is null."));
+            return Promise.reject(SIS.ERR_BAD_CREDS("User is null."));
         }
         if (!user[SIS.FIELD_ROLES] && !user[SIS.FIELD_SUPERUSER]) {
-            return Q.reject(SIS.ERR_BAD_CREDS("Invalid user."));
+            return Promise.reject(SIS.ERR_BAD_CREDS("Invalid user."));
         }
         // get the user
         var username = doc[SIS.FIELD_USERNAME];
-        var d = Q.defer();
+        var d = Promise.pending();
         var self = this;
         this.sm.auth[SIS.SCHEMA_USERS].getById(username).done(function(tokenUser) {
             if (tokenUser[SIS.FIELD_SUPERUSER] && !doc[SIS.FIELD_EXPIRES]) {

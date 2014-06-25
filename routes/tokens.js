@@ -22,7 +22,7 @@
     var ApiController = require("./apicontroller");
     var SIS = require("../util/constants");
     var passport = require("passport");
-    var Q = require("q");
+    var Promise = require("bluebird");
 
     /////////////////////////////////
     // Token controller (user level)
@@ -70,9 +70,9 @@
     };
 
     // override main entry points to ensure user exists..
-    TokenController.prototype.ensureUser = function(req, callback) {
+    TokenController.prototype.ensureUser = function(req) {
         var uid = req.params.uid;
-        return Q.nodeify(this.userManager.getById(uid), callback);
+        return this.userManager.getById(uid);
     };
 
     var fixBody = function(req) {
@@ -93,25 +93,23 @@
         // returns a wrapper around it
         var wrapFunc = function(func) {
             return function(req, res) {
-                self.ensureUser(req, function(e, user) {
-                    if (e) {
-                        return self.sendError(res, e);
-                    } else {
-                        req[SIS.FIELD_TOKEN_USER] = user;
-                        fixBody(req);
-                        // need to ensure that only admins of the user
-                        // super users, or the user himself are
-                        // getting the tokens
-                        var p = self.authenticate(req, res, SIS.SCHEMA_TOKENS);
-                        Q.nodeify(p, function(err, auth) {
-                            if (err) { return self.sendError(res, err); }
-                            if (self.manager.canAdministerTokensOf(req.user, user)) {
-                                func.call(self, req, res);
-                            } else {
-                                return self.sendError(res, SIS.ERR_BAD_CREDS("Cannot read tokens for user."));
-                            }
-                        });
-                    }
+                self.ensureUser(req).then(function(user) {
+                    req[SIS.FIELD_TOKEN_USER] = user;
+                    fixBody(req);
+                    // need to ensure that only admins of the user
+                    // super users, or the user himself are
+                    // getting the tokens
+                    var p = self.authenticate(req, res, SIS.SCHEMA_TOKENS);
+                    return p.then(function(auth) {
+                        if (self.manager.canAdministerTokensOf(req.user, user)) {
+                            func.call(self, req, res);
+                        } else {
+                            return self.sendError(res, SIS.ERR_BAD_CREDS("Cannot read tokens for user."));
+                        }
+                    });
+                })
+                .catch(function(err) {
+                    return self.sendError(res, err);
                 });
             };
         };

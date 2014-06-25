@@ -22,7 +22,7 @@
 
     var jsondiff = require('jsondiffpatch');
     var SIS = require('./constants');
-    var Q = require('q');
+    var Promise = require("bluebird");
 
     var docToPojo = function(doc) {
         if (typeof doc.toObject === 'function') {
@@ -116,7 +116,7 @@
             var sort = { date_modified : -1 };
             var commits = [];
             // result promise
-            var d = Q.defer();
+            var d = Promise.pending();
             // find the first commit
             var query = self.model.findOne(condition).select(fields).sort(sort);
             query.exec(function(err, first) {

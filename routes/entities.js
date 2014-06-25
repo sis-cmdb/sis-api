@@ -22,7 +22,7 @@
 
     var ApiController = require("./apicontroller");
     var SIS = require("../util/constants");
-    var Q = require("q");
+    var Promise = require("bluebird");
     var createEntityManager = require("../util/entity-manager");
 
     //////////
@@ -47,7 +47,7 @@
         // Get the latest
         var name = this.getType(req);
         var self = this;
-        var d = Q.defer();
+        var d = Promise.pending();
         this.sm.getById(name, { lean : true }).done(function(schema) {
             var model = self.sm.getEntityModel(schema);
             var manager = createEntityManager(model, schema, self.opts);

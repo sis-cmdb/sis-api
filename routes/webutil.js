@@ -21,7 +21,7 @@
     var passport = require('passport');
     var BasicStrategy = require('passport-http').BasicStrategy;
     var SIS = require("../util/constants");
-    var Q = require("q");
+    var Promise = require("bluebird");
     var util = require("util");
 
     // authorization using user and pass via the user manager
@@ -81,14 +81,12 @@
                 var timeLeft = expires.getTime() - Date.now();
                 if (timeLeft <= 0) {
                     // no good
-                    return Q.reject(SIS.ERR_BAD_CREDS("Token has expired."));
+                    return Promise.reject(SIS.ERR_BAD_CREDS("Token has expired."));
                 }
             }
             return userManager.getById(t[SIS.FIELD_USERNAME]);
-        }, function(e) {
-            return Q.reject(e);
         });
-        return Q.nodeify(p, done);
+        return p.nodeify(done);
     };
 
     var getAuthType = function(config) {
@@ -174,9 +172,9 @@
         var opts = oidType.options;
         if (!opts || !opts.ref) {
             // just return an empty array
-            return Q([]);
+            return Promise.resolve([]);
         }
-        var d = Q.defer();
+        var d = Promise.pending();
         sm.getEntityModelAsync(opts.ref, function(err, sisModel) {
             if (err) {
                 return d.reject(err);
@@ -286,11 +284,11 @@
         var references = mgr.getReferences();
         if (!condition || typeof condition !== 'object' ||
             !references || !references.length) {
-            return Q(condition);
+            return Promise.resolve(condition);
         }
         var keys = Object.keys(condition);
         if (!keys.length) {
-            return Q(condition);
+            return Promise.resolve(condition);
         }
         var paths = references.filter(function(ref) {
             return ref.type != 'arr';
@@ -307,7 +305,7 @@
             var key = keys[k];
             if (key[key.length - 1] == '.') {
                 // invalid query - just let it flow.
-                return Q(condition);
+                return Promise.resolve(condition);
             }
             // compare with the references - probably a better way to do
             // this ;)
@@ -336,7 +334,7 @@
                 return getObjectIds(schemaPath, cond, remainingPath,
                                     schemaManager, mgr.model);
             });
-            return Q.all(promises).then(function(results) {
+            return Promise.all(promises).then(function(results) {
                 var refConds = {};
                 for (var i = 0; i < results.length; ++i) {
                     var key = fieldKeys[i];
@@ -352,10 +350,10 @@
                         flattened[k] = v;
                     }
                 }
-                return Q(flattened);
+                return Promise.resolve(flattened);
             });
         } else {
-            return Q(condition);
+            return Promise.resolve(condition);
         }
     };
 
