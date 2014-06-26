@@ -47,17 +47,13 @@
         // Get the latest
         var name = this.getType(req);
         var self = this;
-        var d = Promise.pending();
-        this.sm.getById(name, { lean : true }).done(function(schema) {
+        return this.sm.getById(name, { lean : true }).then(function(schema) {
             var model = self.sm.getEntityModel(schema);
             var manager = createEntityManager(model, schema, self.opts);
             req.sisManager = manager;
             self.useLean = !model.schema._sis_defaultpaths.length;
-            d.resolve(manager);
-        }, function(e) {
-            d.reject(e);
+            return manager;
         });
-        return d.promise;
     };
 
     EntityController.prototype.shouldSaveCommit = function(req) {

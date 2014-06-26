@@ -210,23 +210,24 @@
                     return Promise.reject(SIS.ERR_BAD_REQ("Reference Object has no _id"));
                 }
             }
-            d = Promise.pending();
-            this.sm.getEntityModelAsync(refModelName, function(err, model) {
-                if (err) { return d.reject(err); }
+            return this.sm.getEntityModelAsync(refModelName).then(function(model) {
                 if (!model) {
-                    return d.reject(SIS.ERR_BAD_REQ("No schema named " + refModelName));
+                    return Promise.reject(SIS.ERR_BAD_REQ("No schema named " + refModelName));
                 }
-                model.findOne({'_id' : currObj}, '_id', function(e, r) {
-                    if (e) {
-                        d.reject(SIS.ERR_INTERNAL(e));
-                    } else if (!r) {
-                        d.reject(SIS.ERR_BAD_REQ("Reference with id " + currObj + " does not exist."));
+                return model.findOneAsync({'_id' : currObj}, '_id', {lean : true}).then(function(r) {
+                    if (!r) {
+                        return Promise.reject(SIS.ERR_BAD_REQ("Reference with id " + currObj + " does not exist."));
                     } else {
-                        d.resolve(true);
+                        return true;
                     }
                 });
+            })
+            .catch(function(err) {
+                if (err instanceof Array) {
+                    return Promise.reject(err);
+                }
+                return Promise.reject(SIS.ERR_INTERNAL(err));
             });
-            return d.promise;
         } else {
             // array of oids
             if (!(currObj instanceof Array)) {
@@ -250,23 +251,24 @@
             if (errored) {
                 return Promise.reject(SIS.ERR_BAD_REQ("Reference Object has no _id field"));
             }
-            d = Promise.pending();
-            this.sm.getEntityModelAsync(refModelName, function(err, model) {
-                if (err) { return d.reject(err); }
+            return this.sm.getEntityModelAsync(refModelName).then(function(model) {
                 if (!model) {
-                    return d.reject(SIS.ERR_BAD_REQ("No schema named " + refModelName));
+                    return Promise.reject(SIS.ERR_BAD_REQ("No schema named " + refModelName));
                 }
-                model.find({ '_id' : { "$in" : currObj }}, '_id', function(e, r) {
-                    if (e) {
-                        d.reject(SIS.ERR_INTERNAL(e));
-                    } else if (!r || r.length != currObj.length) {
-                        d.reject(SIS.ERR_BAD_REQ("Some IDs do not exist in " + JSON.stringify(currObj)));
+                return model.findAsync({ '_id' : { "$in" : currObj }}, '_id', {lean : true}).then(function(r) {
+                    if (!r || r.length != currObj.length) {
+                        return Promise.reject(SIS.ERR_BAD_REQ("Some IDs do not exist in " + JSON.stringify(currObj)));
                     } else {
-                        d.resolve(true);
+                        return true;
                     }
                 });
+            })
+            .catch(function(err) {
+                if (err instanceof Array) {
+                    return Promise.reject(err);
+                }
+                return Promise.reject(SIS.ERR_INTERNAL(err));
             });
-            return d.promise;
         }
     };
 

@@ -152,6 +152,10 @@
         };
     };
 
+    var mapIds = function(ids) {
+        return ids.map(stripOutId);
+    };
+
     var getFindCond = function(key, condition) {
         var result = {};
         result[key] = condition;
@@ -174,17 +178,14 @@
             // just return an empty array
             return Promise.resolve([]);
         }
-        var d = Promise.pending();
-        sm.getEntityModelAsync(opts.ref, function(err, sisModel) {
-            if (err) {
-                return d.reject(err);
-            }
+        return sm.getEntityModelAsync(opts.ref).then(function(sisModel){
             // need to check if the remainingPath is another reference
             // or the actual path
             var path = sisModel.schema.path(remainingPath);
             if (path) {
                 // we can query this since it is a property of the model
-                sisModel.find(getFindCond(remainingPath, condition), '_id', getQueryIdsCallback(d));
+                return sisModel.findAsync(getFindCond(remainingPath, condition), '_id')
+                    .then(mapIds);
             } else {
                 // need to see if we're looking to join another set of object ids
                 var references = SIS.UTIL_GET_OID_PATHS(sisModel.schema).filter(function(ref) {
@@ -195,7 +196,7 @@
                 if (!references.length) {
                     // no object ids referenced by this nested model, so the
                     // path is invalid.. bail
-                    return d.resolve([]);
+                    return Promise.resolve([]);
                 } else {
                     // find out which reference matches the remainingPath
                     var found = false;
@@ -212,42 +213,38 @@
                     if (found) {
                         // if it's path._id then we can just query this
                         if (remainingPath == path + "_id") {
-                            sisModel.find(getFindCond(remainingPath, condition), '_id',
-                                          getQueryIdsCallback(d));
+                            return sisModel.findAsync(getFindCond(remainingPath, condition), '_id',
+                                                      { lean : true }).then(mapIds);
                         } else {
                             // nested so we need to get the ids and then
                             // issue an $in query for this path
                             var nestedRemain = remainingPath.substring(path.length);
-                            var inner = getObjectIds(references[i], condition, nestedRemain,
-                                                     sm, sisModel);
-                            inner.then(function(ids) {
-                                if (!ids.length) {
-                                    d.resolve(ids);
-                                } else if (ids.length == 1) {
-                                    // no need for $in
-                                    sisModel.find(getFindCond(ref, ids[0]), '_id',
-                                                  getQueryIdsCallback(d));
-                                } else {
-                                    // need in..
-                                    sisModel.find(getFindCond(ref, { "$in" : ids }), '_id',
-                                                  getQueryIdsCallback(d));
+                            return getObjectIds(references[i], condition, nestedRemain,
+                                                sm, sisModel).then(function(ids) {
+                                if (!ids || !ids.length) {
+                                    return Promise.resolve([]);
                                 }
-                            }, function(err) {
-                                d.reject(err);
+                                var findCond = ids.length == 1 ? getFindCond(ref, ids[0]) : getFindCond(ref, { "$in" : ids});
+                                return sisModel.findAsync(findCond, '_id', {lean : true}).then(mapIds);
                             });
                         }
                     } else {
                         // path is invalid.  just return empty
-                        return d.resolve([]);
+                        return Promise.resolve([]);
                     }
                 }
             }
+        })
+        .catch(function(err) {
+            if (err instanceof Array) {
+                return Promise.reject(err);
+            }
+            return Promise.reject(SIS.ERR_INTERNAL(err));
         });
-        return d.promise;
     };
 
     var addIdsToFlattenedCondition = function(flattened, path, ids) {
-        if (!ids.length ||
+        if (!ids || !ids.length ||
             ((flattened[path] instanceof Array) &&
              !flattened[path].length)) {
             flattened[path] = [];

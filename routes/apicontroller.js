@@ -250,16 +250,14 @@ ApiController.prototype.delete = function(req, res) {
             var memo = { success : [], errors : [] };
             if (!items.length) { return Promise.resolve(memo); }
             var promises = items.map(function(item) {
-                var d = Promise.pending();
-                mgr.delete(item[mgr.idField], req.user)
-                    .then(function(result) {
-                        memo.success.push(item);
-                        d.resolve(memo);
-                    }).catch(function(err) {
-                        memo.errors.push({err : err, value : item });
-                        d.resolve(memo);
-                    });
-                return d.promise;
+                return mgr.delete(item[mgr.idField], req.user)
+                .then(function(result) {
+                    memo.success.push(item);
+                    return memo;
+                }).catch(function(err) {
+                    memo.errors.push({err : err, value : item });
+                    return memo;
+                });
             });
             return Promise.all(promises).then(function() {
                 return Promise.resolve(memo);
@@ -300,22 +298,20 @@ ApiController.prototype.add = function(req, res) {
             // async try to add everything
             var memo = { success : [], errors : [] };
             var promises = body.map(function(obj) {
-                var d = Promise.pending();
-                mgr.add(obj, req.user)
+                return mgr.add(obj, req.user)
                 .then(function(result) {
                     memo.success.push(result);
-                    d.resolve(memo);
-                }, function(err) {
+                    return memo;
+                }).catch(function(err) {
                     memo.errors.push({err : err, value : obj});
-                    d.resolve(memo);
+                    return memo;
                 });
-                return d.promise;
             });
             return Promise.all(promises).then(function() {
-                return Promise.resolve(memo);
+                return Promise.resolve([memo, mgr]);
             });
         });
-        p = p.then(function(result) {
+        p = p.spread(function(result, mgr) {
             if (result.errors.length &&
                 req.query.all_or_none) {
                 if (!result.success.length) {
@@ -324,19 +320,16 @@ ApiController.prototype.add = function(req, res) {
                 }
                 // delete the ones that were added.
                 // TODO: single bulk op on mongo
-                var promises = result.success.map(function(toDelete) {
-                    var d = Promise.pending();
-                    toDelete.remove(function() {
-                        d.resolve(true);
-                    });
-                    return d.promise;
+                var ids = result.success.map(function(obj) {
+                    return obj._id;
                 });
-                return Promise.all(promises).then(function() {
+                return mgr.model.removeAsync({ _id : { $in : ids }}).
+                then(function() {
                     result.success = [];
-                    return Promise.resolve(result);
+                    return result;
                 });
             } else {
-                return Promise.resolve(result);
+                return result;
             }
         });
         this._finish(req, res, p, 200);

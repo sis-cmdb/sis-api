@@ -128,15 +128,12 @@ Manager.prototype.getPopulateFields = function(schemaManager) {
         // need to try loading up some schemas
         // as they may be available due to DB replication
         var loadPromises = schemasToLoad.map(function(schemaName) {
-            var loadDefer = Promise.pending();
-            schemaManager.getEntityModelAsync(schemaName).then(function() {
-                loadDefer.resolve(schemaName);
+            return schemaManager.getEntityModelAsync(schemaName).then(function() {
+                return schemaName;
             }).catch(function() {
-                // err
                 delete schemaNameToPaths[schemaName];
-                loadDefer.resolve(schemaName);
+                return schemaName;
             });
-            return loadDefer.promise;
         });
         return Promise.all(loadPromises).then(function() {
             var loadedSchemas = Object.keys(schemaNameToPaths);

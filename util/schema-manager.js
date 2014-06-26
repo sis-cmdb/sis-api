@@ -272,18 +272,11 @@
         }
 
         // need to unset the paths
-        var d = Promise.pending();
-        currentMongooseModel.update({},{ $unset : pathsObj}, {multi: true, safe : true, strict: false},
-            function(err) {
-                if (err) {
-                    d.reject(SIS.ERR_INTERNAL(err));
-                } else {
-                    // cleanup the mongoose models and save the new document
-                    d.resolve(currentSchema);
-                }
-            }
-        );
-        return d.promise;
+        return currentMongooseModel.updateAsync({},{ $unset : pathsObj}, {multi: true, safe : true, strict: false})
+            .then(function() {
+                return currentSchema;
+            });
+
     };
 
     SchemaManager.prototype.objectRemoved = function(schema) {
@@ -320,22 +313,21 @@
         return this.mongoose.models[name];
     };
 
-    SchemaManager.prototype.getEntityModelAsync = function(name, callback) {
-        var d = Promise.pending();
-        var self = this;
-        this.model.findOne({name: name}, null, { lean : true }, function(err, schema) {
-            if (err) {
-                d.reject(SIS.ERR_BAD_REQ("Schema not found with name " + name));
+    SchemaManager.prototype.getEntityModelAsync = function(name) {
+        return this.model.findOneAsync({name: name}, null, { lean : true }).bind(this)
+        .then(function(schema) {
+            var model = this.getEntityModel(schema);
+            if (!model) {
+                return Promise.reject(SIS.ERR_BAD_REQ("Invalid schema found with name " + name));
             } else {
-                var model = self.getEntityModel(schema);
-                if (!model) {
-                    d.reject(SIS.ERR_BAD_REQ("Invalid schema found with name " + name));
-                } else {
-                    d.resolve(model);
-                }
+                return model;
             }
+        }).catch(function(err) {
+            if (err instanceof Array) {
+                return Promise.reject(err);
+            }
+            return Promise.reject(SIS.ERR_BAD_REQ("Schema not found with name " + name));
         });
-        return d.promise.nodeify(callback);
     };
 
     // Bootstrap mongoose by setting up entity models
