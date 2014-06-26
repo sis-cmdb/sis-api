@@ -77,7 +77,7 @@ describe('Token Manager', function() {
                         }, function(err) { done(err); });
                     }, 70000);
                     setTimeout(function() {
-                        tokenManager.getById(token.name).done(function(token) {
+                        tokenManager.getById(token.name).then(function(token) {
                             done(token);
                         }).catch(function(e) {
                             if (e[0] == 404)

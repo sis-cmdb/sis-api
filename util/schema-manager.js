@@ -98,7 +98,7 @@
         require('./types')(mongoose);
         var sisSchemas = require('./sis-schemas').schemas;
         for (var i = 0; i < sisSchemas.length; ++i) {
-            this.getEntityModel(sisSchemas[i]);
+            this.getEntityModel(sisSchemas[i],true);
         }
         var model = this.getSisModel(SIS.SCHEMA_SCHEMAS);
         Manager.call(this, model, opts);
@@ -379,7 +379,7 @@
     // calls like getById
     // the mongoose cached version is returned if available
     // Do not hang on to any of these objects
-    SchemaManager.prototype.getEntityModel = function(sisSchema) {
+    SchemaManager.prototype.getEntityModel = function(sisSchema, isInternal) {
         if (!sisSchema || !sisSchema.name || !sisSchema.definition) {
             return null;
         }
@@ -397,6 +397,29 @@
         try {
             var schema = this._getMongooseSchema(sisSchema);
             var result = this.mongoose.model(name, schema);
+            var pathsWithDefaultVal = [];
+            var pathsWithArray = [];
+            schema.eachPath(function(pathName, schemaType) {
+                if (schemaType.default()) {
+                    pathsWithDefaultVal.push(pathName);
+                }
+                if (pathName != SIS.FIELD_OWNER && schemaType.constructor.name.indexOf('Array') != -1) {
+                    pathsWithArray.push(pathName);
+                }
+            });
+            // array
+            if (!isInternal && pathsWithArray.length) {
+                schema.pre('save', function(next) {
+                    pathsWithArray.forEach(function(p) {
+                        var arr = this.get(p);
+                        if (arr && arr.length === 0 &&
+                            !this.isDirectModified(p)) {
+                            this.set(p, undefined);
+                        }
+                    }.bind(this));
+                    next();
+                });
+            }
 
             schema.pre('save', function(next) {
                 this[SIS.FIELD_UPDATED_AT] = Date.now();
@@ -405,12 +428,6 @@
 
             // precalculate sis data and store on the schema
             schema._sis_references = SIS.UTIL_GET_OID_PATHS(schema);
-            var pathsWithDefaultVal = [];
-            schema.eachPath(function(pathName, schemaType) {
-                if (schemaType.default()) {
-                    pathsWithDefaultVal.push(pathName);
-                }
-            });
             schema._sis_defaultpaths = pathsWithDefaultVal;
 
             if ('indexes' in sisSchema) {
