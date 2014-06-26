@@ -78,9 +78,13 @@ describe('Token Manager', function() {
                     }, 70000);
                     setTimeout(function() {
                         tokenManager.getById(token.name).done(function(token) {
-                            should.not.exist(token);
-                            done();
-                        }, function(e) { done(e); });
+                            done(token);
+                        }).catch(function(e) {
+                            if (e[0] == 404)
+                                done();
+                            else
+                                done(e);
+                        });
                     }, 185000);
                 });
             });
