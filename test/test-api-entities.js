@@ -364,4 +364,82 @@ describe('@API - Entity API', function() {
         });
     });
 
+    describe("remove empty arrays", function() {
+        var schema = {
+            name : "test_empty_arrays",
+            owner : ["sistest"],
+            definition : {
+                name : "String",
+                arr : ["String"],
+                nested : {
+                    str : "String",
+                    arr : ["String"],
+                    deeper : [{
+                        field : "String",
+                        arr : ["String"]
+                    }]
+                }
+            }
+        };
+        var entityUrl = "/api/v1/entities/" + schema.name;
+        var fooDoc = { name : "foo" };
+        var barDoc = { name : "bar", nested : { str : "baz" } };
+        before(function(done) {
+            ApiServer.del("/api/v1/schemas/" + schema.name)
+                .end(function() {
+                ApiServer.post('/api/v1/schemas')
+                    .send(schema).expect(201, done);
+            });
+        });
+        after(function(done) {
+            ApiServer.del("/api/v1/schemas/" + schema.name)
+                      .expect(200, done);
+        });
+
+        it("should add foo and not receive empty arrays or objects", function(done) {
+            ApiServer.post(entityUrl).query({removeEmpty : true})
+            .send(fooDoc).expect(201, function(err, res) {
+                fooDoc = res.body;
+                should.not.exist(fooDoc.arr);
+                should.not.exist(fooDoc.nested);
+                done();
+            });
+        });
+
+        it("should add bar and not receive empty arrays", function(done) {
+            ApiServer.post(entityUrl).query({removeEmpty : true})
+            .send(barDoc).expect(201, function(err, res) {
+                barDoc = res.body;
+                should.not.exist(barDoc.arr);
+                should.exist(barDoc.nested);
+                should.not.exist(barDoc.nested.arr);
+                should.not.exist(barDoc.nested.deeper);
+                done();
+            });
+        });
+
+        it("should retrieve foo with empty arrays", function(done) {
+            ApiServer.get(entityUrl + "/" + fooDoc._id)
+            .expect(200, function(err, res) {
+                var doc = res.body;
+                should.exist(doc.arr);
+                should.exist(doc.nested);
+                should.exist(doc.nested.arr);
+                should.exist(doc.nested.deeper);
+                done();
+            });
+        });
+
+        it("should update foo and show non empty arrays", function(done) {
+            ApiServer.put(entityUrl + "/" + fooDoc._id)
+            .query({ removeEmpty : true })
+            .send({ arr : ["str"] }).expect(200, function(err, res) {
+                var doc = res.body;
+                should.exist(doc.arr);
+                should.not.exist(doc.nested);
+                done();
+            });
+        });
+    });
+
 });

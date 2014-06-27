@@ -56,6 +56,24 @@
         });
     };
 
+    EntityController.prototype.convertToResponseObject = function(req, obj) {
+        if (req.query.removeEmpty &&
+            req.sisManager.model.schema._sis_arraypaths.length) {
+            var paths = req.sisManager.model.schema._sis_arraypaths;
+            if (!obj.toObject) {
+                obj = new req.sisManager.model(obj);
+            }
+            paths.forEach(function(p) {
+                var arr = obj.get(p);
+                if (arr && arr.length === 0) {
+                    obj.set(p, undefined);
+                }
+            });
+            obj = obj.toObject();
+        }
+        return obj;
+    };
+
     EntityController.prototype.shouldSaveCommit = function(req) {
         return req.sisManager &&
                req.sisManager.schema[SIS.FIELD_TRACK_HISTORY] &&

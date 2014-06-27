@@ -407,19 +407,6 @@
                     pathsWithArray.push(pathName);
                 }
             });
-            // array
-            if (!isInternal && pathsWithArray.length) {
-                schema.pre('save', function(next) {
-                    pathsWithArray.forEach(function(p) {
-                        var arr = this.get(p);
-                        if (arr && arr.length === 0 &&
-                            !this.isDirectModified(p)) {
-                            this.set(p, undefined);
-                        }
-                    }.bind(this));
-                    next();
-                });
-            }
 
             schema.pre('save', function(next) {
                 this[SIS.FIELD_UPDATED_AT] = Date.now();
@@ -427,6 +414,7 @@
             });
 
             // precalculate sis data and store on the schema
+            schema._sis_arraypaths = pathsWithArray;
             schema._sis_references = SIS.UTIL_GET_OID_PATHS(schema);
             schema._sis_defaultpaths = pathsWithDefaultVal;
 
