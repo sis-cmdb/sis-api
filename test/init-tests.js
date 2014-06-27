@@ -22,16 +22,12 @@ describe('Initialize Tests', function() {
 
     var test = null;
 
-    before(function(done) {
+    it("Should create the test", function(done) {
         test = new util.LocalTest();
         test.start(config, done);
     });
 
-    after(function(done) {
+    it("Should stop the test", function(done) {
         test.stop(done);
-    });
-
-    it("Should pass", function(done) {
-        done();
     });
 });
