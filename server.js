@@ -18,6 +18,7 @@ var express = require('express');
 var mongoose = require('mongoose');
 var bodyParser = require('body-parser');
 var Promise = require("bluebird");
+
 var SIS = require("./util/constants");
 
 var app = null;
@@ -55,6 +56,10 @@ var defaultConfig = {
         }
     }
 };
+
+if (process.env.SIS_DEBUG) {
+    Promise.longStackTraces();
+}
 
 var startServer = function(config, callback) {
     'use strict';

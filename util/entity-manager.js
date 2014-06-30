@@ -166,18 +166,36 @@
         return Manager.prototype.authorize.call(this, evt, doc, user, mergedDoc);
     };
 
-    EntityManager.prototype.applyUpdate = function(result, entity) {
-        for (var k in entity) {
-            if (entity[k] !== null) {
-                result[k] = this.applyPartial(result[k], entity[k]);
-            } else {
-                delete result[k];
+    var getValueForPath = function(path, obj) {
+        if (!obj) {
+            return null;
+        }
+        var paths = path.split(".");
+        for (var i = 0; i < paths.length; ++i) {
+            var p = paths[i];
+            obj = obj[p];
+            if (!obj) {
+                return null;
             }
         }
-        // horribly inefficient and may be unnecessary
+        return obj;
+    };
+
+    EntityManager.prototype.applyUpdate = function(result, entity) {
+        // save old mixed paths
+        var oldMixed = this.mixedTypes.reduce(function(ret, p) {
+            ret[p] = result.get(p);
+            return ret;
+        }, { });
+        result.set(entity);
+        // restore mixed objects w/ merge
         this.mixedTypes.forEach(function(p) {
+            var old = oldMixed[p];
+            var entityVal = getValueForPath(p, entity);
+            this.applyPartial(old, entityVal);
+            result.set(p, old);
             result.markModified(p);
-        });
+        }.bind(this));
         return result;
     };
 

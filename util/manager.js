@@ -381,7 +381,7 @@ Manager.prototype._getFieldsFromPopulateObject = function(refToPaths) {
     var refs = Object.keys(refToPaths);
     return refs.reduce(function(result, ref) {
         return result.concat(refToPaths[ref]);
-    }, []);
+    }, []).join(" ");
 };
 
 // returns a promise function that accepts a document from
