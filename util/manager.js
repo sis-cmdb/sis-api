@@ -185,10 +185,62 @@ Manager.prototype.add = function(obj, user, callback) {
     if (err) {
         return Promise.reject(SIS.ERR_BAD_REQ(err)).nodeify(callback);
     }
-    var p = this.authorize(SIS.EVENT_INSERT, obj, user)
+    var p = this.authorize(SIS.EVENT_INSERT, obj, user).bind(this)
         .then(this._addByFields(user, SIS.EVENT_INSERT))
-        .then(this._save.bind(this));
+        .then(this._preSave)
+        .then(this._save);
     return p.nodeify(callback);
+};
+
+Manager.prototype._update = function(id, obj, user, saveFunc) {
+    var err = this.validate(obj, true, user);
+    if (err) {
+        return Promise.reject(SIS.ERR_BAD_REQ(err));
+    }
+    if (this.idField in obj && id != obj[this.idField]) {
+        err = SIS.ERR_BAD_REQ(this.idField + " cannot be changed.");
+        return Promise.reject(err);
+    }
+    return this.getById(id).bind(this)
+    .then(function(found) {
+        // need to save found's old state
+        // HACK - see
+        // https://github.com/LearnBoost/mongoose/pull/1981
+        found.$__error(null);
+        var old = found.toObject();
+        return this._merge(found, obj).bind(this).then(function(merged) {
+            return this.authorize(SIS.EVENT_UPDATE, old, user, merged);
+        })
+        .then(this._addByFields(user, SIS.EVENT_UPDATE))
+        .then(this._preSave)
+        .then(saveFunc)
+        .then(function(updated) {
+            return Promise.resolve([old, updated]);
+        });
+    });
+};
+
+Manager.prototype.casUpdate = function(id, obj, user, cas) {
+    // set the ID on the id field
+    cas[this.idField] = id;
+    // will be bound to this in _update
+    var saveFunc = function(doc) {
+        var validate = Promise.promisify(doc.validate, doc);
+        return validate().bind(this).then(function() {
+            // find and update
+            // need to add the update time
+            this.applyPreSaveFields(obj);
+            return this.model.findOneAndUpdateAsync(cas, obj)
+            .then(function(doc) {
+                if (!doc) {
+                    // cas update failed
+                    return Promise.reject(SIS.ERR_BAD_REQ("CAS update failed."));
+                }
+                return doc;
+            });
+        });
+    };
+    return this._update(id, obj, user, saveFunc);
 };
 
 // Ensures the user can update the object and then update it
@@ -197,34 +249,7 @@ Manager.prototype.update = function(id, obj, user, callback) {
         callback = user;
         user = null;
     }
-    var err = this.validate(obj, true, user);
-    if (err) {
-        return Promise.reject(SIS.ERR_BAD_REQ(err)).nodeify(callback);
-    }
-    if (this.idField in obj && id != obj[this.idField]) {
-        err = SIS.ERR_BAD_REQ(this.idField + " cannot be changed.");
-        return Promise.reject(err).nodeify(callback);
-    }
-    var self = this;
-    var p = this.getById(id)
-        .then(function(found) {
-            // need to save found's old state
-            // HACK - see
-            // https://github.com/LearnBoost/mongoose/pull/1981
-            found.$__error(null);
-
-            var old = found.toObject();
-            var innerP = self._merge(found, obj)
-                .then(function(merged) {
-                    return self.authorize(SIS.EVENT_UPDATE, old, user, merged);
-                })
-                .then(self._addByFields(user, SIS.EVENT_UPDATE))
-                .then(self._save.bind(self))
-                .then(function(updated) {
-                    return Promise.resolve([old, updated]);
-                });
-            return innerP;
-        });
+    var p = this._update(id, obj, user, this._save);
     return p.nodeify(callback);
 };
 
@@ -388,6 +413,14 @@ Manager.prototype._getFieldsFromPopulateObject = function(refToPaths) {
 // find and applies the update
 Manager.prototype._merge = function(doc, update) {
     return Promise.resolve(this.applyUpdate(doc, update));
+};
+
+Manager.prototype.applyPreSaveFields = function(obj) {
+    obj[SIS.FIELD_UPDATED_AT] = Date.now();
+};
+
+Manager.prototype._preSave = function(obj) {
+    return obj;
 };
 
 // Save the object and return a promise that is fulfilled

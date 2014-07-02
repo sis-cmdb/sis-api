@@ -310,10 +310,9 @@
         });
     };
 
-    EntityManager.prototype._save = function(obj) {
+    EntityManager.prototype._preSave = function(obj) {
         // ensure references
-        return this.ensureReferences(obj)
-                   .then(Manager.prototype._save.bind(this));
+        return this.ensureReferences(obj);
     };
     //////////
 

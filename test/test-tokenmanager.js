@@ -74,7 +74,7 @@ describe('Token Manager', function() {
                         tokenManager.getById(token.name).done(function(token) {
                             should.exist(token);
                             'admin1'.should.eql(token[SIS.FIELD_USERNAME]);
-                        }, function(err) { done(err); });
+                        }, done);
                     }, 70000);
                     setTimeout(function() {
                         tokenManager.getById(token.name).then(function(token) {
@@ -222,9 +222,7 @@ describe('Token Manager', function() {
                     .done(function(res) {
                         res.length.should.eql(0);
                         done();
-                    }, function(err) {
-                        done(err);
-                    });
+                    }, done);
                 });
             });
         });

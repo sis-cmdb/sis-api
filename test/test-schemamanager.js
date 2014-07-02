@@ -336,7 +336,7 @@ describe('SchemaManager', function() {
           should.not.exist(result.num);
           done();
         });
-      }, function(err) { done(err); });
+      }, done);
     });
 
     it("Should not save the initial entity num field " + JSON.stringify(initialEntity), function(done) {
@@ -351,7 +351,7 @@ describe('SchemaManager', function() {
             should.not.exist(e.num);
             done();
         });
-      }, function(err) { done(err); });
+      }, done);
     });
 
     it("Should save an updated entity", function(done) {
@@ -365,7 +365,7 @@ describe('SchemaManager', function() {
           "bool" : "became a string"
           });
           doc.save(done);
-      }, function(err) { done(err); });
+      }, done);
     });
   });
 

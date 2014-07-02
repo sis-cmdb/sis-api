@@ -408,8 +408,9 @@
                 }
             });
 
+            var self = this;
             schema.pre('save', function(next) {
-                this[SIS.FIELD_UPDATED_AT] = Date.now();
+                self.applyPreSaveFields(this);
                 next();
             });
 

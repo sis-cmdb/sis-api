@@ -272,7 +272,26 @@ ApiController.prototype.update = function(req, res) {
     this.applyDefaults(req);
     var id = req.params.id;
     var obj = req.body;
-    var p = this.getManager(req).call('update', id, obj, req.user);
+    var p = null;
+    if ('cas' in req.query) {
+        var cas = req.query.cas;
+        try {
+            if (typeof cas === 'string') {
+                cas = JSON.parse(cas);
+            }
+        } catch (ex) {
+            cas = { };
+        }
+        if (typeof cas !== 'object' ||
+            cas instanceof Array ||
+            !Object.keys(cas).length) {
+            // invalid query
+            return this.sendError(res, SIS.ERR_BAD_REQ("CAS condition must be an object."));
+        }
+        p = this.getManager(req).call('casUpdate', id, obj, req.user, cas);
+    } else {
+        p = this.getManager(req).call('update', id, obj, req.user);
+    }
     this._finish(req, res, p, 200);
 };
 

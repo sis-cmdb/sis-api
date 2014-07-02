@@ -20,6 +20,7 @@ describe('@API - Entity API', function() {
     var config = require('./fixtures/config');
     var TestUtil = require('./fixtures/util');
     var ApiServer = new TestUtil.TestServer();
+    var async = require('async');
 
     it("Should setup fixtures", function(done) {
         ApiServer.start(config, function(e) {
@@ -440,6 +441,127 @@ describe('@API - Entity API', function() {
                 done();
             });
         });
+    });
+
+    describe("CAS operations", function() {
+
+        var schema = {
+            name : "test_cas_entity",
+            owner : ["sistest"],
+            definition : {
+                name : "String",
+                num : "Number"
+            }
+        };
+        var entityUrl = "/api/v1/entities/" + schema.name;
+        var doc = { name : "CAStest", num : 0 };
+        before(function(done) {
+            ApiServer.del("/api/v1/schemas/" + schema.name)
+                .end(function() {
+                ApiServer.post('/api/v1/schemas')
+                .send(schema).expect(201, function(err, res) {
+                    // add the entity
+                    ApiServer.post(entityUrl).send(doc)
+                    .expect(201, function(err, res) {
+                        doc = res.body;
+                        done(err);
+                    });
+                });
+            });
+        });
+        after(function(done) {
+            ApiServer.del("/api/v1/schemas/" + schema.name)
+                      .expect(200, done);
+        });
+
+        it("should error on non object cas", function(done) {
+            var casOp = 1;
+            var update = { num : 1 };
+            ApiServer.put(entityUrl + '/' + doc._id)
+            .query({ cas : casOp }).send(update)
+            .expect(400, done);
+        });
+
+        it("should error on array cas", function(done) {
+            var casOp = [1,2,3];
+            var update = { num : 1 };
+            ApiServer.put(entityUrl + '/' + doc._id)
+            .query({ cas : casOp }).send(update)
+            .expect(400, done);
+        });
+
+        it("should error on empty cas", function(done) {
+            var update = { num : 1 };
+            ApiServer.put(entityUrl + '/' + doc._id)
+            .query({ cas : "{}" }).send(update)
+            .expect(400, done);
+        });
+
+        it("should update with cas object", function(done) {
+            var casOp = { _updated_at : doc._updated_at };
+            var update = { num : 1 };
+            ApiServer.put(entityUrl + '/' + doc._id)
+            .query({ cas : casOp }).send(update)
+            .expect(200, function(err, res) {
+                should.not.exist(err);
+                should.exist(res.body.num);
+                res.body.num.should.eql(1);
+                doc = res.body;
+                done();
+            });
+        });
+
+        it("should update with cas string", function(done) {
+            var casOp = JSON.stringify({ _updated_at : doc._updated_at });
+            var update = { num : 2 };
+            ApiServer.put(entityUrl + '/' + doc._id)
+            .query({ cas : casOp }).send(update)
+            .expect(200, function(err, res) {
+                should.not.exist(err);
+                should.exist(res.body.num);
+                res.body.num.should.eql(2);
+                doc = res.body;
+                done();
+            });
+        });
+
+        it("should succeed only once", function(done) {
+            var casOp = { _updated_at : doc._updated_at, num : doc.num };
+            var aggregate = {
+                doc : null,
+                success : [],
+                error : []
+            };
+            var createUpdateFunc = function(num) {
+                return  function(callback) {
+                    ApiServer.put(entityUrl + '/' + doc._id)
+                    .query({ cas : casOp }).send({ num : num })
+                    .end(function(err, res) {
+                        if (res.statusCode == 200) {
+                            aggregate.doc = res.body;
+                            aggregate.success.push(num);
+                        } else {
+                            aggregate.error.push(num);
+                        }
+                        callback(null, aggregate);
+                    });
+                };
+            };
+            var NUM_QUERIES = 10;
+            var tasks = [];
+            for (var i = 0; i < NUM_QUERIES; ++i) {
+                tasks.push(createUpdateFunc(i));
+            }
+            async.parallel(tasks, function(err, res) {
+                should.not.exist(err);
+                aggregate.success.length.should.eql(1);
+                aggregate.error.length.should.eql(NUM_QUERIES - 1);
+                aggregate.success[0].should.eql(aggregate.doc.num);
+                doc = aggregate.doc[0];
+                done();
+            });
+        });
+
     });
 
 });

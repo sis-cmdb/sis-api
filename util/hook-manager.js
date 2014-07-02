@@ -131,7 +131,7 @@
         // find hooks that have the entity_type w/ the
         // event
         var query = {"entity_type" : entity_type, "events" :  event };
-        this.model.find(query, function(err, hooks) {
+        this.model.find(query, null, { lean : true }, function(err, hooks) {
             if (err) {
                 callback(SIS.ERR_NOT_FOUND(err), null);
             } else {
@@ -140,9 +140,7 @@
                 });
                 Promise.all(promises).then(function(res) {
                     callback(null, res);
-                }, function(err) {
-                    callback(err);
-                });
+                }).catch(callback);
             }
         });
     };
