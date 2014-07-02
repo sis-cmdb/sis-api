@@ -23,6 +23,7 @@ Table of Contents
 		- [Creating a new entity](#creating-a-new-entity)
 		- [Updating an entity](#updating-an-entity)
 		- [Deleting an entity](#deleting-an-entity)
+        - [Removing empty containers](#removing-empty-containers-from-the-response)
 	- [Hooks API](#hooks-api)
 		- [Hook Objects](#hook-objects)
 		- [Hook payloads](#hook-payloads)
