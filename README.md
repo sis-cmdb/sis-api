@@ -51,6 +51,7 @@ Table of Contents
     - [Bulk Operations](#bulk-operations)
         - [Bulk Insert](#bulk-insert)
         - [Bulk Delete](#bulk-delete)
+    - [CAS Support](#cas-support)
 	- [Data Sharing and Organization](#data-sharing-and-organization)
 - [API Examples using resty](#api-examples-using-resty)
 
@@ -359,6 +360,41 @@ The response is the updated entity object.
 
 Removes the entity belonging to the schema with name `schema_name` that has the `_id` specified by the `id` path parameter.  This method fails if `sis_locked` is set to true.
 
+### Removing empty containers from the response
+
+By default, array fields are always included in a response, even if empty.  In some applications, this may not be desirable behavior.
+
+Consider the following object in SIS that is accessible via `GET /api/v1/entities/myschema/obj_id`:
+
+```javascript
+{
+    "_id" : obj_id,
+    "name" : "Some name",
+    "array_field" : [],
+    "nested_doc_1" : {
+        "array_field_2" : [],
+        "nested_name" : "Foo"
+    },
+    "nested_doc_2" : {
+        "array_field_3" : []
+    }
+}
+```
+
+Issuing `GET /api/v1/entities/myschema/obj_id?removeEmpty=true` yields the following result:
+
+```javascript
+{
+    "_id" : obj_id,
+    "name" : "Some name",
+    "nested_doc_1" : {
+        "nested_name" : "Foo"
+    }
+}
+```
+
+Note that `nested_doc_2` was removed from the response since it would have been empty when `array_field_3` was removed.
+
 ## Hooks API
 
 Hooks allow users to receive notifications when objects are inserted, updated, and deleted from the SIS database.
@@ -408,7 +444,7 @@ A hook can be represented by the following schema definition:
     // The entity type that the hook is interested in.  May be a schema name or one of:
     // - sis_schemas - type for schemas
     // - sis_hiera - type for heira entries in SIS
-    "entity_type" : "String",
+    "entity_type" : { "type" : "String", "required" : true },
 
     // The owners the hook.  Note that this does not need to correlate with the entity type of the hook.
     "owner" : { "type" : ["String"] }
@@ -807,11 +843,93 @@ POST endpoints that support bulk insert also accept an array of objects instead 
 
 An optional `all_or_none` URL query parameter can be added to the request and has a boolean value.  When `true`, any errors will prevent any inserts from occurring and the success array will return empty.
 
+As an example, to insert 3 items in the `sample` schema defined in [Schema Objects](#schema-objects), issue `POST /api/v1/entities/sample` with the body
+
+```javascript
+[
+    {
+        "stringField":    "sampleString",
+        "numberField" : 20,
+        "uniqueNumberField" : 1,
+        "requiredField" : "required string",
+        "anythingField" : {
+            "anything" : "goes",
+            "in" : ["this", "field"]
+         },
+        "owner" : ["SISG1"]
+    },
+    {
+        "stringField":    "sampleString2",
+        "numberField" : 21,
+        "uniqueNumberField" : 2,
+        "requiredField" : "required string",
+        "anythingField" : {
+            "anything" : "goes",
+            "in" : ["this", "field"]
+         },
+        "owner" : ["SISG1"]
+    },
+    {
+        "stringField":    "sampleString3",
+        "numberField" : 22,
+        "uniqueNumberField" : 3,
+        "requiredField" : "required string",
+        "anythingField" : {
+            "anything" : "goes",
+            "in" : ["this", "field"]
+         },
+        "owner" : ["SISG1"]
+    }
+]
+```
+
 ### Bulk Delete
 
 Typically, DELETE endpoints require an ID as the last part of the URL path.  If omitted, a bulk deletion operation is performed.  Bulk deletion requires a query with the same query format as those supplied in [search](#search).
 
 A query must be present, otherwise a 400 is returned.  Any errors that occur to some items do not prevent other objects from being deleted.
+
+For instance, to delete all entities in the `sample` schema where the `numberField` is less than 20, issue the following request:
+
+`DELETE /api/v1/entities/sample?q={"numberField" : {"$lt" : 20}}`
+
+## CAS Support
+
+CAS updates are supported on single object update calls only (i.e. `PUT /api/v1/schemas/my_schema` or `PUT /api/v1/entities/my_schema/the_object_id`).  CAS updates ensure that an update is applied atomically only if the object meets certain criteria.
+
+To issue a CAS update operation, add the `cas` query parameter with the value being a query object representing the conditions the object must meet.
+
+For instance, consider the following `sample` object that exists in SIS and can be retrieved via `GET /api/v1/entities/sample/some_object_id`:
+
+```javascript
+{
+    "_id" : "some_object_id",
+    "_updated_at" : 1404142960187,
+    "stringField":    "some string",
+    "numberField" : 100,
+    "uniqueNumberField" : 1001,
+    "requiredField" : "r",
+    "anythingField" : { },
+    "owner" : ["SISG1"]
+    // some other SIS fields omitted
+}
+```
+
+To update the object and set `numberField` to 101 only if `numberField` is 100, issue the following request:
+
+`PUT /api/v1/entities/sample/some_object_id?cas={"numberField":100}` with the following body:
+
+```javascript
+{
+    "numberField" : 101
+}
+```
+
+Issuing the same call again will result in an error with status 400.
+
+To further enhance the update condition, consider adding the `_updated_at` field to the condition.  The CAS condition then becomes: `{"numberField" : 100 , "_updated_at" : 1404142960187}`.
+
+Note that it may not be sufficient to use only `_updated_at` as multiple writes may succeed within a millisecond.  The proper fields for the condition are left up to the application.
 
 ## Data Sharing and Organization
 
