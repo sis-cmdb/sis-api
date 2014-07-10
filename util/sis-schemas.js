@@ -33,6 +33,7 @@ module.exports.schemas = [
             definition : { type : {}, required : true },
             locked_fields : { type : ["String"] },
             track_history : { type : "Boolean", default : true },
+            is_open : { type : "Boolean", default : false },
             _references : ["String"]
         }
     },

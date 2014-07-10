@@ -90,6 +90,10 @@ describe('@API - Authorization API Entities', function() {
                 // must be member of g2
                 pass : ['superman', 'superman2', 'admin2', 'admin3', 'admin4',
                         'admin5', 'user2', 'user3', 'user4']
+            },
+            test_s4_e5 : {
+                // open schema - everyone should be able to
+                pass : userNames
             }
         };
 
@@ -241,5 +245,87 @@ describe('@API - Authorization API Entities', function() {
 
             });
         });
+    });
+
+    describe("Open schemas", function() {
+        var schema = {
+            name : "test_open_schema",
+            owner : ["nobody_should_be_a_member"],
+            is_open : true,
+            definition : {
+                name : "String"
+            }
+        };
+        var users = ['admin1', 'admin2'];
+        var updates = {
+            'admin1' : {
+                pass : ['admin1'],
+                fail : ['admin2']
+            },
+            'admin2' : {
+                pass : ['admin2'],
+                fail : ['admin1']
+            }
+        };
+        var userToEntity = { };
+        before(function(done) {
+            // nuke existing schema
+            ApiServer.authToken = superToken;
+            AuthFixture.deleteSchemas(ApiServer, [schema], false, function(err, res) {
+                if (err) { return done(err); }
+                AuthFixture.addSchemas(ApiServer, [schema], function(e, r) {
+                    ApiServer.authToken = null;
+                    done(e);
+                });
+            });
+        });
+        // adds
+        users.forEach(function(user) {
+            it("should add an entity for " + user, function(done) {
+                var token = userToTokens[user].name;
+                var entity = {
+                    name : user
+                };
+                ApiServer.post("/api/v1/entities/" + schema.name, token)
+                .send(entity).expect(201, function(err, res) {
+                    should.not.exist(err);
+                    res.body.name.should.eql(user);
+                    userToEntity[user] = res.body;
+                    done();
+                });
+            });
+        });
+        // updates
+        users.forEach(function(user) {
+            var entity = {
+                name : user + "-update"
+            };
+            updates[user].pass.forEach(function(passUser) {
+                it(user + " should update entity for " + passUser, function(done) {
+                    var token = userToTokens[user].name;
+                    var toUpdate = userToEntity[passUser]._id;
+                    var url = "/api/v1/entities/" + schema.name + "/" + toUpdate;
+                    ApiServer.put(url, token).send(entity).expect(200, done);
+                });
+            });
+            updates[user].fail.forEach(function(failUser) {
+                it(user + " should not update entity for " + failUser, function(done) {
+                    var token = userToTokens[user].name;
+                    var toUpdate = userToEntity[failUser]._id;
+                    var url = "/api/v1/entities/" + schema.name + "/" + toUpdate;
+                    ApiServer.put(url, token).send(entity).expect(401, done);
+                });
+            });
+
+        });
+        // deletes
+        users.map(function(user) {
+            it("should delete the entity for " + user, function(done) {
+                var token = userToTokens[user].name;
+                ApiServer.del("/api/v1/entities/" + schema.name + "/" + userToEntity[user]._id, token)
+                .expect(200, done);
+            });
+        });
+
     });
 });

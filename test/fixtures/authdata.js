@@ -160,6 +160,15 @@
                     str : "String",
                     num : "Number"
                 }
+            },
+            test_s4 : {
+                name : "test_s4",
+                owner : ['test_g2'],
+                is_open : true,
+                definition : {
+                    str : "String",
+                    num : "Number"
+                }
             }
         };
     };
@@ -217,6 +226,13 @@
                 entity : {
                     str : "e4",
                     num : 4
+                }
+            },
+            test_s4_e5 : {
+                schema : "test_s4",
+                entity : {
+                    str : "e5",
+                    num : 5
                 }
             }
         };

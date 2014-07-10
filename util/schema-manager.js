@@ -243,6 +243,9 @@
         if (SIS.FIELD_LOCKED_FIELDS in sisSchema) {
             currentSchema[SIS.FIELD_LOCKED_FIELDS] = sisSchema[SIS.FIELD_LOCKED_FIELDS];
         }
+        if (SIS.FIELD_IS_OPEN in sisSchema) {
+            currentSchema[SIS.FIELD_IS_OPEN] = sisSchema[SIS.FIELD_IS_OPEN];
+        }
 
         if (!defChanged) {
             // definition didn't change so we don't need to delete any models

@@ -67,6 +67,7 @@ module.exports = {
     FIELD_TRACK_HISTORY : "track_history",
     FIELD_REFERENCES : "_references",
     FIELD_DESCRIPTION : "description",
+    FIELD_IS_OPEN : "is_open",
 
     // schema names
     SCHEMA_SCHEMAS : "sis_schemas",
@@ -142,6 +143,9 @@ module.exports = {
         }
     },
     ERR_BAD_CREDS : function(msg) {
+        if (typeof msg !== 'string') {
+            msg = JSON.stringify(msg);
+        }
         return [401, { error : util.format("Unauthorized. %s", msg), code : 1004 }, msg];
     },
 

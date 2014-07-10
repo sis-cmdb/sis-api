@@ -382,7 +382,7 @@ ApiController.prototype.authenticate = function(req, res, type) {
     var self = this;
     passport.authenticate(type, {session : false}, function(err, user) {
         if (err) {
-            d.reject(SIS.ERR_BAD_CREDS("" + err));
+            d.reject(err);
         } else if (!user) {
             d.reject(SIS.ERR_BAD_CREDS("Invalid credentials"));
         } else {

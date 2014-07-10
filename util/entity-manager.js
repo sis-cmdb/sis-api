@@ -152,6 +152,18 @@
         if (user[SIS.FIELD_SUPERUSER]) {
             return Manager.prototype.authorize.call(this, evt, doc, user, mergedDoc);
         }
+        if (this.schema[SIS.FIELD_IS_OPEN]) {
+            var userGroups = user[SIS.FIELD_ROLES] ? Object.keys(user[SIS.FIELD_ROLES]) : [];
+            if (!userGroups.length) {
+                return SIS.ERR_BAD_REQ("User must have roles assigned.");
+            }
+            if (mergedDoc && !mergedDoc[SIS.FIELD_OWNER]) {
+                mergedDoc[SIS.FIELD_OWNER] = userGroups;
+            } else if (!doc[SIS.FIELD_OWNER]) {
+                doc[SIS.FIELD_OWNER] = userGroups;
+            }
+            return Manager.prototype.authorize.call(this, evt, doc, user, mergedDoc);
+        }
         // authorize against entity subset or schema
         var ownerSubset = getOwnerSubset(user, this.schema);
         if (!ownerSubset.length) {
