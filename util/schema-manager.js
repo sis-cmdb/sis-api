@@ -446,6 +446,13 @@
         return this.mongoose.models[name];
     };
 
+    SchemaManager.prototype.getPermissionsForObject = function(schema, user) {
+        if (schema && schema.is_open) {
+            return SIS.PERMISSION_ADMIN;
+        }
+        return Manager.prototype.getPermissionsForObject.call(this, schema, user);
+    };
+
     SchemaManager.prototype.authorize = function(evt, doc, user, mergedDoc) {
         if (evt == SIS.EVENT_DELETE) {
             if (doc[SIS.FIELD_LOCKED]) {

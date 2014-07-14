@@ -276,4 +276,3 @@ describe('@API - Schema API', function() {
         });
     });
 });
-

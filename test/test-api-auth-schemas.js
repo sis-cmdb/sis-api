@@ -231,4 +231,52 @@ describe('@API - Authorization API Schemas', function() {
             });
         });
     });
+
+    describe("Open schemas", function() {
+
+        var schema = {
+            name : "test_very_open_schema",
+            owner : ["does_not_exist"],
+            is_open : true,
+            definition : {
+                name : "String"
+            }
+        };
+
+        before(function(done) {
+            // nuke existing schemas
+            ApiServer.authToken = superToken;
+            AuthFixture.deleteSchemas(ApiServer, [schema], false, function(err, res) {
+                if (err) { return done(err); }
+                ApiServer.authToken = null;
+                done();
+            });
+        });
+
+        it("Should be created by admin1", function(done) {
+            var token = userToTokens.admin1.name;
+            ApiServer.post("/api/v1/schemas", token)
+                .send(schema).expect(201, done);
+        });
+
+        it("Should be updated by user4", function(done) {
+            var token = userToTokens.user4.name;
+            schema.definition.num = "Number";
+            ApiServer.put("/api/v1/schemas/" + schema.name, token)
+                .send(schema).expect(200, done);
+        });
+
+        it("Should not be updated by admin_2 changing is_open", function(done) {
+            var token = userToTokens.admin2.name;
+            schema.is_open = false;
+            ApiServer.put("/api/v1/schemas/" + schema.name, token)
+                .send(schema).expect(401, done);
+        });
+
+        it("Should be deleted by user2", function(done) {
+            var token = userToTokens.user2.name;
+            ApiServer.del("/api/v1/schemas/" + schema.name, token)
+                .expect(200, done);
+        });
+    });
 });

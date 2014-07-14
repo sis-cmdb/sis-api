@@ -74,7 +74,10 @@ var startServer = function(config, callback) {
     var app = express();
 
     //app.use(webUtil.json());
-    app.use(bodyParser.json());
+    app.use(bodyParser.json({
+        // one mb limit
+        limit : 1024 * 1024
+    }));
     app.use(allowCrossDomain);
 
     // Setup global options
