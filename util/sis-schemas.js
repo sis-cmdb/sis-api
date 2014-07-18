@@ -34,6 +34,7 @@ module.exports.schemas = [
             locked_fields : { type : ["String"] },
             track_history : { type : "Boolean", default : true },
             is_open : { type : "Boolean", default : false },
+            id_field : { type : "String", default : "_id" },
             _references : ["String"]
         }
     },

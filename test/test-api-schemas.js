@@ -67,6 +67,34 @@ describe('@API - Schema API', function() {
                 .send(schema)
                 .expect(400, done);
         });
+        it("Should fail to add a schema with a non existent ID field", function(done) {
+            var schema = {
+                name : "test_bad_id_1",
+                id_field : "bogus",
+                owner : ["sistest"],
+                definition : {
+                    name : "String"
+                }
+            };
+            ApiServer.post("/api/v1/schemas")
+                .set("Content-type", "application/json")
+                .send(schema)
+                .expect(400, done);
+        });
+        it("Should fail to add a schema with a non unique / required id field", function(done) {
+            var schema = {
+                name : "test_bad_id_2",
+                id_field : "name",
+                owner : ["sistest"],
+                definition : {
+                    name : "String"
+                }
+            };
+            ApiServer.post("/api/v1/schemas")
+                .set("Content-type", "application/json")
+                .send(schema)
+                .expect(400, done);
+        });
     });
 
     describe("CRUD schema", function() {

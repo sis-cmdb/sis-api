@@ -193,6 +193,27 @@
         return obj;
     };
 
+    // get a single object by id.
+    EntityManager.prototype.getById = function(id, options) {
+        // id could be _id or idField
+        var idField = this.schema[SIS.FIELD_ID_FIELD];
+        var q = {};
+        if (idField && idField != '_id') {
+            // try getting it like this first
+            q[idField] = id;
+            return this.getSingleByCondition(q, id, options)
+                .bind(this).catch(function(err) {
+                // fallback to _id
+                q = {}; q._id = id;
+                return this.getSingleByCondition(q, id, options);
+            });
+        } else {
+            // use _id
+            q._id = id;
+            return this.getSingleByCondition(q, id, options);
+        }
+    };
+
     EntityManager.prototype.applyUpdate = function(result, entity) {
         // save old mixed paths
         var oldMixed = this.mixedTypes.reduce(function(ret, p) {

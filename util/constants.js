@@ -68,6 +68,7 @@ module.exports = {
     FIELD_REFERENCES : "_references",
     FIELD_DESCRIPTION : "description",
     FIELD_IS_OPEN : "is_open",
+    FIELD_ID_FIELD : "id_field",
 
     // schema names
     SCHEMA_SCHEMAS : "sis_schemas",

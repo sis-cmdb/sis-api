@@ -142,6 +142,15 @@
                     return fields[i] + " is a reserved field";
                 }
             }
+            if (modelObj[SIS.FIELD_ID_FIELD] && modelObj[SIS.FIELD_ID_FIELD] != '_id') {
+                // ensure it's proper in the definition
+                var idField = modelObj[SIS.FIELD_ID_FIELD];
+                var idDescriptor = modelObj.definition[idField];
+                if (!idDescriptor || typeof idDescriptor != 'object' ||
+                    !idDescriptor.required || !idDescriptor.unique) {
+                    return "ID Field must be required and unique.";
+                }
+            }
             // set the model object to have owners
             modelObj.definition[SIS.FIELD_OWNER] = ["String"];
             var mongooseSchema = new this.mongoose.Schema(modelObj.definition, { collection : "__test__" });
@@ -237,15 +246,17 @@
 
         currentSchema[SIS.FIELD_OWNER] = sisSchema[SIS.FIELD_OWNER];
         currentSchema[SIS.FIELD_DESCRIPTION] = sisSchema[SIS.FIELD_DESCRIPTION];
-        if (SIS.FIELD_LOCKED in sisSchema) {
-            currentSchema[SIS.FIELD_LOCKED] = sisSchema[SIS.FIELD_LOCKED];
-        }
-        if (SIS.FIELD_LOCKED_FIELDS in sisSchema) {
-            currentSchema[SIS.FIELD_LOCKED_FIELDS] = sisSchema[SIS.FIELD_LOCKED_FIELDS];
-        }
-        if (SIS.FIELD_IS_OPEN in sisSchema) {
-            currentSchema[SIS.FIELD_IS_OPEN] = sisSchema[SIS.FIELD_IS_OPEN];
-        }
+        currentSchema[SIS.FIELD_ID_FIELD] = sisSchema[SIS.FIELD_ID_FIELD] || '_id';
+
+        var setIfPresent = function(field) {
+            if (field in sisSchema) {
+                currentSchema[field] = sisSchema[field];
+            }
+        };
+        // update optional fields that have default vals
+        setIfPresent(SIS.FIELD_LOCKED);
+        setIfPresent(SIS.FIELD_LOCKED_FIELDS);
+        setIfPresent(SIS.FIELD_IS_OPEN);
 
         if (!defChanged) {
             // definition didn't change so we don't need to delete any models
@@ -366,15 +377,11 @@
 
     // wrap this so we can handle the error case
     SchemaManager.prototype.getById = function(id, options) {
-        var d = Promise.pending();
-        var self = this;
-        Manager.prototype.getById.call(this, id, options).done(function(result) {
-            d.resolve(result);
-        }, function(err) {
-            self._invalidateSchema(id);
-            d.reject(err);
-        });
-        return d.promise;
+        return Manager.prototype.getById.call(this, id, options).bind(this)
+            .catch(function(err) {
+                this._invalidateSchema(id);
+                return Promise.reject(err);
+            });
     };
 
     // get a mongoose model back based on the sis schema

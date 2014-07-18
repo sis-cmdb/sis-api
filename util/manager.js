@@ -197,6 +197,10 @@ Manager.prototype._update = function(id, obj, user, saveFunc) {
     if (err) {
         return Promise.reject(SIS.ERR_BAD_REQ(err));
     }
+    // this check should still work for entities since idField is _id and
+    // it is removed from the object in the validate method.
+    // this needs to be cleaned since this is a case of a superclass
+    // getting lucky because of subclass behavior
     if (this.idField in obj && id != obj[this.idField]) {
         err = SIS.ERR_BAD_REQ(this.idField + " cannot be changed.");
         return Promise.reject(err);
@@ -221,12 +225,12 @@ Manager.prototype._update = function(id, obj, user, saveFunc) {
 };
 
 Manager.prototype.casUpdate = function(id, obj, user, cas) {
-    // set the ID on the id field
-    cas[this.idField] = id;
     // will be bound to this in _update
     var saveFunc = function(doc) {
         var validate = Promise.promisify(doc.validate, doc);
         return validate().bind(this).then(function() {
+            // set the ID on the id field
+            cas[this.idField] = doc[this.idField];
             // find and update
             // need to add the update time
             this.applyPreSaveFields(obj);
