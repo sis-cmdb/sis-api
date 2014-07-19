@@ -247,6 +247,27 @@ Manager.prototype.casUpdate = function(id, obj, user, cas) {
     return this._update(id, obj, user, saveFunc);
 };
 
+Manager.prototype.canInsertWithId = function(id, obj) {
+    return obj[this.idField] == id;
+};
+
+Manager.prototype.upsert = function(id, obj, user, cas) {
+    // get by id first
+    return this.getById(id).bind(this).then(function(found) {
+        if (cas) {
+            return this.casUpdate(id, obj, user, cas);
+        } else {
+            return this.update(id, obj, user);
+        }
+    }).catch(function(err) {
+        // add it
+        if (!this.canInsertWithId(id, obj)) {
+            return Promise.reject(SIS.ERR_BAD_REQ("Cannot insert object with specified ID"));
+        }
+        return this.add(obj, user);
+    });
+};
+
 // Ensures the user can update the object and then update it
 Manager.prototype.update = function(id, obj, user, callback) {
     if (!callback && typeof user === 'function') {

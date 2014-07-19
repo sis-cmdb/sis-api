@@ -214,6 +214,12 @@
         }
     };
 
+    EntityManager.prototype.canInsertWithId = function(id, obj) {
+        var idField = this.schema[SIS.FIELD_ID_FIELD];
+        return idField && idField != '_id' && obj[idField] == id;
+    };
+
+
     EntityManager.prototype.applyUpdate = function(result, entity) {
         // save old mixed paths
         var oldMixed = this.mixedTypes.reduce(function(ret, p) {

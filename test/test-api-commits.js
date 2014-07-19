@@ -318,4 +318,45 @@ describe('@API - History API', function() {
         });
     });
 
+    describe("Updating with the same content", function() {
+        var schema = {
+            name : "history_test_3",
+            owner : ["sistst"],
+            definition : {
+                name : "String"
+            }
+        };
+
+        var entity = {
+            name : "testme"
+        };
+
+        before(function(done) {
+            ApiServer.del('/api/v1/schemas/history_test_3')
+                .end(function(err, res) {
+                ApiServer.post("/api/v1/schemas")
+                    .send(schema)
+                    .expect(201, function(err, res) {
+                        should.not.exist(err);
+                        ApiServer.post("/api/v1/entities/history_test_3")
+                            .send(entity).expect(201, function(err, res) {
+                            should.not.exist(err);
+                            entity = res.body;
+                            ApiServer.put("/api/v1/entities/history_test_3/" + entity._id)
+                                .send(entity).expect(200, done);
+                    });
+                });
+            });
+        });
+
+        it("should only have one commit", function(done) {
+            ApiServer.get("/api/v1/entities/history_test_3/" + entity._id + "/commits")
+                .expect(200, function(err, res) {
+                    should.not.exist(err);
+                    res.body.length.should.eql(1);
+                    done();
+                });
+        });
+    });
+
 });

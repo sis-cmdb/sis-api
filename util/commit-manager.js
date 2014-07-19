@@ -72,6 +72,13 @@
                     var left = docToPojo(oldDoc);
                     var right = docToPojo(newDoc);
                     doc.commit_data = differ.diff(left, right);
+                    var hasChanged = Object.keys(doc.commit_data).some(function(k) {
+                        return k[0] != '_';
+                    });
+                    if (!hasChanged) {
+                        // just exit
+                        return callback(null, null);
+                    }
                     doc.date_modified = newDoc[SIS.FIELD_UPDATED_AT];
                     break;
                 default:

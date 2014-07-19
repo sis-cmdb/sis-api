@@ -153,14 +153,18 @@ ApiController.prototype.parseQuery = function(req) {
     return result;
 };
 
+ApiController.prototype.parseUpsert = function(req) {
+    if (typeof req.query.upsert == 'string') {
+        return req.query.upsert == 'true';
+    } else {
+        return req.query.upsert || false;
+    }
+};
+
 // Returns true if the request wants sub-documents populated
 ApiController.prototype.parsePopulate = function(req) {
     if (typeof req.query.populate == 'string') {
-        try {
-            return JSON.parse(req.query.populate);
-        } catch(ex) {
-            return false;
-        }
+        return req.query.populate == 'true';
     } else {
         return req.query.populate || false;
     }
@@ -272,6 +276,7 @@ ApiController.prototype.update = function(req, res) {
     this.applyDefaults(req);
     var id = req.params.id;
     var obj = req.body;
+    var upsert = this.parseUpsert(req);
     var p = null;
     if ('cas' in req.query) {
         var cas = req.query.cas;
@@ -288,9 +293,17 @@ ApiController.prototype.update = function(req, res) {
             // invalid query
             return this.sendError(res, SIS.ERR_BAD_REQ("CAS condition must be an object."));
         }
-        p = this.getManager(req).call('casUpdate', id, obj, req.user, cas);
+        if (upsert) {
+            p = this.getManager(req).call('upsert', id, obj, req.user, cas);
+        } else {
+            p = this.getManager(req).call('casUpdate', id, obj, req.user, cas);
+        }
     } else {
-        p = this.getManager(req).call('update', id, obj, req.user);
+        if (upsert) {
+            p = this.getManager(req).call('upsert', id, obj, req.user);
+        } else {
+            p = this.getManager(req).call('update', id, obj, req.user);
+        }
     }
     this._finish(req, res, p, 200);
 };
@@ -497,10 +510,14 @@ ApiController.prototype._getSendCallback = function(req, res, code) {
         if (err) { return self.sendError(res, err); }
         var orig = result;
         if (!req.params.isBulk &&
-            req.method == SIS.METHOD_PUT && req.params.id &&
-            result instanceof Array) {
+            req.method == SIS.METHOD_PUT && req.params.id) {
             // update.. grab the second obj
-            result = result[1];
+            if (result instanceof Array) {
+                result = result[1];
+            } else if (self.parseUpsert(req)) {
+                // code becomes 201 since it was created
+                code = 201;
+            }
         }
         result = self._convertToResponseObject(req, result);
         self.sendObject(res, code, result);
@@ -525,6 +542,12 @@ ApiController.prototype._saveSingleCommit = function(req, result) {
     var now = null;
     switch (req.method) {
         case SIS.METHOD_PUT:
+            // might be an upsert
+            if (!(result instanceof Array) &&
+                req.query.upsert) {
+                now = result;
+                break;
+            }
             // update.. result is an array
             old = result[0];
             now = result[1];
