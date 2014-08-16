@@ -132,7 +132,7 @@ var startServer = function(config, callback) {
             // setup error handler
             app.use(function(err, req, res, next) {
                 var errObj = SIS.ERR_INTERNAL("Unexpected error : " + err);
-                res.json(errObj[0], errObj[1]);
+                res.status(errObj[0]).send(errObj[1]);
             });
 
             // listen

@@ -63,9 +63,9 @@ describe("Hook Dispatch", function() {
                 should.exist(req.body);
                 if (!postCount) {
                     postCount++;
-                    res.send(400, "Need to retry.");
+                    res.status(400).send("Need to retry.");
                 } else {
-                    res.send(200, "ok");
+                    res.status(200).send("ok");
                     if (doneCallback) {
                         doneCallback();
                     }

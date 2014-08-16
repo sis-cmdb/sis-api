@@ -28,7 +28,8 @@
         if (typeof doc.toObject === 'function') {
             doc = doc.toObject();
         }
-        return JSON.parse(JSON.stringify(doc));
+        // return JSON.parse(JSON.stringify(doc));
+        return doc;
     };
 
     var differ = jsondiff.create({

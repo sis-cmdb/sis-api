@@ -33,7 +33,7 @@
             build = { 'err' : 'no info present' };
         }
         app.get("/api/v1/info", function(req, res) {
-            res.jsonp(200, build);
+            res.status(200).send(build);
         });
     };
 

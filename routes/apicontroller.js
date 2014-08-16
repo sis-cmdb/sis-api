@@ -102,12 +102,12 @@ ApiController.prototype.sendError = function(res, err) {
         console.log(JSON.stringify(err));
         err = [500, err];
     }
-    res.json(err[0], err[1]);
+    res.status(err[0]).send(err[1]);
 };
 
 // Send a response with the specified code and data
 ApiController.prototype.sendObject = function(res, code, obj) {
-    res.json(code, obj);
+    res.status(code).send(obj);
 };
 
 // Parse the query parameters for a given req
@@ -314,7 +314,6 @@ ApiController.prototype.add = function(req, res) {
     var body = req.body;
     if (body instanceof Array) {
         req.params.isBulk = true;
-        req.params.bulkEvenft = SIS.EVENT_INSERT;
         if (typeof req.query.all_or_none == 'undefined') {
             req.query.all_or_none = false;
         } else {
