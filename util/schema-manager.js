@@ -194,31 +194,35 @@
         var s2Paths = Object.keys(schema2.paths).filter(isNotSisPath).sort();
         // linear diff
         while (s1Paths.length && s2Paths.length) {
-            var p1 = s1Paths[0];
-            var p2 = s2Paths[0];
-            if (p1 === p2) {
+            var pathName1 = s1Paths[0];
+            var pathName2 = s2Paths[0];
+            // check if they are the same type
+            var path1 = schema1.path(pathName1);
+            var path2 = schema2.path(pathName2);
+            if (pathName1 === pathName2) {
                 s1Paths.shift();
                 s2Paths.shift();
-                // check if they are the same type
-                var t1 = schema1.path(p1);
-                var t2 = schema2.path(p2);
-                if (t1.constructor.name !== t2.constructor.name) {
-                    updatedPaths.push(p1);
-                } else if (JSON.stringify(t1.options) !== JSON.stringify(t2.options)) {
-                    updatedPaths.push(p1);
+                if (path1.constructor.name !== path2.constructor.name) {
+                    updatedPaths.push([pathName1, path1, path2]);
+                } else if (JSON.stringify(path1.options) !== JSON.stringify(path2.options)) {
+                    updatedPaths.push([pathName1, path1, path2]);
                 }
-            } else if (p1 < p2) {
+            } else if (pathName1 < pathName2) {
                 // p1 before p2.  p1 has been removed in s2
-                removedPaths.push(p1);
+                removedPaths.push([pathName1, path1]);
                 s1Paths.shift();
             } else {
                 // p2 before p1. p2 has been added
-                addedPaths.push(p2);
+                addedPaths.push([pathName2, path2]);
                 s2Paths.shift();
             }
         }
-        addedPaths = addedPaths.concat(s2Paths);
-        removedPaths = removedPaths.concat(s1Paths);
+        addedPaths = addedPaths.concat(s2Paths.map(function(p) {
+            return [p, schema2.path(p)];
+        }));
+        removedPaths = removedPaths.concat(s1Paths.map(function(p) {
+            return [p, schema1.path(p)];
+        }));
         return [addedPaths, removedPaths, updatedPaths];
     };
 
@@ -238,8 +242,6 @@
 
         var diff = this._diffSchemas(currentMongooseSchema, newSchema);
 
-        // find all paths that need to be unset/deleted
-        var pathsToDelete = diff[1];
         var defChanged = diff.reduce(function(c, paths) {
             return c || paths.length > 0;
         }, false);
@@ -264,14 +266,67 @@
             return Promise.resolve(currentSchema);
         }
 
+        // see if any paths changed that require index changes
+        var updatedPaths = diff[2];
+        var pathsWithIndecesToRemove = updatedPaths.filter(function(p) {
+            var p1Opt = p[1].options || { };
+            var p2Opt = p[2].options || { };
+            return JSON.stringify(p1Opt.index) !== JSON.stringify(p2Opt.index) ||
+                p1Opt.unique != p2Opt.unique;
+        });
+
+        pathsWithIndecesToRemove = pathsWithIndecesToRemove.map(function(p) {
+            // actual path
+            return p[0];
+        });
+
+        var indeces = currentMongooseSchema.indexes();
+
         // update the def and cache
         currentSchema.definition = newDef;
         this._invalidateSchema(name);
-        currentMongooseModel = this.getEntityModel(currentSchema);
+        currentMongooseModel = self.getEntityModel(currentSchema);
 
+        var collection = Promise.promisifyAll(currentMongooseModel.collection);
 
+        var resultPromise = Promise.resolve(currentSchema);
+        if (pathsWithIndecesToRemove.length) {
+            // build up the index objects to remove
+            var toRemove = [];
+            pathsWithIndecesToRemove.forEach(function(p) {
+                indeces.filter(function(idx) {
+                    return p in idx[0];
+                }).forEach(function(idx) {
+                    toRemove.push(idx);
+                });
+            });
+            if (toRemove.length) {
+                resultPromise = resultPromise.then(function() {
+                    var promises = toRemove.map(function(r) {
+                        return collection.dropIndexAsync(r[0], r[1])
+                        .then(function(res) {
+                            return r;
+                        }).catch(function(e) {
+                            return r;
+                        });
+                    });
+                    return Promise.all(promises);
+                });
+            }
+        }
+
+        resultPromise = resultPromise.then(function() {
+            var d = Promise.pending();
+            currentMongooseModel.ensureIndexes(function(err) {
+                d.resolve(currentSchema);
+            });
+            return d.promise;
+        });
+
+        // find all paths that need to be unset/deleted
+        var pathsToDelete = diff[1].map(function(p) { return p[0]; });
         if (!pathsToDelete.length) {
-            return Promise.resolve(currentSchema);
+            return resultPromise;
         }
 
         var lockedFields = currentSchema[SIS.FIELD_LOCKED_FIELDS] || [];
@@ -285,12 +340,43 @@
             pathsObj[path] = "";
         }
 
-        // need to unset the paths
-        return currentMongooseModel.updateAsync({},{ $unset : pathsObj}, {multi: true, safe : true, strict: false})
-            .then(function() {
-                return currentSchema;
+        resultPromise = resultPromise.then(function(currSchema) {
+            // unset any indeces
+            var toRemove = [];
+            pathsToDelete.forEach(function(p) {
+                indeces.filter(function(idx) {
+                    return p in idx[0];
+                }).forEach(function(idx) {
+                    toRemove.push(idx);
+                });
             });
+            if (toRemove.length) {
+                var promises = toRemove.map(function(r) {
+                    return collection.dropIndexAsync(r[0], r[1])
+                    .then(function(res) {
+                        return r;
+                    }).catch(function(e) {
+                        return r;
+                    });
+                });
+                return Promise.all(promises).then(function() {
+                    return currSchema;
+                });
+            } else {
+                return currSchema;
+            }
+        });
 
+        if (pathsToDelete.length) {
+            resultPromise = resultPromise.then(function(currSchema) {
+                return currentMongooseModel.updateAsync({},{ $unset : pathsObj}, {multi: true, safe : true, strict: false})
+                .then(function() {
+                    return currentSchema;
+                });
+            });
+        }
+
+        return resultPromise;
     };
 
     SchemaManager.prototype.objectRemoved = function(schema) {

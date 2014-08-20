@@ -32,7 +32,8 @@ describe('SchemaManager', function() {
   });
 
   after(function(done) {
-    LocalTest.stop(done);
+    //LocalTest.stop(done);
+    done();
   });
 
   describe('add-invalid-schema', function() {
@@ -407,7 +408,7 @@ describe('SchemaManager', function() {
         var s2 = schemaManager._getMongooseSchema(s);
         var diff = schemaManager._diffSchemas(s1, s2);
         diff[1].length.should.eql(1);
-        diff[1][0].should.eql('str');
+        diff[1][0][0].should.eql('str');
         done();
     });
 
@@ -419,13 +420,85 @@ describe('SchemaManager', function() {
         var s2 = schemaManager._getMongooseSchema(s);
         var diff = schemaManager._diffSchemas(s1, s2);
         diff[1].length.should.eql(1);
-        diff[1][0].should.eql('str');
+        diff[1][0][0].should.eql('str');
         diff[0].length.should.eql(1);
-        diff[0][0].should.eql('q');
+        diff[0][0][0].should.eql('q');
         diff[2].length.should.eql(1);
-        diff[2][0].should.eql('num');
+        diff[2][0][0].should.eql('num');
         done();
     });
+  });
+
+  describe("schema indexes", function() {
+      var schema = {
+          name : "test_schema_index_removal",
+          owner : ["test"],
+          definition : {
+              str : { type : "String", unique : true },
+              other : { type : "String", unique : true }
+          }
+      };
+
+      var schemaDoc = null;
+
+      // create the schema
+      before(function(done) {
+          schemaManager.delete(schema.name, function() {
+            schemaManager.add(schema, function(err, result) {
+                if (err) return done(err);
+                schemaDoc = result.toObject();
+                done();
+            });
+          });
+
+      });
+
+    //   after(function(done) {
+    //       schemaManager.delete(schema.name, done);
+    //   });
+
+      it("Should fail to add two objects w/ same str", function(done) {
+          var EntityType = schemaManager.getEntityModel(schemaDoc);
+          EntityType.ensureIndexes(function(err) {
+              should.not.exist(err);
+              var doc1 = new EntityType({ str : "foo", other : "foo" });
+              var doc2 = new EntityType({ str : "foo", other : "bar" });
+              doc1.save(function(err) {
+                 should.not.exist(err);
+                 doc2.save(function(err) {
+                    should.exist(err);
+                    done();
+                 });
+              });
+          });
+      });
+
+      it("Should remove the unique index", function(done) {
+          delete schema.definition.str.unique;
+          schemaManager.update(schema.name, schema).then(function(result) {
+              schemaDoc = result[1].toObject();
+              var EntityType = schemaManager.getEntityModel(schemaDoc);
+              var doc2 = new EntityType({ str : "foo", other : "bar" });
+              doc2.save(function(err) {
+                 should.not.exist(err);
+                 done();
+              });
+          }).catch(done);
+      });
+
+      it("Should remove the 'other' index", function(done) {
+          delete schema.definition.other;
+          var EntityType = schemaManager.getEntityModel(schemaDoc);
+          var indeces = EntityType.schema.indexes();
+          schemaManager.update(schema.name, schema).then(function(result) {
+              schemaDoc = result[1].toObject();
+              EntityType = schemaManager.getEntityModel(schemaDoc);
+              indeces = EntityType.schema.indexes();
+              indeces.length.should.eql(0);
+              done();
+          }).catch(done);
+      });
+
   });
 
   describe("lock-schema", function() {
