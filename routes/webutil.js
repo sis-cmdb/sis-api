@@ -169,24 +169,14 @@
     // ref_field, and num would be remainingPath.  model would point to
     // the model that knows about the ref_field and which other model it
     // belongs to.
-    var getObjectIds = function(schemaPath, condition, remainingPath,
+    var getObjectIds = function(schemaRef, condition, remainingPath,
                                 sm, model) {
-        // get the ObjectId schemaType from mongoose
-        var oidType = model.schema.path(schemaPath);
-        var opts = oidType.options;
-        if (!opts) {
+        var optRef = schemaRef.ref;
+        if (!optRef) {
             // just return an empty array
             return Promise.resolve([]);
         }
-        // opts could be an array..
-        if (opts.type && opts.type instanceof Array) {
-            opts = opts.type[0];
-        }
-        if (!opts || !opts.ref) {
-            // just return an empty array
-            return Promise.resolve([]);
-        }
-        return sm.getEntityModelAsync(opts.ref).then(function(sisModel){
+        return sm.getEntityModelAsync(optRef).then(function(sisModel){
             // need to check if the remainingPath is another reference
             // or the actual path
             var path = sisModel.schema.path(remainingPath);
@@ -196,11 +186,7 @@
                     .then(mapIds);
             } else {
                 // need to see if we're looking to join another set of object ids
-                var references = SIS.UTIL_GET_OID_PATHS(sisModel.schema).filter(function(ref) {
-                    return ref.type != 'arr';
-                }).map(function(ref) {
-                    return ref.path;
-                });
+                var references = SIS.UTIL_GET_OID_PATHS(sisModel.schema);
                 if (!references.length) {
                     // no object ids referenced by this nested model, so the
                     // path is invalid.. bail
@@ -211,7 +197,7 @@
                     path = null;
                     var ref = null;
                     for (var i = 0; i < references.length; ++i) {
-                        ref = references[i];
+                        ref = references[i].path;
                         path = ref + ".";
                         if (remainingPath.indexOf(path) === 0) {
                             found = true;
@@ -296,7 +282,7 @@
             return Promise.resolve([condition, mgr]);
         }
         var paths = references.map(function(ref) {
-            return ref.path;
+            return ref;
         });
 
         var found = false;
@@ -313,7 +299,7 @@
             // compare with the references - probably a better way to do
             // this ;)
             for (var i = 0; i < paths.length; ++i) {
-                var ref = paths[i] + ".";
+                var ref = paths[i].path + ".";
                 if (key.indexOf(ref) === 0 && key != ref + "_id") {
                     fieldToPath[key] = [paths[i], condition[key]];
                     found = true;
@@ -333,7 +319,7 @@
             var promises = fieldKeys.map(function(key) {
                 var schemaPath = fieldToPath[key][0];
                 var cond = fieldToPath[key][1];
-                var remainingPath = key.substring(schemaPath.length + 1);
+                var remainingPath = key.substring(schemaPath.path.length + 1);
                 return getObjectIds(schemaPath, cond, remainingPath,
                                     schemaManager, mgr.model);
             });
@@ -341,7 +327,7 @@
                 var refConds = {};
                 for (var i = 0; i < results.length; ++i) {
                     var key = fieldKeys[i];
-                    var path = fieldToPath[key][0];
+                    var path = fieldToPath[key][0].path;
                     var ids = results[i];
                     addIdsToFlattenedCondition(refConds, path, ids);
                 }
