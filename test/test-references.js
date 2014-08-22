@@ -21,6 +21,7 @@ describe('@API - Entity References', function() {
     var TestUtil = require('./fixtures/util');
     var ApiServer = new TestUtil.TestServer();
     var async = require('async');
+    var Promise = require('bluebird');
 
     before(function(done) {
         ApiServer.start(config, function(e) {
@@ -290,6 +291,123 @@ describe('@API - Entity References', function() {
                 res.length.should.eql(1);
                 done();
             });
+        });
+
+    });
+
+    describe("Subdocs and arrays", function() {
+
+        var mongoose = require('mongoose');
+        // need to test arrays of sub docs, arrays of object ids
+        // and arrays of object ids -> sub array field
+        var leaf_schema = {
+            "owner" : ["entity_test"],
+            "name" : "ref_leaf_schema",
+            "definition" : {
+                "name" : "String",
+                "num" : "Number"
+            }
+        };
+
+        var ancestor_schema = {
+            owner : ["entity_test"],
+            name : "ref_ancestor_schema",
+            definition : {
+                name : "String",
+                num : "Number",
+                leaves : [
+                    { type : "ObjectId", ref : "ref_leaf_schema" }
+                ],
+                leaf_docs : [
+                    {
+                        doc_name : "String",
+                        leaf : { type : "ObjectId", ref : "ref_leaf_schema" }
+                    }
+                ]
+            }
+        };
+
+        var numLeaves = 20;
+        var LEAVES = null;
+        // create leaves 0 - numLeaves
+        var createLeaves = function() {
+            var totalLeaves = numLeaves;
+            var items = [];
+            for (var i = 0; i < totalLeaves; ++i) {
+                items.push({
+                    name : "leaf_" + i,
+                    num : i
+                });
+            }
+            var d = Promise.pending();
+            ApiServer.post("/api/v1/entities/" + leaf_schema.name)
+            .send(items).expect(200, function(err, res) {
+                if (err) { return d.reject(err); }
+                res.body.success.length.should.eql(totalLeaves);
+                LEAVES = res.body.success.map(function(l) {
+                    return l._id;
+                });
+                d.resolve(LEAVES);
+            });
+            return d.promise;
+        };
+
+        before(function(done) {
+            // delete/create all the schemas
+            var promises = [leaf_schema, ancestor_schema].map(function(schema) {
+                var d = Promise.pending();
+                var url = "/api/v1/schemas";
+                ApiServer.del(url + '/' + schema.name).end(function() {
+                    ApiServer.post(url).send(schema).expect(201, function(err, res) {
+                        if (err) { return d.reject(err); }
+                        d.resolve(res);
+                    });
+                });
+                return d.promise;
+            });
+            Promise.all(promises).then(function() {
+                return createLeaves();
+            }).then(function() { done(); }).catch(done);
+        });
+
+        var getDneObjectId = function() {
+            var dneObjId = mongoose.Types.ObjectId();
+            while (LEAVES.filter(function(l) {
+                return l._id == dneObjId;
+            }).length) {
+                dneObjId = mongoose.Types.ObjectId();
+            }
+            return dneObjId;
+        };
+
+        var ANC_URL = "/api/v1/entities/" + ancestor_schema.name;
+
+        it("Should fail to create the ancestor via leaves", function(done) {
+            var oid = getDneObjectId();
+            var anc = {
+                name : "anc_1",
+                leaves : [oid]
+            };
+            ApiServer.post(ANC_URL).send(anc).expect(400, done);
+        });
+
+        it("Should fail to create the ancestor via leaf_docs", function(done) {
+            var oid = getDneObjectId();
+            var anc = {
+                name : "anc_2",
+                leaves : [LEAVES[0], LEAVES[1]],
+                leaf_docs : [
+                    {
+                        doc_name : "exists",
+                        leaf : LEAVES[2]
+                    },
+                    {
+                        doc_name : "foo",
+                        leaf : oid
+                    }
+                ]
+            };
+            ApiServer.post(ANC_URL).send(anc).expect(400, done);
         });
 
     });

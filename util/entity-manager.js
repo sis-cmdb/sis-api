@@ -238,9 +238,45 @@
         return result;
     };
 
+    EntityManager.prototype.getEnsureDocArrayRef = function(ref, obj) {
+        var containerPaths = ref.containerSplits;
+        var currObj = obj;
+        var path = null;
+        for (var i = 0; i < containerPaths.length; ++i) {
+            path = containerPaths[i];
+            if (!(path in currObj)) {
+                // not there - fine.
+                return Promise.resolve(true);
+            }
+            currObj = currObj[path];
+        }
+        if (currObj && !(currObj instanceof Array)) {
+            // invalid
+            return Promise.reject(SIS.ERR_BAD_REQ("Array expected at " + ref.path));
+        }
+        if (!currObj || !currObj.length) {
+            // empty - ok..
+            return Promise.resolve(true);
+        }
+        // map the promises
+        var promises = currObj.map(function(doc) {
+            return this.getEnsureReferencePromise(ref.subRef, doc);
+        }.bind(this));
+        return Promise.all(promises).catch(function(err) {
+            if (err instanceof Array) {
+                return Promise.reject(err);
+            }
+            return Promise.reject(SIS.ERR_BAD_REQ("One ore more references could not be verified at " + ref.path));
+        });
+    };
+
     EntityManager.prototype.getEnsureReferencePromise = function(ref, obj) {
         var currObj = obj;
         var path = null;
+        if (ref.container == 'docarr') {
+            // in a doc array
+            return this.getEnsureDocArrayRef(ref, obj);
+        }
         var refPaths = ref.splits;
         for (var i = 0; i < refPaths.length; ++i) {
             path = refPaths[i];
@@ -285,7 +321,7 @@
                 }
                 return Promise.reject(SIS.ERR_INTERNAL(err));
             });
-        } else {
+        } else if (ref.type == 'arr') {
             // array of oids
             if (!(currObj instanceof Array)) {
                 currObj = [currObj];

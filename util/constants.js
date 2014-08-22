@@ -280,7 +280,10 @@ module.exports = {
                         paths.push({
                             path : fullPath,
                             splits : fullPath.split(/\./),
-                            type : p.type,
+                            container : 'docarr',
+                            containerPath : pathName,
+                            containerSplits : pathName.split(/\./),
+                            subRef : p,
                             ref : p.ref
                         });
                     });

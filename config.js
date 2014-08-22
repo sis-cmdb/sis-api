@@ -18,7 +18,7 @@
 module.exports =
 {
     db: {
-        url : "mongodb://localhost/sis",
+        url : "mongodb://localhost/sis-test",
         opts : {
                 "server": {
                     "auto_reconnect": true,"socketOptions": {"keepAlive": 1}, "poolSize": 5
