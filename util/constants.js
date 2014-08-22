@@ -251,6 +251,7 @@ module.exports = {
     // schema is a mongoose schema object
     UTIL_GET_OID_PATHS : function(schema) {
         var paths = [];
+        var self = this;
         schema.eachPath(function(pathName, schemaType) {
             if (schemaType.instance == "ObjectID" &&
                 schemaType.options && schemaType.options.ref) {
@@ -260,16 +261,30 @@ module.exports = {
                     'type' : 'oid',
                     'ref' : schemaType.options.ref
                 });
-            } else if (schemaType.constructor.name.indexOf('Array') != -1 &&
-                       schemaType.caster.instance == "ObjectID" &&
-                       schemaType.caster.options.ref) {
-                schemaType = schemaType.caster;
-                paths.push({
-                    'path' : pathName,
-                    'splits' : pathName.split(/\./),
-                    'type' : 'arr',
-                    'ref' : schemaType.options.ref
-                });
+            } else if (schemaType.constructor.name.indexOf('Array') != -1) {
+                // could be an obj id or a document..
+                if (schemaType.caster.instance == "ObjectID" &&
+                    schemaType.caster.options.ref) {
+                    schemaType = schemaType.caster;
+                    paths.push({
+                        'path' : pathName,
+                        'splits' : pathName.split(/\./),
+                        'type' : 'arr',
+                        'ref' : schemaType.options.ref
+                    });
+                } else if (schemaType.constructor.name.indexOf("DocumentArray") != -1 &&
+                           schemaType.schema) {
+                    var subIdPaths = self.UTIL_GET_OID_PATHS(schemaType.schema);
+                    subIdPaths.forEach(function(p) {
+                        var fullPath = pathName + "." + p.path;
+                        paths.push({
+                            path : fullPath,
+                            splits : fullPath.split(/\./),
+                            type : p.type,
+                            ref : p.ref
+                        });
+                    });
+                }
             }
         });
         return paths;

@@ -174,6 +174,14 @@
         // get the ObjectId schemaType from mongoose
         var oidType = model.schema.path(schemaPath);
         var opts = oidType.options;
+        if (!opts) {
+            // just return an empty array
+            return Promise.resolve([]);
+        }
+        // opts could be an array..
+        if (opts.type && opts.type instanceof Array) {
+            opts = opts.type[0];
+        }
         if (!opts || !opts.ref) {
             // just return an empty array
             return Promise.resolve([]);
@@ -276,7 +284,7 @@
     };
 
     // "flatten" a query to deal with all joins
-    // returns a promise for the flattened query
+    // returns a promise for the flattened query + mgr
     module.exports.flattenCondition = function(condition, schemaManager, mgr) {
         var references = mgr.getReferences();
         if (!condition || typeof condition !== 'object' ||
@@ -287,9 +295,7 @@
         if (!keys.length) {
             return Promise.resolve([condition, mgr]);
         }
-        var paths = references.filter(function(ref) {
-            return ref.type != 'arr';
-        }).map(function(ref) {
+        var paths = references.map(function(ref) {
             return ref.path;
         });
 
