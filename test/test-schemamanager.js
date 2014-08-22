@@ -32,8 +32,7 @@ describe('SchemaManager', function() {
   });
 
   after(function(done) {
-    //LocalTest.stop(done);
-    done();
+    LocalTest.stop(done);
   });
 
   describe('add-invalid-schema', function() {
