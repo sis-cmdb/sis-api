@@ -493,6 +493,10 @@ describe('SchemaManager', function() {
               schemaDoc = result[1].toObject();
               EntityType = schemaManager.getEntityModel(schemaDoc);
               indeces = EntityType.schema.indexes();
+              indeces = indeces.filter(function(ind) {
+                  var keys = Object.keys(ind[0]);
+                  return keys.length != 1 || keys[0].indexOf('sis_') !== 0;
+              });
               indeces.length.should.eql(0);
               done();
           }).catch(done);
@@ -588,5 +592,75 @@ describe('SchemaManager', function() {
             done();
         });
     });
+  });
+
+  describe("immutable schemas", function() {
+      var schema = {
+        "name":"test_immutable_schema",
+        "owner" : ["test"],
+        "definition": {
+          "str":   "String"
+        }
+      };
+
+      var schemaDoc = null;
+
+      // create the schema and add an entity
+      before(function(done) {
+          schemaManager.add(schema, function(err, result) {
+            if (err) return done(err);
+            schemaDoc = result;
+            done();
+          });
+      });
+      after(function(done) {
+          schemaManager.delete(schema.name, done);
+      });
+
+      it("Should mark the schema immutable and add num", function(done) {
+          var obj = schemaDoc.toObject();
+          obj[SIS.FIELD_IMMUTABLE] = true;
+          obj.definition.num = "Number"
+          schemaManager.update(schema.name, obj).spread(function(old, updated) {
+              schemaDoc = updated;
+              var schemaObj = schemaDoc.toObject();
+              schemaObj[SIS.FIELD_IMMUTABLE].should.eql(true);
+              schemaObj.definition.num.should.eql("Number");
+              done();
+          }).catch(done);
+      });
+
+      it("Should fail to update the schema", function(done) {
+         var obj = schemaDoc.toObject();
+         obj.definition.other = "Number";
+         schemaManager.update(schema.name, obj).spread(function(o, r) {
+             done("Should not have updated.");
+         }).catch(function(e) {
+             // good this should error
+             should.exist(e);
+             done();
+         });
+      });
+
+      it("Should make the schema mutable", function(done) {
+          var obj = schemaDoc.toObject();
+          obj[SIS.FIELD_IMMUTABLE] = false;
+          schemaManager.update(schema.name, obj).spread(function(old, updated) {
+              schemaDoc = updated;
+              var schemaObj = schemaDoc.toObject();
+              schemaObj[SIS.FIELD_IMMUTABLE].should.eql(false);
+              done();
+          }).catch(done);
+      });
+
+      it("Should update the schema now", function(done) {
+          var obj = schemaDoc.toObject();
+          obj.definition.other = "Number";
+          schemaManager.update(schema.name, obj).spread(function(old, updated) {
+              schemaDoc = updated;
+              schemaDoc.toObject().definition.other.should.eql("Number");
+              done();
+          }).catch(done);
+      });
   });
 });

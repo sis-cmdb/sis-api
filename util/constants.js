@@ -69,6 +69,10 @@ module.exports = {
     FIELD_DESCRIPTION : "description",
     FIELD_IS_OPEN : "is_open",
     FIELD_ID_FIELD : "id_field",
+    FIELD_ANY_ADMIN_MOD : "any_owner_can_modify",
+    FIELD_IS_PUBLIC : "is_public",
+    FIELD_TAGS : "sis_tags",
+    FIELD_IMMUTABLE : "sis_immutable",
 
     // schema names
     SCHEMA_SCHEMAS : "sis_schemas",
@@ -96,7 +100,7 @@ module.exports = {
     ROLE_USER : "user",
     ROLE_ADMIN : "admin",
 
-    // an admin of one of the groups
+    // an admin of all of the groups
     PERMISSION_ADMIN : "admin",
     // a user of one of the groups
     PERMISSION_USER : "user",

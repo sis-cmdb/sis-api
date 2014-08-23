@@ -279,4 +279,47 @@ describe('@API - Authorization API Schemas', function() {
                 .expect(200, done);
         });
     });
+
+    describe("any_owner_can_modify schemas", function() {
+        var schema = {
+            name : "test_any_owner_schema",
+            owner : ["test_g1", "test_g2"],
+            any_owner_can_modify : true,
+            definition : {
+                name : "String"
+            }
+        };
+
+        before(function(done) {
+            // nuke existing schema and create
+            ApiServer.authToken = superToken;
+            AuthFixture.deleteSchemas(ApiServer, [schema], false, function(err, res) {
+                if (err) { return done(err); }
+                ApiServer.authToken = null;
+                ApiServer.post("/api/v1/schemas", superToken)
+                    .send(schema).expect(201, done);
+            });
+        });
+
+        it("Should be updated by admin1", function(done) {
+            var token = userToTokens.admin1.name;
+            schema.definition.num = "Number";
+            ApiServer.put("/api/v1/schemas/" + schema.name, token)
+                .send(schema).expect(200, done);
+        });
+
+        it("Should be updated by admin2", function(done) {
+            var token = userToTokens.admin2.name;
+            schema.definition.other_num = "Number";
+            ApiServer.put("/api/v1/schemas/" + schema.name, token)
+                .send(schema).expect(200, done);
+        });
+
+        it("Should be deleted by admin1_1", function(done) {
+            var token = userToTokens.admin1_1.name;
+            ApiServer.del("/api/v1/schemas/" + schema.name, token)
+                .expect(200, done);
+        });
+    });
+
 });

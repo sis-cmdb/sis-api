@@ -35,6 +35,8 @@ module.exports.schemas = [
             track_history : { type : "Boolean", default : true },
             is_open : { type : "Boolean", default : false },
             id_field : { type : "String", default : "_id" },
+            is_public : { type : "Boolean", default : false },
+            any_owner_can_modify : { type : "Boolean", default : false },
             _references : ["String"]
         }
     },

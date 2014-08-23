@@ -20,6 +20,7 @@
 
 var Promise = require("bluebird");
 var SIS = require('./constants');
+var jsondiffpatch = require("jsondiffpatch");
 
 // Constructor for a Manager base
 // A manager is responsible for communicating with
@@ -147,14 +148,34 @@ Manager.prototype.getPopulateFields = function(schemaManager) {
     }
 };
 
+Manager.prototype._commonAuth = function(evt, doc, user, mergedDoc) {
+    if (evt == SIS.EVENT_DELETE) {
+        if (doc[SIS.FIELD_LOCKED]) {
+            return SIS.ERR_BAD_CREDS("Cannot delete a locked object.");
+        }
+    } else if (evt == SIS.EVENT_UPDATE) {
+        if (doc[SIS.FIELD_IMMUTABLE]) {
+            var diff = jsondiffpatch.diff(doc, mergedDoc.toObject()) || { };
+            console.log("immutable diff - " + JSON.stringify(diff));
+            var changedKeys = Object.keys(diff).filter(function(k) {
+                return k[0] != '_';
+            });
+            console.log("keys changed: " + JSON.stringify(changedKeys));
+            if (changedKeys.length != 1 || changedKeys[0] != SIS.FIELD_IMMUTABLE) {
+                return SIS.ERR_BAD_REQ("Cannot change an immutable object unless only changing immutable state");
+            }
+        }
+    }
+    return null;
+};
+
 // Authorize a user to operate on a particular document
 // if evt is SIS.EVENT_UPDATE, mergedDoc is the updated object
 // otherwise doc is the object being added/deleted
 Manager.prototype.authorize = function(evt, doc, user, mergedDoc) {
-    if (evt == SIS.EVENT_DELETE) {
-        if (doc[SIS.FIELD_LOCKED]) {
-            return Promise.reject(SIS.ERR_BAD_CREDS("Cannot delete a locked object."));
-        }
+    var commonErr = this._commonAuth(evt, doc, user, mergedDoc);
+    if (commonErr) {
+        return Promise.reject(commonErr);
     }
     // get the permissions on the doc being added/updated/deleted
     var permission = this.getPermissionsForObject(doc, user);

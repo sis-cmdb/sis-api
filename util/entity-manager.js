@@ -152,7 +152,7 @@
         if (user[SIS.FIELD_SUPERUSER]) {
             return Manager.prototype.authorize.call(this, evt, doc, user, mergedDoc);
         }
-        if (this.schema[SIS.FIELD_IS_OPEN]) {
+        if (this.schema[SIS.FIELD_IS_OPEN] || this.schema[SIS.FIELD_IS_PUBLIC]) {
             var userGroups = user[SIS.FIELD_ROLES] ? Object.keys(user[SIS.FIELD_ROLES]) : [];
             if (!userGroups.length) {
                 return SIS.ERR_BAD_REQ("User must have roles assigned.");

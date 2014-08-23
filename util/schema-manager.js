@@ -249,6 +249,7 @@
         currentSchema[SIS.FIELD_OWNER] = sisSchema[SIS.FIELD_OWNER];
         currentSchema[SIS.FIELD_DESCRIPTION] = sisSchema[SIS.FIELD_DESCRIPTION];
         currentSchema[SIS.FIELD_ID_FIELD] = sisSchema[SIS.FIELD_ID_FIELD] || '_id';
+        currentSchema[SIS.FIELD_TAGS] = sisSchema[SIS.FIELD_TAGS] || [];
 
         var setIfPresent = function(field) {
             if (field in sisSchema) {
@@ -259,6 +260,9 @@
         setIfPresent(SIS.FIELD_LOCKED);
         setIfPresent(SIS.FIELD_LOCKED_FIELDS);
         setIfPresent(SIS.FIELD_IS_OPEN);
+        setIfPresent(SIS.FIELD_IS_PUBLIC);
+        setIfPresent(SIS.FIELD_IMMUTABLE);
+        setIfPresent(SIS.FIELD_ANY_ADMIN_MOD);
 
         if (!defChanged) {
             // definition didn't change so we don't need to delete any models
@@ -457,6 +461,8 @@
         definition[SIS.FIELD_CREATED_BY] = { "type" : "String" };
         definition[SIS.FIELD_UPDATED_BY] = { "type" : "String" };
         definition[SIS.FIELD_LOCKED] = { type : "Boolean", required : true, "default" : false };
+        definition[SIS.FIELD_IMMUTABLE] = { type : "Boolean", "default" : false };
+        definition[SIS.FIELD_TAGS] = { type: [String], index: true };
 
         return this.mongoose.Schema(definition, { collection : sisSchema.name });
     };
@@ -546,22 +552,34 @@
         return Manager.prototype.getPermissionsForObject.call(this, schema, user);
     };
 
+    SchemaManager.prototype._isPartialAdmin = function(obj, user) {
+        var owners = obj[SIS.FIELD_OWNER] || [];
+        var roles = user[SIS.FIELD_ROLES] || { };
+        return owners.some(function(o) {
+            return roles[o] == SIS.ROLE_ADMIN;
+        });
+    };
+
     SchemaManager.prototype.authorize = function(evt, doc, user, mergedDoc) {
-        if (evt == SIS.EVENT_DELETE) {
-            if (doc[SIS.FIELD_LOCKED]) {
-                return Promise.reject(SIS.ERR_BAD_CREDS("Cannot delete a locked object."));
-            }
+        var commonErr = this._commonAuth(evt, doc, user, mergedDoc);
+        if (commonErr) {
+            return Promise.reject(commonErr);
         }
         // get the permissions on the doc being added/updated/deleted
         var permission = this.getPermissionsForObject(doc, user);
-        if (permission != SIS.PERMISSION_ADMIN) {
+        var canOperateOnDoc = permission == SIS.PERMISSION_ADMIN ||
+            (doc[SIS.FIELD_ANY_ADMIN_MOD] && this._isPartialAdmin(doc, user));
+        if (!canOperateOnDoc) {
             return Promise.reject(SIS.ERR_BAD_CREDS("Insufficient permissions."));
         } else if (evt != SIS.EVENT_UPDATE) {
             // insert / delete and user is an admin
             return Promise.resolve(doc);
         }
-        var updatedPerms = this.getPermissionsForObject(mergedDoc, user);
-        if (updatedPerms != SIS.PERMISSION_ADMIN) {
+
+        permission = this.getPermissionsForObject(mergedDoc, user);
+        canOperateOnDoc = permission == SIS.PERMISSION_ADMIN ||
+            (mergedDoc[SIS.FIELD_ANY_ADMIN_MOD] && this._isPartialAdmin(mergedDoc, user));
+        if (!canOperateOnDoc) {
             return Promise.reject(SIS.ERR_BAD_CREDS("Insufficient permissions."));
         }
         return Promise.resolve(mergedDoc);
