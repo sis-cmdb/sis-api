@@ -256,15 +256,19 @@ describe('@API - Authorization API Entities', function() {
                 name : "String"
             }
         };
-        var users = ['admin1', 'admin2'];
+        var users = ['admin1', 'admin2', 'user_g3'];
         var updates = {
             'admin1' : {
                 pass : ['admin1'],
-                fail : ['admin2']
+                fail : users.filter(function(u) { return u != 'admin1'; })
             },
             'admin2' : {
                 pass : ['admin2'],
-                fail : ['admin1']
+                fail : users.filter(function(u) { return u != 'admin2'; })
+            },
+            'user_g3' : {
+                pass : ['user_g3'],
+                fail : users.filter(function(u) { return u != 'user_g3'; })
             }
         };
         var userToEntity = { };
@@ -279,6 +283,7 @@ describe('@API - Authorization API Entities', function() {
                 });
             });
         });
+
         // adds
         users.forEach(function(user) {
             it("should add an entity for " + user, function(done) {
@@ -319,7 +324,7 @@ describe('@API - Authorization API Entities', function() {
 
         });
         // deletes
-        users.map(function(user) {
+        users.forEach(function(user) {
             it("should delete the entity for " + user, function(done) {
                 var token = userToTokens[user].name;
                 ApiServer.del("/api/v1/entities/" + schema.name + "/" + userToEntity[user]._id, token)
@@ -327,5 +332,146 @@ describe('@API - Authorization API Entities', function() {
             });
         });
 
+        // regardless of token, user should be able to create, update and delete an open schema
+        users.forEach(function(user) {
+            it(user + " should manage a schema entirely", function(done) {
+                var token = userToTokens[user].name;
+                var u_schema = {
+                    name : "test_open_schema_" + user,
+                    owner : ["nobody_should_be_a_member"],
+                    is_open : true,
+                    definition : {
+                        name : "String"
+                    }
+                };
+                ApiServer.del("/api/v1/schemas/" + u_schema.name, superToken)
+                .end(function() {
+                    ApiServer.post("/api/v1/schemas", token).send(u_schema)
+                    .expect(201, function(e, r) {
+                        should.not.exist(e);
+                        u_schema.definition.num = "Number";
+                        ApiServer.put("/api/v1/schemas/" + u_schema.name, token)
+                        .send(u_schema).expect(200, function(e , r) {
+                            should.not.exist(e);
+                            ApiServer.del("/api/v1/schemas/" + u_schema.name, token)
+                            .expect(200, done);
+                        });
+                    });
+                });
+
+            });
+        });
+    });
+
+    describe("Public schemas", function() {
+        var schema = {
+            name : "test_public_schema",
+            owner : ["nobody_should_be_a_member"],
+            is_public : true,
+            definition : {
+                name : "String"
+            }
+        };
+        var users = ['admin1', 'admin2', 'user_g3'];
+        var updates = {
+            'admin1' : {
+                pass : ['admin1'],
+                fail : users.filter(function(u) { return u != 'admin1'; })
+            },
+            'admin2' : {
+                pass : ['admin2'],
+                fail : users.filter(function(u) { return u != 'admin2'; })
+            },
+            'user_g3' : {
+                pass : ['user_g3'],
+                fail : users.filter(function(u) { return u != 'user_g3'; })
+            }
+        };
+        var userToEntity = { };
+        before(function(done) {
+            // nuke existing schema
+            ApiServer.authToken = superToken;
+            AuthFixture.deleteSchemas(ApiServer, [schema], false, function(err, res) {
+                if (err) { return done(err); }
+                AuthFixture.addSchemas(ApiServer, [schema], function(e, r) {
+                    ApiServer.authToken = null;
+                    done(e);
+                });
+            });
+        });
+
+        // adds
+        users.forEach(function(user) {
+            it("should add an entity for " + user, function(done) {
+                var token = userToTokens[user].name;
+                var entity = {
+                    name : user
+                };
+                ApiServer.post("/api/v1/entities/" + schema.name, token)
+                .send(entity).expect(201, function(err, res) {
+                    should.not.exist(err);
+                    res.body.name.should.eql(user);
+                    userToEntity[user] = res.body;
+                    done();
+                });
+            });
+        });
+        // updates
+        users.forEach(function(user) {
+            var entity = {
+                name : user + "-update"
+            };
+            updates[user].pass.forEach(function(passUser) {
+                it(user + " should update entity for " + passUser, function(done) {
+                    var token = userToTokens[user].name;
+                    var toUpdate = userToEntity[passUser]._id;
+                    var url = "/api/v1/entities/" + schema.name + "/" + toUpdate;
+                    ApiServer.put(url, token).send(entity).expect(200, done);
+                });
+            });
+            updates[user].fail.forEach(function(failUser) {
+                it(user + " should not update entity for " + failUser, function(done) {
+                    var token = userToTokens[user].name;
+                    var toUpdate = userToEntity[failUser]._id;
+                    var url = "/api/v1/entities/" + schema.name + "/" + toUpdate;
+                    ApiServer.put(url, token).send(entity).expect(401, done);
+                });
+            });
+
+        });
+        // deletes
+        users.forEach(function(user) {
+            it("should delete the entity for " + user, function(done) {
+                var token = userToTokens[user].name;
+                ApiServer.del("/api/v1/entities/" + schema.name + "/" + userToEntity[user]._id, token)
+                .expect(200, done);
+            });
+        });
+
+        // users should not be able to create public schemas they don't own
+        users.forEach(function(user) {
+            it(user + " should not manage a public schema entirely", function(done) {
+                var token = userToTokens[user].name;
+                var u_schema = {
+                    name : "test_public_schema_" + user,
+                    owner : ["nobody_should_be_a_member"],
+                    is_public : true,
+                    definition : {
+                        name : "String"
+                    }
+                };
+                ApiServer.post("/api/v1/schemas", token).send(u_schema)
+                .expect(401, function(e, r) {
+                    should.not.exist(e);
+                    schema.definition.num = "Number";
+                    ApiServer.put("/api/v1/schemas/" + schema.name, token)
+                    .send(schema).expect(401, function(e , r) {
+                        should.not.exist(e);
+                        ApiServer.del("/api/v1/schemas/" + schema.name, token)
+                        .expect(401, done);
+                    });
+                })
+            });
+        });
     });
 });

@@ -156,11 +156,9 @@ Manager.prototype._commonAuth = function(evt, doc, user, mergedDoc) {
     } else if (evt == SIS.EVENT_UPDATE) {
         if (doc[SIS.FIELD_IMMUTABLE]) {
             var diff = jsondiffpatch.diff(doc, mergedDoc.toObject()) || { };
-            console.log("immutable diff - " + JSON.stringify(diff));
             var changedKeys = Object.keys(diff).filter(function(k) {
                 return k[0] != '_';
             });
-            console.log("keys changed: " + JSON.stringify(changedKeys));
             if (changedKeys.length != 1 || changedKeys[0] != SIS.FIELD_IMMUTABLE) {
                 return SIS.ERR_BAD_REQ("Cannot change an immutable object unless only changing immutable state");
             }

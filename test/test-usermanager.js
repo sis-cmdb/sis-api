@@ -54,6 +54,7 @@ describe('User Manager', function() {
         ["superman", "user2", true],
         ["superman", "user3", true],
         ["superman", "user4", true],
+        ["superman", "user_g3", true],
         // admin1 - similar as admin2
         ["admin1", "superman", false],
         ["admin1", "admin1_1", true],

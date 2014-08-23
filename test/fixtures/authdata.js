@@ -93,6 +93,11 @@
                     "test_g2" : "user",
                     "test_g3" : "user"
                 }
+            }),
+            "user_g3" : genUser("user_g3", {
+                roles : {
+                    "test_g3" : "user"
+                }
             })
         };
     };

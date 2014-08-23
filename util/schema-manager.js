@@ -546,7 +546,7 @@
     };
 
     SchemaManager.prototype.getPermissionsForObject = function(schema, user) {
-        if (schema && schema.is_open) {
+        if (schema && schema[SIS.FIELD_IS_OPEN]) {
             return SIS.PERMISSION_ADMIN;
         }
         return Manager.prototype.getPermissionsForObject.call(this, schema, user);
