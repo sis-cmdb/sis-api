@@ -571,6 +571,26 @@ ApiController.prototype._saveSingleCommit = function(req, result) {
     return d.promise;
 };
 
+ApiController.prototype._saveBulkCommits = function(req, items) {
+    var old = null;
+    var now = null;
+    switch (req.method) {
+        // only post and del supported here
+        case SIS.METHOD_POST:
+        case SIS.METHOD_DELETE:
+            break;
+        default:
+            return Promise.reject(SIS.ERR_INTERNAL("invalid bulk commits being saved"));
+    }
+    // save it
+    var action = SIS.METHODS_TO_EVENT[req.method];
+    var type = this.getType(req);
+    return this.commitManager.recordHistoryBulk(items, req.user, action, type)
+    .then(function() {
+        return items;
+    });
+};
+
 // Save a commit to the commit log
 ApiController.prototype._saveCommit = function(req) {
     // need to return a promise that saves history
@@ -583,14 +603,11 @@ ApiController.prototype._saveCommit = function(req) {
         if (req.params.isBulk) {
             var items = result.success;
             if (items.length) {
-                // just need to write all commits
-                var promises = items.map(function(item) {
-                    return this._saveSingleCommit(req, item);
-                }.bind(this));
-                return Promise.all(promises).then(function() {
-                    return Promise.resolve(result);
-                }, function() {
-                    return Promise.resolve(result);
+                return this._saveBulkCommits(req, items)
+                .then(function() {
+                    return result;
+                }).catch(function() {
+                    return result;
                 });
             } else {
                 return Promise.resolve(result);

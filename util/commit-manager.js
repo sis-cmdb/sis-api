@@ -48,6 +48,39 @@
         this.idField = 'name';
         self.model = schemaManager.getSisModel(SIS.SCHEMA_COMMITS);
 
+        this.recordHistoryBulk = function(items, user, action, type) {
+            if (action != 'insert' && action != 'delete') {
+                return Promise.reject(SIS.ERR_INTERNAL("Only insert and delete supported"));
+            }
+            var idField = this.idField;
+            var ts = Date.now();
+            var commits = items.map(function(item) {
+                var commit = {
+                    entity_id : item[idField],
+                    action : action,
+                    type : type,
+                    entity_oid : item._id
+                };
+                if (user && user[SIS.FIELD_NAME]) {
+                    commit[SIS.FIELD_MODIFIED_BY] = user[SIS.FIELD_NAME];
+                }
+                commit.commit_data = docToPojo(item);
+                if (action == 'insert') {
+                    commit.date_modified = item[SIS.FIELD_UPDATED_AT];
+                } else {
+                    commit.date_modified = ts;
+                }
+                commit[SIS.FIELD_UPDATED_AT] = ts;
+                commit[SIS.FIELD_CREATED_AT] = ts;
+                return new self.model(commit).toObject();
+            });
+            // do a bulk insert directly
+            var insert = Promise.promisify(self.model.collection.insert, self.model.collection);
+            return insert(commits).then(function() {
+                return items;
+            });
+        };
+
         this.recordHistory = function(oldDoc, newDoc, user, type, callback) {
             var id = oldDoc ? oldDoc[this.idField] : newDoc[this.idField];
             var oid = oldDoc ? oldDoc._id : newDoc._id;
