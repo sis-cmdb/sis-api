@@ -1,22 +1,5 @@
-/***********************************************************
-
- The information in this document is proprietary
- to VeriSign and the VeriSign Product Development.
- It may not be used, reproduced or disclosed without
- the written approval of the General Manager of
- VeriSign Product Development.
-
- PRIVILEGED AND CONFIDENTIAL
- VERISIGN PROPRIETARY INFORMATION
- REGISTRY SENSITIVE INFORMATION
-
- Copyright (c) 2013 VeriSign, Inc.  All rights reserved.
-
- ***********************************************************/
-
-// Note this is not a remote test since it requires spinning up a
-// readonly server
 describe('API at the Edge ', function() {
+    "use strict";
 
     var schema = {
         "name":"test_entity",

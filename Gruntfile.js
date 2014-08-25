@@ -27,7 +27,7 @@ module.exports = function(grunt) {
       }
     },
     jshint: {
-      files: distFiles,
+      files: distFiles.concat(["test/**/*.js"]),
       options: {
         newcap: false,
         node : true

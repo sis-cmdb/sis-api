@@ -1,20 +1,6 @@
-/***********************************************************
-
- The information in this document is proprietary
- to VeriSign and the VeriSign Product Development.
- It may not be used, reproduced or disclosed without
- the written approval of the General Manager of
- VeriSign Product Development.
-
- PRIVILEGED AND CONFIDENTIAL
- VERISIGN PROPRIETARY INFORMATION
- REGISTRY SENSITIVE INFORMATION
-
- Copyright (c) 2013 VeriSign, Inc.  All rights reserved.
-
- ***********************************************************/
-
 describe('@API - Entity References', function() {
+    "use strict";
+
     var SIS = require("../util/constants");
     var config = require('./fixtures/config');
     var should = require('should');
@@ -98,7 +84,6 @@ describe('@API - Entity References', function() {
                 }
                 var req = ApiServer;
                 async.map(['foo', 'bar', 'baz'], function(name, callback) {
-                    entity = { "name" : name };
                     req.post("/api/v1/entities/ref_1")
                         .set("Content-Type", "application/json")
                         .query("populate=false")
@@ -372,9 +357,12 @@ describe('@API - Entity References', function() {
 
         var getDneObjectId = function() {
             var dneObjId = mongoose.Types.ObjectId();
-            while (LEAVES.filter(function(l) {
-                return l._id == dneObjId;
-            }).length) {
+            var hasObjId = function(id) {
+                return LEAVES.filter(function(l) {
+                    return l._id == dneObjId;
+                }).length > 0;
+            };
+            while (hasObjId(dneObjId)) {
                 dneObjId = mongoose.Types.ObjectId();
             }
             return dneObjId;

@@ -1,21 +1,6 @@
-/***********************************************************
-
- The information in this document is proprietary
- to VeriSign and the VeriSign Product Development.
- It may not be used, reproduced or disclosed without
- the written approval of the General Manager of
- VeriSign Product Development.
-
- PRIVILEGED AND CONFIDENTIAL
- VERISIGN PROPRIETARY INFORMATION
- REGISTRY SENSITIVE INFORMATION
-
- Copyright (c) 2013 VeriSign, Inc.  All rights reserved.
-
- ***********************************************************/
-
 describe('SchemaManager', function() {
   "use strict";
+
   var SIS = require("../util/constants");
   var config = require('./fixtures/config');
   var should = require('should');
@@ -620,7 +605,7 @@ describe('SchemaManager', function() {
       it("Should mark the schema immutable and add num", function(done) {
           var obj = schemaDoc.toObject();
           obj[SIS.FIELD_IMMUTABLE] = true;
-          obj.definition.num = "Number"
+          obj.definition.num = "Number";
           schemaManager.update(schema.name, obj).spread(function(old, updated) {
               schemaDoc = updated;
               var schemaObj = schemaDoc.toObject();
