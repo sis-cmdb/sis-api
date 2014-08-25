@@ -21,6 +21,7 @@
 var Promise = require("bluebird");
 var SIS = require('./constants');
 var jsondiffpatch = require("jsondiffpatch");
+var hat = require('hat');
 
 // Constructor for a Manager base
 // A manager is responsible for communicating with
@@ -63,7 +64,7 @@ Manager.prototype.applyUpdate = function(doc, updateObj) {
 // Returns a promise with the object removed.
 Manager.prototype.objectRemoved = function(obj) {
     // default just returns a fullfilled promise
-    return obj;
+    return Promise.resolve(obj);
 };
 
 /** Common methods - rare to override these **/
@@ -211,6 +212,92 @@ Manager.prototype.add = function(obj, user, callback) {
     return p.nodeify(callback);
 };
 
+
+Manager.prototype.bulkAdd = function(items, user, allOrNone) {
+    var memo = { success: [], errors: [] };
+    var self = this;
+    var toAdd = [];
+    var transactionId = hat(64) + Date.now();
+    var transactionCond = { };
+    transactionCond[SIS.FIELD_TRANSACTION_ID + ".id"] = transactionId;
+    var prepPromises = items.map(function(item, idx) {
+        return this.authorize(SIS.EVENT_INSERT, item, user)
+        .bind(this).then(this._addByFields(user, SIS.EVENT_INSERT))
+        .then(this._preSave)
+        .then(function(res) {
+            // convert to mongoose obj
+            res = new this.model(res).toObject();
+            // add the pre save
+            this.applyPreSaveFields(res);
+            // add the transaction field in case
+            // we need to nuke them later
+            res[SIS.FIELD_TRANSACTION_ID] = {
+                id : transactionId,
+                idx : idx
+            };
+            toAdd.push(res);
+            return memo;
+        }).catch(function(err) {
+            memo.errors.push({ err : err, value : item });
+            return memo;
+        });
+    }.bind(this));
+    // helper for the insert
+    var handleInsertFailed = function(inserted) {
+        // some things failed..
+        // find the ones that failed
+        var successIds = inserted.reduce(function(ret, i) {
+            var idx = i[SIS.FIELD_TRANSACTION_ID].idx;
+            ret[idx] = true;
+            return ret;
+        }, { });
+        toAdd.forEach(function(item) {
+            if (!(item[SIS.FIELD_TRANSACTION_ID].idx in successIds)) {
+                memo.errors.push({
+                    value : item,
+                    err : SIS.ERR_BAD_REQ("Insert failed.")
+                });
+            }
+        });
+        if (!allOrNone) {
+            // done
+            memo.success = inserted;
+            return memo;
+        }
+        // nuke the ones that have our transaction
+        return this.model.removeAsync(transactionCond).then(function(deleted) {
+            // finito
+            return memo;
+        }).catch(function(e) {
+            // oof something very bad happened.
+            var msg = "Error deleting entries per allOrNone: " + SIS.FIELD_TRANSACTION_ID + ".id = " + transactionId;
+            return SIS.ERR_INTERNAL(msg);
+        });
+    }.bind(this);
+    // do the insert
+    return Promise.all(prepPromises).bind(this).then(function() {
+        if ((allOrNone && memo.errors.length) || !toAdd.length) {
+            // bail - nothing inserted yet or nothing to insert
+            return memo;
+        }
+        // do the insert
+        var insert = Promise.promisify(this.model.collection.insert, this.model.collection);
+        return insert(toAdd).bind(this).then(function(inserted) {
+            if (inserted.length === toAdd.length) {
+                // g2g - everything we wanted to add was added
+                memo.success = inserted;
+                return memo;
+            }
+            return handleInsertFailed(inserted);
+        }).catch(function(err) {
+            // get the ones that belong to this transaction
+            return this.getAll(transactionCond, { lean : true}).then(function(inserted) {
+                return handleInsertFailed(inserted);
+            });
+        });
+    });
+};
+
 Manager.prototype._update = function(id, obj, user, saveFunc) {
     var err = this.validate(obj, true, user);
     if (err) {
@@ -310,6 +397,92 @@ Manager.prototype.delete = function(id, user, callback) {
         .then(this._remove.bind(this))
         .tap(this.objectRemoved.bind(this));
     return p.nodeify(callback);
+};
+
+Manager.prototype.bulkDelete = function(condition, user) {
+    var memo = { success: [], errors: [] };
+    return this.getAll(condition, { lean: true })
+    .bind(this).then(function(items) {
+        if (!items.length) {
+            return memo;
+        }
+        var toDelete = [];
+        var authPromises = items.map(function(item) {
+            return this.authorize(SIS.EVENT_DELETE, item, user)
+            .then(function(res) {
+                toDelete.push(res);
+                return memo;
+            }).catch(function(err) {
+                memo.errors.push({ err : err, value : item });
+                return memo;
+            });
+        }.bind(this));
+        // inner promise chain
+        return Promise.all(authPromises).bind(this).then(function() {
+            if (!toDelete.length) {
+                memo.success = toDelete;
+                return memo;
+            }
+            var idsToDelete = toDelete.reduce(function(ret, i) {
+                ret[i._id] = i;
+                return ret;
+            }, { });
+            var idCondition = {};
+            idCondition._id = { $in : Object.keys(idsToDelete) };
+            return this.model.removeAsync(idCondition)
+            .bind(this).then(function(res) {
+                if (res == toDelete.length) {
+                    memo.success = toDelete;
+                    return memo;
+                }
+                // some issue occurred.. get the ones that weren't deleted
+                return this.getAll(idCondition, { lean : true }).then(function(res) {
+                    var errors = res.map(function(r) {
+                        delete idsToDelete[r._id];
+                        var err = SIS.ERR_INTERNAL("Could not delete.");
+                        return {
+                            err : err,
+                            value : r
+                        };
+                    });
+                    memo.success = Object.keys(idsToDelete).map(function(id) { return idsToDelete[id]; });
+                    memo.errors = memo.errors.concat(errors);
+                    return memo;
+                }).catch(function(err) {
+                    // ok.. totally hosed here.
+                    // error out
+                    return Promise.reject(SIS.ERR_INTERNAL(err));
+                });
+            }).catch(function(err) {
+                // removeAsync failed
+                return Promise.reject(SIS.ERR_INTERNAL(err));
+            });
+        }).then(function() {
+            if (!memo.success.length) {
+                return memo;
+            }
+            // trigger object removed
+            var newSuccess = [];
+            var triggers = memo.success.map(function(removed) {
+                return this.objectRemoved(removed).then(function(r) {
+                    newSuccess.push(r);
+                    return true;
+                }).catch(function(e) {
+                    // in a REALLY bad state here.
+                    // TODO: handle this error case
+                    memo.errors.push({
+                        err : e,
+                        value : removed
+                    });
+                    return false;
+                });
+            }.bind(this));
+            return Promise.all(triggers).then(function(){
+                memo.success = newSuccess;
+                return memo;
+            });
+        });
+    });
 };
 
 // utils

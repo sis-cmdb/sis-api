@@ -73,6 +73,7 @@ module.exports = {
     FIELD_IS_PUBLIC : "is_public",
     FIELD_TAGS : "sis_tags",
     FIELD_IMMUTABLE : "sis_immutable",
+    FIELD_TRANSACTION_ID : "_trans_id",
 
     // schema names
     SCHEMA_SCHEMAS : "sis_schemas",
