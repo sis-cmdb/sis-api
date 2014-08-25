@@ -311,43 +311,6 @@ ApiController.prototype.add = function(req, res) {
         p = p.then(function(mgr) {
             return mgr.bulkAdd(req.body, req.user, req.query.all_or_none);
         });
-        //     // async try to add everything
-        //     var memo = { success : [], errors : [] };
-        //     var promises = body.map(function(obj) {
-        //         return mgr.add(obj, req.user)
-        //         .then(function(result) {
-        //             memo.success.push(result);
-        //             return memo;
-        //         }).catch(function(err) {
-        //             memo.errors.push({err : err, value : obj});
-        //             return memo;
-        //         });
-        //     });
-        //     return Promise.all(promises).then(function() {
-        //         return Promise.resolve([memo, mgr]);
-        //     });
-        // });
-        // p = p.spread(function(result, mgr) {
-        //     if (result.errors.length &&
-        //         req.query.all_or_none) {
-        //         if (!result.success.length) {
-        //             // already done
-        //             return Promise.resolve(result);
-        //         }
-        //         // delete the ones that were added.
-        //         // TODO: single bulk op on mongo
-        //         var ids = result.success.map(function(obj) {
-        //             return obj._id;
-        //         });
-        //         return mgr.model.removeAsync({ _id : { $in : ids }}).
-        //         then(function() {
-        //             result.success = [];
-        //             return result;
-        //         });
-        //     } else {
-        //         return result;
-        //     }
-        // });
         this._finish(req, res, p, 200);
     } else {
         p = p.call('add', body, req.user);

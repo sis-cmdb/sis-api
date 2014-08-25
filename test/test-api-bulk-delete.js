@@ -66,7 +66,7 @@ describe('@API - Bulk Delete API', function() {
     };
 
     var verifyDeletedItems = function(items, done) {
-        async.map(items, function(item, cb) {
+        async.mapSeries(items, function(item, cb) {
             var parts = [
                 "/api/v1/entities",
                 schema.name,

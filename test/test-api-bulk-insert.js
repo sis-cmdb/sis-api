@@ -83,7 +83,7 @@ describe('@API - Bulk Insert API', function() {
             res.should.be.instanceof(Array);
             res.length.should.eql(num);
             // ensure commits
-            async.map(res, function(item, cb) {
+            async.mapSeries(res, function(item, cb) {
                 var path = [
                     "/api/v1/entities",
                     schema.name,
@@ -113,8 +113,8 @@ describe('@API - Bulk Insert API', function() {
             });
     });
 
-    it("should add 150 items", function(done) {
-        var start = 0, num = 150;
+    it("should add 200 items", function(done) {
+        var start = 0, num = 200;
         var items = createItems(start, num);
         ApiServer.post("/api/v1/entities/" + schema.name)
             .send(items)
@@ -131,8 +131,8 @@ describe('@API - Bulk Insert API', function() {
             });
     });
 
-    it("should add 150 more items", function(done) {
-        var start = 1000, num = 150;
+    it("should add 200 more items", function(done) {
+        var start = 1000, num = 200;
         var items = createItems(start, num);
         ApiServer.post("/api/v1/entities/" + schema.name)
             .send(items)
