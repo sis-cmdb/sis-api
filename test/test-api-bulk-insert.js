@@ -102,6 +102,7 @@ describe('@API - Bulk Insert API', function() {
     it("should add 200 items", function(done) {
         var start = 0, num = 200;
         var items = createItems(start, num);
+        this.timeout(num * 1000);
         ApiServer.post("/api/v1/entities/" + schema.name)
             .send(items)
             .expect(200, function(err, res) {
@@ -120,6 +121,7 @@ describe('@API - Bulk Insert API', function() {
     it("should add 200 more items", function(done) {
         var start = 1000, num = 200;
         var items = createItems(start, num);
+        this.timeout(num * 1000);
         ApiServer.post("/api/v1/entities/" + schema.name)
             .send(items)
             .expect(200, function(err, res) {

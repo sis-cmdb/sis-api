@@ -95,6 +95,7 @@ describe('@API - Bulk Delete API', function() {
     it("should delete 150 items", function(done) {
         var start = 1000, num = 150;
         var items = createItems(start, num);
+        this.timeout(num * 1000);
         ApiServer.post("/api/v1/entities/" + schema.name)
             .send(items)
             .expect(200, function(err, res) {
@@ -119,6 +120,7 @@ describe('@API - Bulk Delete API', function() {
     it("should delete even items", function(done) {
         var start = 2000, num = 150;
         var items = createItems(start, num);
+        this.timeout(num * 1000);
         ApiServer.post("/api/v1/entities/" + schema.name)
             .send(items)
             .expect(200, function(err, res) {
@@ -168,6 +170,7 @@ describe('@API - Bulk Delete API', function() {
             });
             var all = [].concat(items).concat(failures);
             // add as super
+            this.timeout(num * 1000);
             ApiServer.post("/api/v1/entities/" + schema.name)
                 .send(all)
                 .expect(200, function(err, res) {
