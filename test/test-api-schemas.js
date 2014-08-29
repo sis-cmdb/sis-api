@@ -80,6 +80,35 @@ describe('@API - Schema API', function() {
                 .send(schema)
                 .expect(400, done);
         });
+        it("Should fail to add a schema with a sis_ field", function(done) {
+            var schema = {
+                name : "test_bad_field_sis",
+                owner : ["sistest"],
+                definition : {
+                    sis_name : "String"
+                }
+            };
+            ApiServer.post("/api/v1/schemas")
+                .set("Content-type", "application/json")
+                .send(schema)
+                .expect(400, done);
+        });
+        var types = ["Number", "String", "ObjectId", { }, "Boolean"];
+        types.forEach(function(type, idx) {
+            it("Should fail to add a schema with owner = " + JSON.stringify(type), function(done) {
+                var schema = {
+                    name : "test_bad_owner_field_" + idx,
+                    owner : ["sistest"],
+                    definition : {
+                        owner : type
+                    }
+                };
+                ApiServer.post("/api/v1/schemas")
+                    .set("Content-type", "application/json")
+                    .send(schema)
+                    .expect(400, done);
+            });
+        });
     });
 
     describe("CRUD schema", function() {

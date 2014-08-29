@@ -10,6 +10,7 @@
 var SIS = require("./constants");
 var Manager = require("./manager");
 var Promise = require("bluebird");
+var jsondiffpatch = require("jsondiffpatch");
 
 var toRegex = function(str) {
     try {
@@ -123,7 +124,7 @@ SchemaManager.prototype.validate = function(modelObj, isUpdate) {
             return "Cannot add an empty schema.";
         }
         for (var i = 0; i < fields.length; ++i) {
-            if (fields[i][0] == '_') {
+            if (fields[i][0] == '_' || fields[i].indexOf('sis_') === 0) {
                 return fields[i] + " is a reserved field";
             }
         }
@@ -136,8 +137,6 @@ SchemaManager.prototype.validate = function(modelObj, isUpdate) {
                 return "ID Field must be required and unique.";
             }
         }
-        // set the model object to have owners
-        modelObj.definition[SIS.FIELD_OWNER] = ["String"];
         var mongooseSchema = new this.mongoose.Schema(modelObj.definition, { collection : "__test__" });
         // set the references
         var refs = SIS.UTIL_GET_OID_PATHS(mongooseSchema);
@@ -151,9 +150,16 @@ SchemaManager.prototype.validate = function(modelObj, isUpdate) {
                 if (!toRegex(schemaType.options.match)) {
                     throw "match " + schemaType.options.match;
                 }
+            } else if (path === "owner" &&
+                       (schemaType.constructor.name !== 'SchemaArray' ||
+                        !schemaType.caster ||
+                        schemaType.caster.instance != "String")) {
+                // owner is invalid
+                throw "owner must be a String array.";
             }
         });
-
+        // set the model object to have owners
+        modelObj.definition[SIS.FIELD_OWNER] = ["String"];
     } catch (ex) {
         return "Schema is invalid: " + ex;
     }

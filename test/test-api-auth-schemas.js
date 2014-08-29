@@ -167,23 +167,21 @@ describe('@API - Authorization API Schemas', function() {
                 passes.map(function(uname) {
                     var testName = uname + " can update " + schemaName + " w/ owners " + ownerStr;
                     it(testName, function(done) {
-                        // add the schema
-                        ApiServer.post("/api/v1/schemas", superToken)
-                            .send(schema)
-                            .expect(201, function(e1, r1) {
-                            // validate + update
-                            should.not.exist(e1);
-                            r1.should.have.property('body');
-                            r1 = r1.body;
-                            var token = userToTokens[uname].name;
-                            r1[SIS.FIELD_OWNER] = updateTest[SIS.FIELD_OWNER];
-                            ApiServer.put("/api/v1/schemas/" + schemaName, token)
-                                .send(r1)
-                                .expect(200, function(e2, r2) {
-                                // validate
-                                should.not.exist(e2);
-                                // delete..
-                                ApiServer.del("/api/v1/schemas/" + schemaName, superToken)
+                        // delete..
+                        ApiServer.del("/api/v1/schemas/" + schemaName, superToken)
+                        .end(function() {
+                            // add the schema
+                            ApiServer.post("/api/v1/schemas", superToken)
+                                .send(schema)
+                                .expect(201, function(e1, r1) {
+                                // validate + update
+                                should.not.exist(e1);
+                                r1.should.have.property('body');
+                                r1 = r1.body;
+                                var token = userToTokens[uname].name;
+                                r1[SIS.FIELD_OWNER] = updateTest[SIS.FIELD_OWNER];
+                                ApiServer.put("/api/v1/schemas/" + schemaName, token)
+                                    .send(r1)
                                     .expect(200, done);
                             });
                         });
@@ -194,21 +192,19 @@ describe('@API - Authorization API Schemas', function() {
                     var testName = uname + " cannot update " + schemaName + " w/ owners " + ownerStr;
                     it(testName, function(done) {
                         // add the schema
-                        ApiServer.post("/api/v1/schemas", superToken)
-                            .send(schema)
-                            .expect(201, function(e1, r1) {
-                            // update it
-                            should.not.exist(e1);
-                            r1 = r1.body;
-                            var token = userToTokens[uname].name;
-                            r1[SIS.FIELD_OWNER] = updateTest[SIS.FIELD_OWNER];
-                            ApiServer.put("/api/v1/schemas/" + schemaName, token)
-                                .send(r1)
-                                .expect(401, function(e2, r2) {
-                                // delete..
-                                should.not.exist(e2);
-                                ApiServer.del("/api/v1/schemas/" + schemaName, superToken)
-                                    .expect(200, done);
+                        ApiServer.del("/api/v1/schemas/" + schemaName, superToken)
+                        .end(function() {
+                            ApiServer.post("/api/v1/schemas", superToken)
+                                .send(schema)
+                                .expect(201, function(e1, r1) {
+                                // update it
+                                should.not.exist(e1);
+                                r1 = r1.body;
+                                var token = userToTokens[uname].name;
+                                r1[SIS.FIELD_OWNER] = updateTest[SIS.FIELD_OWNER];
+                                ApiServer.put("/api/v1/schemas/" + schemaName, token)
+                                    .send(r1)
+                                    .expect(401, done);
                             });
                         });
                     });
