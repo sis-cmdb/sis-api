@@ -150,9 +150,10 @@ module.exports = function(grunt) {
     return webInstances;
   };
 
-  grunt.registerTask('apitest', 'Run remote api tests', function(inventory) {
+  grunt.registerTask('apitest', 'Run remote api tests', function() {
+    var inventory = grunt.option("ansible-inventory");
     if (!inventory || !grunt.file.exists(inventory)) {
-        return grunt.fail.fatal("inventory does not exist");
+        return grunt.fail.fatal("inventory does not exist - set ansible-inventory");
     }
     var webInstances = getWebInstancesFromInventory(inventory);
     // update the configs
@@ -171,7 +172,11 @@ module.exports = function(grunt) {
     }
   });
 
-  grunt.registerTask('repltest', 'Run replication tests', function(inventory) {
+  grunt.registerTask('repltest', 'Run replication tests', function() {
+    var inventory = grunt.option("ansible-inventory");
+    if (!inventory || !grunt.file.exists(inventory)) {
+        return grunt.fail.fatal("inventory does not exist - set ansible-inventory");
+    }
     if (!inventory || !grunt.file.exists(inventory)) {
         return grunt.fail.fatal("inventory does not exist");
     }
