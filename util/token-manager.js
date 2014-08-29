@@ -117,6 +117,12 @@ TokenManager.prototype.authorize = function(evt, doc, user, mergedDoc) {
         return Promise.reject(SIS.ERR_BAD_CREDS("Only admins of the user or the user can manage the token."));
     });
 };
+
+TokenManager.prototype.canInsertWithId = function(id, obj) {
+    // always return false to disable upsert
+    return false;
+};
+
 /////////////////////////////////
 
 module.exports = function(sm) {
