@@ -105,14 +105,14 @@ describe('User Manager', function() {
                 var userManager = schemaManager.auth[SIS.SCHEMA_USERS];
                 var u1 = users[usr];
                 var u2 = users[usr2];
-                userManager.add(u2, u1).nodeify(function(err, obj) {
+                userManager.add(u2, { user : u1 }).nodeify(function(err, obj) {
                     if (pass) {
                         // expect pass..
                         should.not.exist(err);
                         should.exist(obj);
                         obj[SIS.FIELD_NAME].should.eql(u2[SIS.FIELD_NAME]);
                         // delete the user
-                        userManager.delete(obj[SIS.FIELD_NAME], u1).nodeify(done);
+                        userManager.delete(obj[SIS.FIELD_NAME], { user : u1 }).nodeify(done);
                     } else {
                         should.exist(err);
                         done();
@@ -140,7 +140,7 @@ describe('User Manager', function() {
                 var u1 = users[test[0]];
                 var u2 = users[test[1]];
                 return function(cb) {
-                    userManager.add(u2, u1).nodeify(cb);
+                    userManager.add(u2, { user : u1 }).nodeify(cb);
                 };
             }), done);
         });
@@ -151,7 +151,7 @@ describe('User Manager', function() {
                 var u1 = users[test[0]];
                 var u2 = users[test[1]];
                 return function(cb) {
-                    userManager.delete(u2[SIS.FIELD_NAME], u1).nodeify(cb);
+                    userManager.delete(u2[SIS.FIELD_NAME], { user : u1 }).nodeify(cb);
                 };
             }), done);
         });
@@ -172,7 +172,7 @@ describe('User Manager', function() {
                 var copy = JSON.parse(JSON.stringify(u2));
                 // set the email field
                 copy.email = u1.name + "." + copy.name + "@test.com";
-                userManager.update(copy.name, copy, u1).nodeify(function(err, obj) {
+                userManager.update(copy.name, copy, { user : u1 }).nodeify(function(err, obj) {
                     if (pass) {
                         // expect pass..
                         obj = validateUpdate(err, obj);
@@ -195,7 +195,7 @@ describe('User Manager', function() {
                 var copy = JSON.parse(JSON.stringify(u1));
                 // set the email field
                 copy.email = username + "." + username + "@test.com";
-                userManager.update(copy.name, copy, u1).nodeify(function(err, obj) {
+                userManager.update(copy.name, copy, { user : u1 }).nodeify(function(err, obj) {
                     // expect pass..
                     obj = validateUpdate(err, obj);
                     obj.email.should.eql(copy.email);
@@ -214,7 +214,7 @@ describe('User Manager', function() {
                 var u1 = users[test[0]];
                 var u2 = users[test[1]];
                 return function(cb) {
-                    userManager.add(u2, u1).nodeify(cb);
+                    userManager.add(u2, { user : u1 }).nodeify(cb);
                 };
             }), done);
         });
@@ -225,7 +225,7 @@ describe('User Manager', function() {
                 var u1 = users[test[0]];
                 var u2 = users[test[1]];
                 return function(cb) {
-                    userManager.delete(u2[SIS.FIELD_NAME], u1).nodeify(cb);
+                    userManager.delete(u2[SIS.FIELD_NAME], { user : u1 }).nodeify(cb);
                 };
             }), done);
         });
@@ -249,13 +249,13 @@ describe('User Manager', function() {
                     var copy = JSON.parse(JSON.stringify(u2));
                     copy.roles = copy.roles || {};
                     copy.roles[group] = role;
-                    userManager.update(u2.name, copy, u1).nodeify(function(err, obj) {
+                    userManager.update(u2.name, copy, { user : u1 }).nodeify(function(err, obj) {
                         if (pass) {
                             obj = validateUpdate(err, obj);
                             obj.roles[group].should.eql(copy.roles[group]);
                             // revert change
                             copy.roles[group] = oldRoleVal;
-                            userManager.update(u2.name, copy, u1).nodeify(function(err, reverted) {
+                            userManager.update(u2.name, copy, { user : u1 }).nodeify(function(err, reverted) {
                                 reverted = validateUpdate(err, reverted);
                                 reverted.roles[group].should.eql(u2.roles[group]);
                                 done();
@@ -281,14 +281,14 @@ describe('User Manager', function() {
                         copy.roles[group] = role;
                     }
                     userManager.getById(u2.name).done(function(o1) {
-                        userManager.update(u2.name, copy, u1).nodeify(function(err, obj) {
+                        userManager.update(u2.name, copy, { user : u1 }).nodeify(function(err, obj) {
                             if (pass) {
                                 obj = validateUpdate(err, obj);
                                 if (action == 'd') {
                                     should.not.exist(obj.roles[group]);
                                     // revert
                                     copy.roles[group] = u2.roles[group];
-                                    userManager.update(u2.name, copy, u1).nodeify(function(err, reverted) {
+                                    userManager.update(u2.name, copy, { user : u1 }).nodeify(function(err, reverted) {
                                         reverted = validateUpdate(err, reverted);
                                         reverted.roles[group].should.eql(u2.roles[group]);
                                         done();
@@ -299,7 +299,7 @@ describe('User Manager', function() {
                                         o.toObject().should.eql(obj.toObject());
                                         // revert
                                         delete copy.roles[group];
-                                        userManager.update(u2.name, copy, u1).nodeify(function(err, reverted) {
+                                        userManager.update(u2.name, copy, { user : u1 }).nodeify(function(err, reverted) {
                                             reverted = validateUpdate(err, reverted);
                                             should.not.exist(reverted.roles[group]);
                                             done();

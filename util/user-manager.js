@@ -24,7 +24,7 @@ UserManager.prototype.createTempToken = function(user) {
         username : user[SIS.FIELD_NAME],
         expires : Date.now() + SIS.AUTH_EXPIRATION_TIME
     };
-    var p = tm.add(token, user);
+    var p = tm.add(token, { user : user });
     return p;
 };
 
@@ -36,12 +36,12 @@ UserManager.prototype.hashPw = function(pw) {
 };
 
 // need to hash the pw
-UserManager.prototype.add = function(obj, user) {
+UserManager.prototype.add = function(obj, options) {
     obj = JSON.parse(JSON.stringify(obj));
     if (obj[SIS.FIELD_PW]) {
         obj[SIS.FIELD_PW] = this.hashPw(obj[SIS.FIELD_PW]);
     }
-    return Manager.prototype.add.call(this, obj, user);
+    return Manager.prototype.add.call(this, obj, options);
 };
 
 UserManager.prototype.applyUpdate = function(obj, updateObj) {
@@ -81,7 +81,7 @@ UserManager.prototype.getOrCreateEmptyUser = function(userObj, superUser) {
                 roles : { },
                 super_user : false
             };
-            return self.add(user, superUser);
+            return self.add(user, { user : superUser});
         } else {
             // found
             return Promise.resolve(user);

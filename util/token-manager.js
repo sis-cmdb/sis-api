@@ -21,7 +21,8 @@ function TokenManager(sm) {
 require('util').inherits(TokenManager, Manager);
 
 // override add to use createToken
-TokenManager.prototype.add = function(obj, user) {
+TokenManager.prototype.add = function(obj, options) {
+    var user = options ? options.user : null;
     var err = this.validate(obj, false, user);
     if (err) {
         err = SIS.ERR_BAD_REQ(err);

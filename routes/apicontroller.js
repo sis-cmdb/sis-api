@@ -213,8 +213,9 @@ ApiController.prototype.delete = function(req, res) {
     this.applyDefaults(req);
     var id = req.params.id;
     var p = null;
+    var options = { user : req.user };
     if (id) {
-        p = this.getManager(req).call('delete', id, req.user);
+        p = this.getManager(req).call('delete', id, options);
         this._finish(req, res, p, 200);
     } else {
         // bulk delete - query is required
@@ -226,11 +227,10 @@ ApiController.prototype.delete = function(req, res) {
             return this.sendError(res, SIS.ERR_BAD_REQ("Bulk delete requires a non empty query."));
         }
         p = this.getManager(req).bind({}).then(function(mgr) {
-            this.mgr = mgr;
             return webUtil.flattenCondition(condition,self.sm,mgr);
         }).spread(function(flattenedCondition, mgr) {
             // delegate to mgr
-            return mgr.bulkDelete(flattenedCondition, req.user);
+            return mgr.bulkDelete(flattenedCondition, options);
         });
         this._finish(req, res, p, 200);
     }
@@ -243,8 +243,10 @@ ApiController.prototype.update = function(req, res) {
     var obj = req.body;
     var upsert = this.parseUpsert(req);
     var p = null;
+    var options = { user : req.user };
+    var cas;
     if ('cas' in req.query) {
-        var cas = req.query.cas;
+        cas = req.query.cas;
         try {
             if (typeof cas === 'string') {
                 cas = JSON.parse(cas);
@@ -258,17 +260,12 @@ ApiController.prototype.update = function(req, res) {
             // invalid query
             return this.sendError(res, SIS.ERR_BAD_REQ("CAS condition must be an object."));
         }
-        if (upsert) {
-            p = this.getManager(req).call('upsert', id, obj, req.user, cas);
-        } else {
-            p = this.getManager(req).call('casUpdate', id, obj, req.user, cas);
-        }
+        options.cas = cas;
+    }
+    if (upsert) {
+        p = this.getManager(req).call('upsert', id, obj, options);
     } else {
-        if (upsert) {
-            p = this.getManager(req).call('upsert', id, obj, req.user);
-        } else {
-            p = this.getManager(req).call('update', id, obj, req.user);
-        }
+        p = this.getManager(req).call('update', id, obj, options);
     }
     this._finish(req, res, p, 200);
 };
@@ -289,13 +286,13 @@ ApiController.prototype.add = function(req, res) {
         }
     }
     var p = this.getManager(req);
+    var options = { user : req.user };
     if (req.params.isBulk) {
-        p = p.then(function(mgr) {
-            return mgr.bulkAdd(req.body, req.user, req.query.all_or_none);
-        });
+        options.allOrNone = req.query.all_or_none;
+        p = p.call('bulkAdd', body, options);
         this._finish(req, res, p, 200);
     } else {
-        p = p.call('add', body, req.user);
+        p = p.call('add', body, options);
         this._finish(req, res, p, 201);
     }
 };

@@ -179,7 +179,9 @@ Manager.prototype.authorize = function(evt, doc, user, mergedDoc) {
 };
 
 // Ensures the user can add the object and then add it
-Manager.prototype.add = function(obj, user) {
+Manager.prototype.add = function(obj, options) {
+    options = options || { };
+    var user = options.user;
     var err = this.validate(obj, false, user);
     if (err) {
         return Promise.reject(SIS.ERR_BAD_REQ(err));
@@ -192,7 +194,10 @@ Manager.prototype.add = function(obj, user) {
 };
 
 
-Manager.prototype.bulkAdd = function(items, user, allOrNone) {
+Manager.prototype.bulkAdd = function(items, options) {
+    options = options || { };
+    var user = options.user;
+    var allOrNone = options.allOrNone;
     var memo = { success: [], errors: [] };
     var self = this;
     var toAdd = [];
@@ -277,7 +282,8 @@ Manager.prototype.bulkAdd = function(items, user, allOrNone) {
     });
 };
 
-Manager.prototype._update = function(id, obj, user, saveFunc) {
+Manager.prototype._update = function(id, obj, options, saveFunc) {
+    var user = options.user;
     var err = this.validate(obj, true, user);
     if (err) {
         return Promise.reject(SIS.ERR_BAD_REQ(err));
@@ -309,9 +315,8 @@ Manager.prototype._update = function(id, obj, user, saveFunc) {
     });
 };
 
-Manager.prototype.casUpdate = function(id, obj, user, cas) {
-    // will be bound to this in _update
-    var saveFunc = function(doc) {
+Manager.prototype._getCasSave = function(obj, cas) {
+    return function(doc) {
         var validate = Promise.promisify(doc.validate, doc);
         return validate().bind(this).then(function() {
             // set the ID on the id field
@@ -328,38 +333,66 @@ Manager.prototype.casUpdate = function(id, obj, user, cas) {
                 return doc;
             });
         });
-    };
-    return this._update(id, obj, user, saveFunc);
+    }.bind(this);
 };
+
+// Manager.prototype.casUpdate = function(id, obj, user, cas) {
+//     // will be bound to this in _update
+//     var saveFunc = function(doc) {
+//         var validate = Promise.promisify(doc.validate, doc);
+//         return validate().bind(this).then(function() {
+//             // set the ID on the id field
+//             cas[this.idField] = doc[this.idField];
+//             // find and update
+//             // need to add the update time
+//             this.applyPreSaveFields(obj);
+//             return this.model.findOneAndUpdateAsync(cas, obj)
+//             .then(function(doc) {
+//                 if (!doc) {
+//                     // cas update failed
+//                     return Promise.reject(SIS.ERR_BAD_REQ("CAS update failed."));
+//                 }
+//                 return doc;
+//             });
+//         });
+//     };
+//     return this._update(id, obj, user, saveFunc);
+// };
 
 Manager.prototype.canInsertWithId = function(id, obj) {
     return obj[this.idField] == id;
 };
 
-Manager.prototype.upsert = function(id, obj, user, cas) {
+Manager.prototype.upsert = function(id, obj, options) {
+    options = options || { };
     // get by id first
     return this.getById(id).bind(this).then(function(found) {
-        if (cas) {
-            return this.casUpdate(id, obj, user, cas);
-        } else {
-            return this.update(id, obj, user);
-        }
+        return this.update(id, obj, options);
     }).catch(function(err) {
         // add it
         if (!this.canInsertWithId(id, obj)) {
             return Promise.reject(SIS.ERR_BAD_REQ("Cannot insert object with specified ID"));
         }
-        return this.add(obj, user);
+        return this.add(obj, options);
     });
 };
 
 // Ensures the user can update the object and then update it
-Manager.prototype.update = function(id, obj, user) {
-    return this._update(id, obj, user, this._save);
+Manager.prototype.update = function(id, obj, options) {
+    options = options || { };
+    var cas = options.cas;
+    var saveFunc = this._save;
+    // if cas, use the cas save rather than generic save
+    if (cas) {
+        saveFunc = this._getCasSave(obj, cas);
+    }
+    return this._update(id, obj, options, saveFunc);
 };
 
 // Ensures the user can delete the object and then delete it
-Manager.prototype.delete = function(id, user) {
+Manager.prototype.delete = function(id, options) {
+    options = options || { };
+    var user = options.user;
     var self = this;
     var p = this.getById(id, { lean : true }).then(function(obj) {
             return self.authorize(SIS.EVENT_DELETE, obj, user);
@@ -369,7 +402,9 @@ Manager.prototype.delete = function(id, user) {
     return p;
 };
 
-Manager.prototype.bulkDelete = function(condition, user) {
+Manager.prototype.bulkDelete = function(condition, options) {
+    options = options || { };
+    var user = options.user;
     var memo = { success: [], errors: [] };
     return this.getAll(condition, { lean: true })
     .bind(this).then(function(items) {

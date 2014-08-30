@@ -34,14 +34,14 @@ describe('Token Manager', function() {
                 var tokenManager = schemaManager.auth[SIS.SCHEMA_TOKENS];
                 tokenManager.model.ensureIndexes(function(e) {
                     if (e) { return done(e); }
-                    userManager.add(admin, superUser).nodeify(done);
+                    userManager.add(admin, { user : superUser }).nodeify(done);
                 });
             });
             after(function(done) {
                 SIS.AUTH_EXPIRATION_TIME = 1000 * 60 * 60 * 8;
                 var userManager = schemaManager.auth[SIS.SCHEMA_USERS];
                 var superUser = users.superman;
-                userManager.delete('admin1', superUser).nodeify(done);
+                userManager.delete('admin1', { user : superUser }).nodeify(done);
             });
 
             it("should add a temp token", function(done) {
@@ -154,7 +154,7 @@ describe('Token Manager', function() {
                 var u1 = users[test[0]];
                 var u2 = users[test[1]];
                 return function(cb) {
-                    userManager.add(u2, u1).nodeify(cb);
+                    userManager.add(u2, { user : u1 }).nodeify(cb);
                 };
             }), done);
         });
@@ -177,7 +177,7 @@ describe('Token Manager', function() {
                     username : u2[SIS.FIELD_NAME],
                     desc : "token added by " + u1[SIS.FIELD_NAME]
                 };
-                tokenManager.add(token, u1).nodeify(function(err, obj) {
+                tokenManager.add(token, { user : u1 }).nodeify(function(err, obj) {
                     if (pass) {
                         // expect pass..
                         should.not.exist(err);
@@ -200,7 +200,7 @@ describe('Token Manager', function() {
                 var tokenManager = schemaManager.auth[SIS.SCHEMA_TOKENS];
                 var u1 = users[test[0]];
                 var u2 = users[test[1]];
-                userManager.delete(u2[SIS.FIELD_NAME], u1).nodeify(function(e, u) {
+                userManager.delete(u2[SIS.FIELD_NAME], { user : u1 }).nodeify(function(e, u) {
                     should.not.exist(e);
                     should.exist(u);
                     tokenManager.getAll({username : u[SIS.FIELD_NAME]}, null, null)
