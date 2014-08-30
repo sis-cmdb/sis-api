@@ -49,7 +49,7 @@ function TestServer() {
                         serverData.password = 'sistest';
                         callback(null, serverData);
                     }, function(dne) {
-                        userManager.add(sisSuper, localSuper, function(e, user) {
+                        userManager.add(sisSuper, localSuper).nodeify(function(e, user) {
                             if (e) {
                                 return callback(e);
                             }

@@ -179,20 +179,16 @@ Manager.prototype.authorize = function(evt, doc, user, mergedDoc) {
 };
 
 // Ensures the user can add the object and then add it
-Manager.prototype.add = function(obj, user, callback) {
-    if (!callback && typeof user === 'function') {
-        callback = user;
-        user = null;
-    }
+Manager.prototype.add = function(obj, user) {
     var err = this.validate(obj, false, user);
     if (err) {
-        return Promise.reject(SIS.ERR_BAD_REQ(err)).nodeify(callback);
+        return Promise.reject(SIS.ERR_BAD_REQ(err));
     }
     var p = this.authorize(SIS.EVENT_INSERT, obj, user).bind(this)
         .then(this._addByFields(user, SIS.EVENT_INSERT))
         .then(this._preSave)
         .then(this._save);
-    return p.nodeify(callback);
+    return p;
 };
 
 
@@ -358,28 +354,19 @@ Manager.prototype.upsert = function(id, obj, user, cas) {
 };
 
 // Ensures the user can update the object and then update it
-Manager.prototype.update = function(id, obj, user, callback) {
-    if (!callback && typeof user === 'function') {
-        callback = user;
-        user = null;
-    }
-    var p = this._update(id, obj, user, this._save);
-    return p.nodeify(callback);
+Manager.prototype.update = function(id, obj, user) {
+    return this._update(id, obj, user, this._save);
 };
 
 // Ensures the user can delete the object and then delete it
-Manager.prototype.delete = function(id, user, callback) {
-    if (!callback && typeof user === 'function') {
-        callback = user;
-        user = null;
-    }
+Manager.prototype.delete = function(id, user) {
     var self = this;
     var p = this.getById(id, { lean : true }).then(function(obj) {
             return self.authorize(SIS.EVENT_DELETE, obj, user);
         })
         .then(this._remove.bind(this))
         .tap(this.objectRemoved.bind(this));
-    return p.nodeify(callback);
+    return p;
 };
 
 Manager.prototype.bulkDelete = function(condition, user) {

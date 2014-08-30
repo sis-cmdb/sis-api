@@ -21,19 +21,15 @@ function TokenManager(sm) {
 require('util').inherits(TokenManager, Manager);
 
 // override add to use createToken
-TokenManager.prototype.add = function(obj, user, callback) {
-    if (!callback && typeof user === 'function') {
-        callback = user;
-        user = null;
-    }
+TokenManager.prototype.add = function(obj, user) {
     var err = this.validate(obj, false, user);
     if (err) {
         err = SIS.ERR_BAD_REQ(err);
-        return Promise.reject(err).nodeify(callback);
+        return Promise.reject(err);
     }
     var p = this.authorize(SIS.EVENT_INSERT, obj, user)
                 .then(this.createToken.bind(this));
-    return p.nodeify(callback);
+    return p;
 };
 
 TokenManager.prototype.validate = function(obj, isUpdate, user) {

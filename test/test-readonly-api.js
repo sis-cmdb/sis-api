@@ -26,8 +26,8 @@ describe('API at the Edge ', function() {
         ApiServer.start(config, function(err, sd) {
             if (err) { return done(err); }
             app = sd.app;
-            sd.schemaManager.delete(schema.name, sd.superUser, function() {
-                sd.schemaManager.add(schema, sd.superUser, done);
+            sd.schemaManager.delete(schema.name, sd.superUser).nodeify(function() {
+                sd.schemaManager.add(schema, sd.superUser).nodeify(done);
             });
         });
     });

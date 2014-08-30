@@ -40,15 +40,15 @@ var user = JSON.parse(fs.readFileSync(jsonFile, 'utf8'));
 function updateUser(userManager, user, callback) {
     userManager.getById(user.name).done(function(u) {
         // user exists
-        userManager.update(u.name, user, self, callback);
+        userManager.update(u.name, user, self).nodeify(callback);
     }, function(err) {
         // user does not exist.
-        userManager.add(user, self, callback);
+        userManager.add(user, self).nodeify(callback);
     });
 }
 
 function deleteUser(userManager, user, callback) {
-    userManager.delete(user.name, self, callback);
+    userManager.delete(user.name, self).nodeify(callback);
 }
 
 var opts = nconf.get('db').opts || { };

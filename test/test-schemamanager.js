@@ -24,7 +24,7 @@ describe('SchemaManager', function() {
     it("should error adding an empty string ", function(done) {
       var name = "name";
       var schema = "";
-      schemaManager.add({"name" : name, "definition" : schema}, function(err, entity) {
+      schemaManager.add({"name" : name, "definition" : schema}).nodeify(function(err, entity) {
         should.exist(err);
         done();
       });
@@ -33,7 +33,7 @@ describe('SchemaManager', function() {
     it("should error adding an empty object ", function(done) {
       var name = "name";
       var schema = { };
-      schemaManager.add({"name" : name, "definition" : schema}, function(err, entity) {
+      schemaManager.add({"name" : name, "definition" : schema}).nodeify(function(err, entity) {
         should.exist(err);
         done();
       });
@@ -43,7 +43,7 @@ describe('SchemaManager', function() {
     it("should error adding a schema with an unkown type ", function(done) {
       var name = "name";
       var schema = { "field1" : "Bogus", "field2" : "String" };
-      schemaManager.add({"name" : name, "definition" : schema}, function(err, entity) {
+      schemaManager.add({"name" : name, "definition" : schema}).nodeify(function(err, entity) {
         should.exist(err);
         done();
       });
@@ -53,7 +53,7 @@ describe('SchemaManager', function() {
     it("should error adding a schema with no name ", function(done) {
       var name = "";
       var schema = { "field1" : "String", "field2" : "String" };
-      schemaManager.add({"name" : name, "definition" : schema}, function(err, entity) {
+      schemaManager.add({"name" : name, "definition" : schema}).nodeify(function(err, entity) {
         should.exist(err);
         done();
       });
@@ -75,7 +75,7 @@ describe('SchemaManager', function() {
           bgpip6: "String"
         }
       };
-      schemaManager.add(schema, function(err, entity) {
+      schemaManager.add(schema).nodeify(function(err, entity) {
         should.not.exist(err);
 
         entity.should.have.property('name', 'network_element');
@@ -94,7 +94,7 @@ describe('SchemaManager', function() {
                 ne_type: "String",
               }
             };
-            schemaManager.add(schema, function(err, entity) {
+            schemaManager.add(schema).nodeify(function(err, entity) {
                 should.exist(err);
                 should.not.exist(entity);
                 done();
@@ -107,7 +107,7 @@ describe('SchemaManager', function() {
           "owner" : "test",
           "definition" : { }
         };
-        schemaManager.add(schema, function(err, entity) {
+        schemaManager.add(schema).nodeify(function(err, entity) {
             should.exist(err);
             should.not.exist(entity);
             done();
@@ -124,7 +124,7 @@ describe('SchemaManager', function() {
                 }
             };
             schema.definition[field] = 'String';
-            schemaManager.add(schema, function(err, entity) {
+            schemaManager.add(schema).nodeify(function(err, entity) {
                 should.exist(err);
                 should.not.exist(entity);
                 done();
@@ -137,7 +137,7 @@ describe('SchemaManager', function() {
             "owner" : "test",
             "definition" : "Bogus"
         };
-        schemaManager.add(schema, function(err, entity) {
+        schemaManager.add(schema).nodeify(function(err, entity) {
             should.exist(err);
             should.not.exist(entity);
             done();
@@ -151,7 +151,7 @@ describe('SchemaManager', function() {
                 "name" : "UnknownType"
             }
         };
-        schemaManager.add(schema, function(err, entity) {
+        schemaManager.add(schema).nodeify(function(err, entity) {
             should.exist(err);
             should.not.exist(entity);
             done();
@@ -186,7 +186,7 @@ describe('SchemaManager', function() {
       "definition" : schemaDef
     };
     before(function(done) {
-      schemaManager.add(fullSchema, function(err, entity) {
+      schemaManager.add(fullSchema).nodeify(function(err, entity) {
         if (err) {
           done(err);
           return;
@@ -209,7 +209,7 @@ describe('SchemaManager', function() {
     });
 
     it("Should return false if schema dne ", function(done) {
-      schemaManager.delete("DNE", function(err, result) {
+      schemaManager.delete("DNE").nodeify(function(err, result) {
         should.exist(err);
         should.not.exist(result);
         done();
@@ -217,7 +217,7 @@ describe('SchemaManager', function() {
     });
 
     it("Should return true if schema exists ", function(done) {
-      schemaManager.delete(schemaName, function(err, result) {
+      schemaManager.delete(schemaName).nodeify(function(err, result) {
         should.not.exist(err);
         /* jshint expr: true */
         result.should.be.ok;
@@ -237,7 +237,7 @@ describe('SchemaManager', function() {
     });
 
     it("Should have no documents ", function(done) {
-      schemaManager.add(fullSchema, function(err, entity) {
+      schemaManager.add(fullSchema).nodeify(function(err, entity) {
         if (err) {
           done(err);
           return;
@@ -276,8 +276,8 @@ describe('SchemaManager', function() {
 
     // create the schema and add an entity
     before(function(done) {
-        schemaManager.delete(schema.name, function() {
-            schemaManager.add(schema, function(err, result) {
+        schemaManager.delete(schema.name).nodeify(function() {
+            schemaManager.add(schema).nodeify(function(err, result) {
               if (err) return done(err);
               var EntityType = schemaManager.getEntityModel(schema);
               var doc = new EntityType(initialEntity);
@@ -290,7 +290,7 @@ describe('SchemaManager', function() {
         });
     });
     after(function(done) {
-        schemaManager.delete(schema.name, done);
+        schemaManager.delete(schema.name).nodeify(done);
     });
 
     it("Should update the schema", function(done) {
@@ -298,7 +298,7 @@ describe('SchemaManager', function() {
       delete schema.definition.num;
       schema.definition.bool = 'String';
       schema.definition.newBool = "Boolean";
-      schemaManager.update(schema.name, schema, function(err, updated) {
+      schemaManager.update(schema.name, schema).nodeify(function(err, updated) {
         should.not.exist(err);
         updated = updated[1];
         should.exist(updated.definition);
@@ -427,8 +427,8 @@ describe('SchemaManager', function() {
 
       // create the schema
       before(function(done) {
-          schemaManager.delete(schema.name, function() {
-            schemaManager.add(schema, function(err, result) {
+          schemaManager.delete(schema.name).nodeify(function() {
+            schemaManager.add(schema).nodeify(function(err, result) {
                 if (err) return done(err);
                 schemaDoc = result.toObject();
                 done();
@@ -437,9 +437,9 @@ describe('SchemaManager', function() {
 
       });
 
-    //   after(function(done) {
-    //       schemaManager.delete(schema.name, done);
-    //   });
+      after(function(done) {
+          schemaManager.delete(schema.name).nodeify(done);
+      });
 
       it("Should fail to add two objects w/ same str", function(done) {
           var EntityType = schemaManager.getEntityModel(schemaDoc);
@@ -507,7 +507,7 @@ describe('SchemaManager', function() {
 
     // create the schema and add an entity
     before(function(done) {
-        schemaManager.add(schema, function(err, result) {
+        schemaManager.add(schema).nodeify(function(err, result) {
           if (err) return done(err);
           schemaDoc = result;
           schemaDoc.toObject()[SIS.FIELD_LOCKED].should.eql(false);
@@ -515,13 +515,13 @@ describe('SchemaManager', function() {
         });
     });
     after(function(done) {
-        schemaManager.delete(schema.name, done);
+        schemaManager.delete(schema.name).nodeify(done);
     });
 
     it("Should lock the schema", function(done) {
         var obj = schemaDoc.toObject();
         obj[SIS.FIELD_LOCKED] = true;
-        schemaManager.update("test_lock_entity", obj, function(e, r) {
+        schemaManager.update("test_lock_entity", obj).nodeify(function(e, r) {
             should.not.exist(e);
             schemaDoc = r[1];
             schemaDoc.toObject()[SIS.FIELD_LOCKED].should.eql(true);
@@ -530,7 +530,7 @@ describe('SchemaManager', function() {
     });
 
     it("Should not delete the schema", function(done) {
-        schemaManager.delete("test_lock_entity", function(e, r) {
+        schemaManager.delete("test_lock_entity").nodeify(function(e, r) {
             should.exist(e);
             should.not.exist(r);
             done();
@@ -540,7 +540,7 @@ describe('SchemaManager', function() {
     it("Should unlock the schema", function(done) {
         var obj = schemaDoc.toObject();
         obj[SIS.FIELD_LOCKED] = false;
-        schemaManager.update("test_lock_entity", obj, function(e, r) {
+        schemaManager.update("test_lock_entity", obj).nodeify(function(e, r) {
             should.not.exist(e);
             schemaDoc = r[1];
             schemaDoc.toObject()[SIS.FIELD_LOCKED].should.eql(false);
@@ -551,7 +551,7 @@ describe('SchemaManager', function() {
     it("Should prevent updating the schema", function(done) {
         var obj = schemaDoc.toObject();
         delete obj.definition.str;
-        schemaManager.update("test_lock_entity", obj, function(e, r) {
+        schemaManager.update("test_lock_entity", obj).nodeify(function(e, r) {
             should.exist(e);
             should.not.exist(r);
             done();
@@ -561,7 +561,7 @@ describe('SchemaManager', function() {
     it("Should delete the date field", function(done) {
         var obj = schemaDoc.toObject();
         delete obj.definition.date;
-        schemaManager.update("test_lock_entity", obj, function(e, r) {
+        schemaManager.update("test_lock_entity", obj).nodeify(function(e, r) {
             should.exist(r);
             should.not.exist(e);
             done();
@@ -571,7 +571,7 @@ describe('SchemaManager', function() {
         var obj = schemaDoc.toObject();
         delete obj.definition.str;
         obj[SIS.FIELD_LOCKED_FIELDS] = ["num"];
-        schemaManager.update("test_lock_entity", obj, function(e, r) {
+        schemaManager.update("test_lock_entity", obj).nodeify(function(e, r) {
             should.exist(r);
             should.not.exist(e);
             done();
@@ -592,14 +592,14 @@ describe('SchemaManager', function() {
 
       // create the schema and add an entity
       before(function(done) {
-          schemaManager.add(schema, function(err, result) {
+          schemaManager.add(schema).nodeify(function(err, result) {
             if (err) return done(err);
             schemaDoc = result;
             done();
           });
       });
       after(function(done) {
-          schemaManager.delete(schema.name, done);
+          schemaManager.delete(schema.name).nodeify(done);
       });
 
       it("Should mark the schema immutable and add num", function(done) {

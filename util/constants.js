@@ -58,6 +58,8 @@ module.exports = {
     FIELD_TAGS : "sis_tags",
     FIELD_IMMUTABLE : "sis_immutable",
     FIELD_TRANSACTION_ID : "_trans_id",
+    FIELD_SIS_FIELDS : "_sis",
+    FIELD_SIS_VERSION : "_version",
 
     // schema names
     SCHEMA_SCHEMAS : "sis_schemas",

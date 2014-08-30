@@ -18,14 +18,14 @@ function UserManager(sm) {
 
 require('util').inherits(UserManager, Manager);
 
-UserManager.prototype.createTempToken = function(user, callback) {
+UserManager.prototype.createTempToken = function(user) {
     var tm = this.sm.auth[SIS.SCHEMA_TOKENS];
     var token = {
         username : user[SIS.FIELD_NAME],
         expires : Date.now() + SIS.AUTH_EXPIRATION_TIME
     };
     var p = tm.add(token, user);
-    return p.nodeify(callback);
+    return p;
 };
 
 UserManager.prototype.hashPw = function(pw) {
@@ -36,12 +36,12 @@ UserManager.prototype.hashPw = function(pw) {
 };
 
 // need to hash the pw
-UserManager.prototype.add = function(obj, user, callback) {
+UserManager.prototype.add = function(obj, user) {
     obj = JSON.parse(JSON.stringify(obj));
     if (obj[SIS.FIELD_PW]) {
         obj[SIS.FIELD_PW] = this.hashPw(obj[SIS.FIELD_PW]);
     }
-    return Manager.prototype.add.call(this, obj, user, callback);
+    return Manager.prototype.add.call(this, obj, user);
 };
 
 UserManager.prototype.applyUpdate = function(obj, updateObj) {
@@ -53,7 +53,7 @@ UserManager.prototype.applyUpdate = function(obj, updateObj) {
     return Manager.prototype.applyUpdate.call(this, obj, updateObj);
 };
 
-UserManager.prototype.getVerifiedUser = function(username, pw, callback) {
+UserManager.prototype.getVerifiedUser = function(username, pw) {
     var self = this;
     var p = this.getById(username, { lean : true }).then(function(u) {
         pw = self.hashPw(pw);
@@ -63,19 +63,16 @@ UserManager.prototype.getVerifiedUser = function(username, pw, callback) {
             return Promise.resolve(u);
         }
     });
-    return p.nodeify(callback);
+    return p;
 };
 
-UserManager.prototype.getOrCreateEmptyUser = function(userObj, superUser, callback) {
+UserManager.prototype.getOrCreateEmptyUser = function(userObj, superUser) {
     var self = this;
     if (!userObj || !userObj.name || !userObj.email) {
-        return callback(SIS.ERR_INTERNAL("Invalid user specified in getOrCreate"), null);
+        return Promise.reject(SIS.ERR_INTERNAL("Invalid user specified in getOrCreate"));
     }
     var username = userObj.name;
-    this.model.findOne({name : username}, function(err, user) {
-        if (err) {
-            return callback(SIS.ERR_INTERNAL("Error talking to DB: " + err), null);
-        }
+    return this.model.findOneAsync({name : username}).then(function(user) {
         if (!user) {
             // create it
             user = {
@@ -84,11 +81,13 @@ UserManager.prototype.getOrCreateEmptyUser = function(userObj, superUser, callba
                 roles : { },
                 super_user : false
             };
-            return self.add(user, superUser, callback);
+            return self.add(user, superUser);
         } else {
             // found
-            return callback(null, user);
+            return Promise.resolve(user);
         }
+    }).catch(function(e) {
+        return Promise.reject(SIS.ERR_INTERNAL(e));
     });
 };
 

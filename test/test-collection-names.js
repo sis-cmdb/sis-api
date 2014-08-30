@@ -70,7 +70,7 @@ describe("Mongo Collection Naming", function() {
                 });
                 return function(cb) {
                     async.map(objs, function(obj, ocb) {
-                        em.add(obj, ocb);
+                        em.add(obj).nodeify(ocb);
                     }, cb);
                 };
             });

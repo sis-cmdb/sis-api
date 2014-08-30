@@ -9,7 +9,7 @@ var util = require("util");
 // authorization using user and pass via the user manager
 var _verifyUserPass = function(user, pass, done) {
     var userManager = this.auth[SIS.SCHEMA_USERS];
-    userManager.getVerifiedUser(user, pass, done);
+    userManager.getVerifiedUser(user, pass).nodeify(done);
 };
 
 var getLdapVerificationFunc = function(sm, auth_config) {
@@ -47,7 +47,7 @@ var getLdapVerificationFunc = function(sm, auth_config) {
                 name : user,
                 email : user + '@' + ed
             };
-            return userManager.getOrCreateEmptyUser(userObj, ldapSisUser, done);
+            return userManager.getOrCreateEmptyUser(userObj, ldapSisUser).nodeify(done);
         });
     };
 };
