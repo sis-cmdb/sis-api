@@ -23,7 +23,7 @@ require('util').inherits(UserController, ApiController);
 // extend attach to also attach the token request route
 UserController.prototype.attach = function(app, prefix) {
     ApiController.prototype.attach.call(this, app, prefix);
-    this.auth_token_path = prefix + "/auth_token";
+    this.auth_token_path = this.apiPrefix + "/auth_token";
     app.post(this.auth_token_path, function(req, res) {
         var p = this.authenticate(req, res, 'basic')
             .then(this.manager.createTempToken.bind(this.manager));
@@ -59,5 +59,5 @@ module.exports.setup = function(app, config) {
         return;
     }
     var controller = new UserController(config);
-    controller.attach(app, "/api/v1/users");
+    controller.attach(app, "/users");
 };

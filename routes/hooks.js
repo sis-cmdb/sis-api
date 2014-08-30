@@ -22,5 +22,5 @@ require('util').inherits(HookController, ApiController);
 // all route controllers expose a setup method
 module.exports.setup = function(app, config) {
     var controller = new HookController(config);
-    controller.attach(app, "/api/v1/hooks");
+    controller.attach(app, "/hooks");
 };

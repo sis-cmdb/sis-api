@@ -32,5 +32,5 @@ HieraController.prototype.convertToResponseObject = function(req, obj) {
 // all route controllers expose a setup method
 module.exports.setup = function(app, config) {
     var controller = new HieraController(config);
-    controller.attach(app, "/api/v1/hiera");
+    controller.attach(app, "/hiera");
 };

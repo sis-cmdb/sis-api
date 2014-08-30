@@ -81,5 +81,5 @@ EntityController.prototype.applyDefaults = function(req) {
 // all route controllers expose a setup method
 module.exports.setup = function(app, config) {
     var controller = new EntityController(config);
-    controller.attach(app, "/api/v1/entities/:schema");
+    controller.attach(app, "/entities/:schema");
 };

@@ -213,7 +213,7 @@ ApiController.prototype.delete = function(req, res) {
     this.applyDefaults(req);
     var id = req.params.id;
     var p = null;
-    var options = { user : req.user };
+    var options = this._getReqOptions(req);
     if (id) {
         p = this.getManager(req).call('delete', id, options);
         this._finish(req, res, p, 200);
@@ -243,7 +243,7 @@ ApiController.prototype.update = function(req, res) {
     var obj = req.body;
     var upsert = this.parseUpsert(req);
     var p = null;
-    var options = { user : req.user };
+    var options = this._getReqOptions(req);
     var cas;
     if ('cas' in req.query) {
         cas = req.query.cas;
@@ -286,7 +286,7 @@ ApiController.prototype.add = function(req, res) {
         }
     }
     var p = this.getManager(req);
-    var options = { user : req.user };
+    var options = this._getReqOptions(req);
     if (req.params.isBulk) {
         options.allOrNone = req.query.all_or_none;
         p = p.call('bulkAdd', body, options);
@@ -299,6 +299,9 @@ ApiController.prototype.add = function(req, res) {
 
 // Attach the controller to the app at a particular base
 ApiController.prototype.attach = function(app, prefix) {
+    // prepend prefix w/ /api/version str
+    prefix = "/api/:version(" + SIS.SUPPORTED_VERSIONS.join("|") + ")" + prefix;
+    this.apiPrefix = prefix;
     app.get(prefix, this.getAll.bind(this));
     app.get(prefix + "/:id", this.get.bind(this));
     if (!app.get(SIS.OPT_READONLY)) {
@@ -558,6 +561,14 @@ ApiController.prototype._finish = function(req, res, p, code) {
         cb(err);
     })
     .done();
+};
+
+// get request options to pass to managers per request
+ApiController.prototype._getReqOptions = function(req) {
+    return {
+        user : req.user,
+        version : req.version
+    };
 };
 
 // export it

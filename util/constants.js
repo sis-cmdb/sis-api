@@ -84,6 +84,9 @@ module.exports = {
     OPT_USE_AUTH : "auth",
     OPT_AUTH_CONFIG : "auth_config",
 
+    // supported versions
+    SUPPORTED_VERSIONS : ["v1","v1.1"],
+
     ROLE_USER : "user",
     ROLE_ADMIN : "admin",
 

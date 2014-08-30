@@ -26,4 +26,15 @@ describe('@API - Info API', function() {
                 done();
             });
     });
+
+    SIS.SUPPORTED_VERSIONS.forEach(function(v) {
+        it("Should work for supported version " + v, function(done) {
+            ApiServer.get("/api/" + v + "/info").expect(200, done);
+        });
+    });
+
+    it("Should error on unsupported versions", function(done) {
+        ApiServer.get("/api/unsupported/info")
+            .expect(404, done);
+    });
 });

@@ -111,5 +111,5 @@ module.exports.setup = function(app, config) {
 
     var controller = new TokenController(config);
     controller.wrapApi();
-    controller.attach(app, "/api/v1/users/:uid/tokens");
+    controller.attach(app, "/users/:uid/tokens");
 };

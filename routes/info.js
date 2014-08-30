@@ -4,6 +4,7 @@
 
 var fs = require('fs');
 var path = require('path');
+var SIS = require('../util/constants');
 
 // all route controllers expose a setup method
 module.exports.setup = function(app, config) {
@@ -15,7 +16,8 @@ module.exports.setup = function(app, config) {
     } catch (ex) {
         build = { 'err' : 'no info present' };
     }
-    app.get("/api/v1/info", function(req, res) {
+
+    app.get("/api/:version(" + SIS.SUPPORTED_VERSIONS.join("|") + ")/info", function(req, res) {
         res.status(200).send(build);
     });
 };

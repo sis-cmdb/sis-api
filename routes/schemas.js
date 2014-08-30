@@ -23,5 +23,5 @@ require('util').inherits(SchemaController, ApiController);
 // all route controllers expose a setup method
 module.exports.setup = function(app, config) {
     var controller = new SchemaController(config);
-    controller.attach(app, "/api/v1/schemas");
+    controller.attach(app, "/schemas");
 };
