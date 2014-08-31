@@ -30,7 +30,7 @@ Manager.prototype.getReferences = function() {
 };
 
 // return a string if validation fails
-Manager.prototype.validate = function(obj, isUpdate) {
+Manager.prototype.validate = function(obj, toUpdate, options) {
     return null;
 };
 
@@ -182,7 +182,7 @@ Manager.prototype.authorize = function(evt, doc, user, mergedDoc) {
 Manager.prototype.add = function(obj, options) {
     options = options || { };
     var user = options.user;
-    var err = this.validate(obj, false, user);
+    var err = this.validate(obj, null, options);
     if (err) {
         return Promise.reject(SIS.ERR_BAD_REQ(err));
     }
@@ -206,7 +206,14 @@ Manager.prototype.bulkAdd = function(items, options) {
     transactionCond[SIS.FIELD_TRANSACTION_ID + ".id"] = transactionId;
     var prepPromises = items.map(function(item, idx) {
         return this.authorize(SIS.EVENT_INSERT, item, user)
-        .bind(this).then(this._addByFields(user, SIS.EVENT_INSERT))
+        .bind(this).then(function(item) {
+            var err = this.validate(item, null, options);
+            if (err) {
+                return Promise.reject(SIS.ERR_BAD_REQ(err));
+            }
+            return item;
+        })
+        .then(this._addByFields(user, SIS.EVENT_INSERT))
         .then(this._preSave)
         .then(function(res) {
             // convert to mongoose obj
@@ -283,26 +290,35 @@ Manager.prototype.bulkAdd = function(items, options) {
 };
 
 Manager.prototype._update = function(id, obj, options, saveFunc) {
-    var user = options.user;
-    var err = this.validate(obj, true, user);
-    if (err) {
-        return Promise.reject(SIS.ERR_BAD_REQ(err));
-    }
-    // this check should still work for entities since idField is _id and
-    // it is removed from the object in the validate method.
-    // this needs to be cleaned since this is a case of a superclass
-    // getting lucky because of subclass behavior
-    if (this.idField in obj && id != obj[this.idField]) {
-        err = SIS.ERR_BAD_REQ(this.idField + " cannot be changed.");
-        return Promise.reject(err);
-    }
-    return this.getById(id).bind(this)
+    return this.getById(id, { lean : true }).bind(this)
     .then(function(found) {
+        // validate
+        var err = this.validate(obj, found, options);
+        if (err) {
+            return Promise.reject(SIS.ERR_BAD_REQ(err));
+        }
+        // this check should still work for entities since idField is _id and
+        // it is removed from the object in the validate method.
+        // this needs to be cleaned since this is a case of a superclass
+        // getting lucky because of subclass behavior
+        if (this.idField in obj && found[this.idField] != obj[this.idField]) {
+            err = SIS.ERR_BAD_REQ(this.idField + " cannot be changed.");
+            return Promise.reject(err);
+        }
+
+        // init the mongoose doc - must use .init per comment in mongoose
+        // otherwise there are problems like _id mod errors from mongo
+        var tmp = found;
+        found = new this.model();
+        found.init(tmp, { });
+        found.isNew = false;
+
         // need to save found's old state
         // HACK - see
         // https://github.com/LearnBoost/mongoose/pull/1981
         found.$__error(null);
         var old = found.toObject();
+        var user = options.user;
         return this._merge(found, obj).bind(this).then(function(merged) {
             return this.authorize(SIS.EVENT_UPDATE, old, user, merged);
         })
@@ -336,29 +352,6 @@ Manager.prototype._getCasSave = function(obj, cas) {
     }.bind(this);
 };
 
-// Manager.prototype.casUpdate = function(id, obj, user, cas) {
-//     // will be bound to this in _update
-//     var saveFunc = function(doc) {
-//         var validate = Promise.promisify(doc.validate, doc);
-//         return validate().bind(this).then(function() {
-//             // set the ID on the id field
-//             cas[this.idField] = doc[this.idField];
-//             // find and update
-//             // need to add the update time
-//             this.applyPreSaveFields(obj);
-//             return this.model.findOneAndUpdateAsync(cas, obj)
-//             .then(function(doc) {
-//                 if (!doc) {
-//                     // cas update failed
-//                     return Promise.reject(SIS.ERR_BAD_REQ("CAS update failed."));
-//                 }
-//                 return doc;
-//             });
-//         });
-//     };
-//     return this._update(id, obj, user, saveFunc);
-// };
-
 Manager.prototype.canInsertWithId = function(id, obj) {
     return obj[this.idField] == id;
 };
@@ -366,7 +359,7 @@ Manager.prototype.canInsertWithId = function(id, obj) {
 Manager.prototype.upsert = function(id, obj, options) {
     options = options || { };
     // get by id first
-    return this.getById(id).bind(this).then(function(found) {
+    return this.getById(id, { lean : true }).bind(this).then(function(found) {
         return this.update(id, obj, options);
     }).catch(function(err) {
         // add it
@@ -641,8 +634,9 @@ Manager.prototype.applyPreSaveFields = function(obj) {
     obj[SIS.FIELD_UPDATED_AT] = Date.now();
 };
 
+// do one last bit of validation for subclasses
 Manager.prototype._preSave = function(obj) {
-    return obj;
+    return Promise.resolve(obj);
 };
 
 // Save the object and return a promise that is fulfilled

@@ -19,7 +19,7 @@ function HieraManager(sm, opts) {
 // inherit
 require('util').inherits(HieraManager, Manager);
 
-HieraManager.prototype.validate = function(entry, isUpdate) {
+HieraManager.prototype.validate = function(entry, toUpdate) {
     if (!entry || !entry.name || typeof entry.name != 'string') {
         return "Hiera entry has an invalid or missing name";
     }

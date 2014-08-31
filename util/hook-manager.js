@@ -23,7 +23,7 @@ function HookManager(sm, opts) {
 
 require('util').inherits(HookManager, Manager);
 
-HookManager.prototype.validate = function(modelObj, isUpdate) {
+HookManager.prototype.validate = function(modelObj, toUpdate) {
     if (!modelObj) {
         return "No model defined.";
     }

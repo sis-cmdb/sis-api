@@ -33,7 +33,8 @@ TokenManager.prototype.add = function(obj, options) {
     return p;
 };
 
-TokenManager.prototype.validate = function(obj, isUpdate, user) {
+TokenManager.prototype.validate = function(obj, toUpdate, options) {
+    var user = options ? (options.user || { }) : { };
     if (!obj[SIS.FIELD_USERNAME]) {
         obj[SIS.FIELD_USERNAME] = user[SIS.FIELD_NAME];
     }

@@ -100,7 +100,7 @@ function SchemaManager(mongoose, opts) {
 require('util').inherits(SchemaManager, Manager);
 
 // overrides
-SchemaManager.prototype.validate = function(modelObj, isUpdate) {
+SchemaManager.prototype.validate = function(modelObj, toUpdate) {
     if (!modelObj || !modelObj.name || typeof modelObj.name != 'string') {
         return "Schema has an invalid name: " + modelObj.name;
     }

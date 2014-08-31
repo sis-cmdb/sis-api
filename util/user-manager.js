@@ -178,7 +178,7 @@ UserManager.prototype.objectRemoved = function(user) {
     return d.promise;
 };
 
-UserManager.prototype.validate = function(obj, isUpdate) {
+UserManager.prototype.validate = function(obj, toUpdate) {
     if (!obj || !obj[SIS.FIELD_NAME]) {
         return "User must have a name.";
     }

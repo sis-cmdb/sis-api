@@ -63,10 +63,10 @@ EntityManager.prototype.fixSubObject = function(entity, reference, isUpdate) {
 };
 
 // validate the entity
-EntityManager.prototype.validate = function(entity, isUpdate) {
+EntityManager.prototype.validate = function(entity, toUpdate, options) {
     var keys = Object.keys(entity);
     var i = 0;
-    if (isUpdate) {
+    if (toUpdate) {
         // remove reserved fields..
         for (i = 0; i < keys.length; ++i) {
             var rf = keys[i];
