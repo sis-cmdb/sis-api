@@ -99,7 +99,7 @@ EntityManager.prototype.validate = function(entity, toUpdate, options) {
                 // sub owners
                 return null;
             }
-            var err = this.validateOwner(entity);
+            var err = this.validateOwner(entity, options);
             if (err) {
                 return err;
             }

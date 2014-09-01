@@ -19,7 +19,7 @@ function HieraManager(sm, opts) {
 // inherit
 require('util').inherits(HieraManager, Manager);
 
-HieraManager.prototype.validate = function(entry, toUpdate) {
+HieraManager.prototype.validate = function(entry, toUpdate, options) {
     if (!entry || !entry.name || typeof entry.name != 'string') {
         return "Hiera entry has an invalid or missing name";
     }
@@ -33,7 +33,7 @@ HieraManager.prototype.validate = function(entry, toUpdate) {
     } catch (ex) {
         return "hieradata is not a valid object";
     }
-    return this.validateOwner(entry);
+    return this.validateOwner(entry, options);
 };
 
 HieraManager.prototype.applyUpdate = function(doc, updateObj) {

@@ -27,18 +27,13 @@ module.exports = {
 
     // fields
     FIELD_ID : "_id",
-    FIELD_VERS : "__v",
-    FIELD_CREATED_AT : "_created_at",
-    FIELD_UPDATED_AT : "_updated_at",
-    FIELD_CREATED_BY : "_created_by",
-    FIELD_UPDATED_BY : "_updated_by",
+    FIELD_VERS : "_v",
     FIELD_NAME : "name",
     FIELD_EXPIRES : "expires",
     FIELD_TOKEN : "token",
     FIELD_DESC : "desc",
     FIELD_ROLES : "roles",
     FIELD_PW : "pw",
-    FIELD_OWNER : "owner",
     FIELD_SUPERUSER : "super_user",
     FIELD_CREATOR : "creator",
     FIELD_EMAIL : "email",
@@ -46,20 +41,37 @@ module.exports = {
     FIELD_TOKEN_USER : "sis_token_user",
     FIELD_MODIFIED_BY : "modified_by",
     FIELD_VERIFIED : "verified",
-    FIELD_LOCKED : "sis_locked",
     FIELD_LOCKED_FIELDS : "locked_fields",
     FIELD_TRACK_HISTORY : "track_history",
-    FIELD_REFERENCES : "_references",
     FIELD_DESCRIPTION : "description",
     FIELD_IS_OPEN : "is_open",
     FIELD_ID_FIELD : "id_field",
     FIELD_ANY_ADMIN_MOD : "any_owner_can_modify",
     FIELD_IS_PUBLIC : "is_public",
-    FIELD_TAGS : "sis_tags",
-    FIELD_IMMUTABLE : "sis_immutable",
+
+    // meta fields
+    // container
+    FIELD_SIS_META : "_sis",
+    // fields
+    // those that start w/ _ are readonly
+    FIELD_LOCKED : "locked",
+    FIELD_IMMUTABLE : "immutable",
+    FIELD_OWNER : "owner",
+    FIELD_TAGS : "tags",
+    FIELD_REFERENCES : "_references",
     FIELD_TRANSACTION_ID : "_trans_id",
-    FIELD_SIS_FIELDS : "_sis",
     FIELD_SIS_VERSION : "_version",
+    FIELD_CREATED_AT : "_created_at",
+    FIELD_UPDATED_AT : "_updated_at",
+    FIELD_CREATED_BY : "_created_by",
+    FIELD_UPDATED_BY : "_updated_by",
+
+    MUTABLE_META_FIELDS : [
+        "locked",
+        "immutable",
+        "owner",
+        "tags"
+    ],
 
     // schema names
     SCHEMA_SCHEMAS : "sis_schemas",
@@ -86,6 +98,7 @@ module.exports = {
 
     // supported versions
     SUPPORTED_VERSIONS : ["v1","v1.1"],
+    CURRENT_VERSION : "v1.1",
 
     ROLE_USER : "user",
     ROLE_ADMIN : "admin",
@@ -285,5 +298,71 @@ module.exports = {
             }
         });
         return paths;
-    }
+    },
+
+    // field mapping
+    V1_TO_SIS_META : {
+        'sis_tags'      : 'tags',
+        'sis_locked'    : 'locked',
+        'sis_immutable' : 'immutable',
+        'owner'         : 'owner',
+        '_references'   : '_references',
+        '_created_at'   : '_created_at',
+        '_updated_at'   : '_updated_at',
+        '_created_by'   : '_created_by',
+        '_updated_by'   : '_updated_by',
+        '_trans_id'     : '_trans_id'
+    },
+
+    SIS_META_TO_V1 : function() {
+        var res = { };
+        for (var k in this.V1_TO_SIS_META) {
+            var v = this.V1_TO_SIS_META[k];
+            res[v] = k;
+        }
+        return res;
+    }(),
+
+    UTIL_IN_PLC_FROM_V1 : function(obj) {
+        if (obj[this.FIELD_SIS_META]) {
+            // done
+            return obj;
+        }
+        var sisMeta = {};
+        for (var k in this.V1_TO_SIS_META) {
+            if (k in obj) {
+                sisMeta[k] = obj[k];
+                delete obj[k];
+            }
+        }
+        sisMeta[this.FIELD_SIS_VERSION] = this.CURRENT_VERSION;
+        // convert __v to _v
+        if ('__v' in obj) {
+            obj[this.FIELD_VERS] = obj.__v;
+            delete obj.__v;
+        }
+        return obj;
+    },
+
+    UTIL_TO_V1 : function(obj) {
+        if (!obj[this.FIELD_SIS_META]) {
+            return obj;
+        }
+        // not in place
+        var result = { };
+        for (var k in obj) {
+            result[k] = obj[k];
+        }
+        var sisMeta = obj[this.FIELD_SIS_META];
+        for (k in this.SIS_META_TO_V1) {
+            if (k in sisMeta) {
+                result[this.SIS_META_TO_V1[k]] = sisMeta[k];
+            }
+        }
+        if ('_v' in obj) {
+            result.__v = obj._v;
+        }
+        delete obj[this.FIELD_SIS_META];
+        return result;
+    },
 };

@@ -74,8 +74,6 @@ var patchMongoose = function(mongoose) {
         }
         return oldMatch.call(this, regExp, message);
     };
-
-    //
 };
 
 function SchemaManager(mongoose, opts) {
@@ -100,11 +98,12 @@ function SchemaManager(mongoose, opts) {
 require('util').inherits(SchemaManager, Manager);
 
 // overrides
-SchemaManager.prototype.validate = function(modelObj, toUpdate) {
+// only called for entity schemas
+SchemaManager.prototype.validate = function(modelObj, toUpdate, options) {
     if (!modelObj || !modelObj.name || typeof modelObj.name != 'string') {
         return "Schema has an invalid name: " + modelObj.name;
     }
-    var ownerError = this.validateOwner(modelObj);
+    var ownerError = this.validateOwner(modelObj, options);
     if (ownerError) {
         return ownerError;
     }
@@ -124,7 +123,8 @@ SchemaManager.prototype.validate = function(modelObj, toUpdate) {
             return "Cannot add an empty schema.";
         }
         for (var i = 0; i < fields.length; ++i) {
-            if (fields[i][0] == '_' || fields[i].indexOf('sis_') === 0) {
+            if (fields[i][0] == '_' ||
+                (fields[i].indexOf('sis_') === 0 && options.version == "v1")) {
                 return fields[i] + " is a reserved field";
             }
         }
@@ -150,7 +150,8 @@ SchemaManager.prototype.validate = function(modelObj, toUpdate) {
                 if (!toRegex(schemaType.options.match)) {
                     throw "match " + schemaType.options.match;
                 }
-            } else if (path === "owner" &&
+            } else if (options.version == "v1" &&
+                       path === "owner" &&
                        (schemaType.constructor.name !== 'SchemaArray' ||
                         !schemaType.caster ||
                         schemaType.caster.instance != "String")) {
@@ -159,7 +160,9 @@ SchemaManager.prototype.validate = function(modelObj, toUpdate) {
             }
         });
         // set the model object to have owners
-        modelObj.definition[SIS.FIELD_OWNER] = ["String"];
+        if (options.version == "v1") {
+            modelObj.definition[SIS.FIELD_OWNER] = ["String"];
+        }
     } catch (ex) {
         return "Schema is invalid: " + ex;
     }
@@ -217,6 +220,7 @@ SchemaManager.prototype._diffSchemas = function(schema1, schema2) {
     return [addedPaths, removedPaths, updatedPaths];
 };
 
+// only called on entity schemas
 SchemaManager.prototype.applyUpdate = function(currentSchema, sisSchema) {
     // now we have the persisted schema document.
     // we will get the mongoose model to unset any fields
@@ -237,23 +241,29 @@ SchemaManager.prototype.applyUpdate = function(currentSchema, sisSchema) {
         return c || paths.length > 0;
     }, false);
 
-    currentSchema[SIS.FIELD_OWNER] = sisSchema[SIS.FIELD_OWNER];
-    currentSchema[SIS.FIELD_DESCRIPTION] = sisSchema[SIS.FIELD_DESCRIPTION];
-    currentSchema[SIS.FIELD_ID_FIELD] = sisSchema[SIS.FIELD_ID_FIELD] || '_id';
-    currentSchema[SIS.FIELD_TAGS] = sisSchema[SIS.FIELD_TAGS] || [];
-
     var setIfPresent = function(field) {
         if (field in sisSchema) {
             currentSchema[field] = sisSchema[field];
         }
     };
-    // update optional fields that have default vals
-    setIfPresent(SIS.FIELD_LOCKED);
+
+    // update optional fields
+    setIfPresent(SIS.FIELD_DESCRIPTION);
+    setIfPresent(SIS.FIELD_ID_FIELD);
     setIfPresent(SIS.FIELD_LOCKED_FIELDS);
     setIfPresent(SIS.FIELD_IS_OPEN);
     setIfPresent(SIS.FIELD_IS_PUBLIC);
-    setIfPresent(SIS.FIELD_IMMUTABLE);
     setIfPresent(SIS.FIELD_ANY_ADMIN_MOD);
+
+    // set meta fields
+    var currentMeta = currentSchema[SIS.FIELD_SIS_META] || { };
+    var updateMeta = sisSchema[SIS.FIELD_SIS_META] || { };
+
+    SIS.MUTABLE_META_FIELDS.forEach(function(k) {
+        if (k in updateMeta) {
+            currentMeta[k] = updateMeta[k];
+        }
+    });
 
     if (!defChanged) {
         // definition didn't change so we don't need to delete any models
@@ -323,6 +333,9 @@ SchemaManager.prototype.applyUpdate = function(currentSchema, sisSchema) {
     if (!pathsToDelete.length) {
         return resultPromise;
     }
+
+    // if sisSchema is a v1, then we do not want to unset
+    // the meta fields
 
     var lockedFields = currentSchema[SIS.FIELD_LOCKED_FIELDS] || [];
 
@@ -440,22 +453,32 @@ SchemaManager.prototype.bootstrapEntitySchemas = function(callback) {
 };
 
 // may throw an exception.
-SchemaManager.prototype._getMongooseSchema = function(sisSchema) {
+SchemaManager.prototype._getMongooseSchema = function(sisSchema, isInternal) {
     // add our special fields..
     var definition = {};
     // only need shallow copy..
     for (var k in sisSchema.definition) {
         definition[k] = sisSchema.definition[k];
     }
-    definition[SIS.FIELD_CREATED_AT] = { "type" : "Number", "default" : function() { return Date.now(); } };
-    definition[SIS.FIELD_UPDATED_AT] = { "type" : "Number" };
-    definition[SIS.FIELD_CREATED_BY] = { "type" : "String" };
-    definition[SIS.FIELD_UPDATED_BY] = { "type" : "String" };
-    definition[SIS.FIELD_LOCKED] = { type : "Boolean", required : true, "default" : false };
-    definition[SIS.FIELD_IMMUTABLE] = { type : "Boolean", "default" : false };
-    definition[SIS.FIELD_TAGS] = { type: [String], index: true };
+    // v1.1. - move these into _sis
+    var META_FIELDS = require('./sis-schemas').metaDef;
+    var thisMetaDef = definition[SIS.FIELD_SIS_META] || { };
+    var ignoredMeta = (isInternal ? sisSchema.ignored_meta : null) || [];
 
-    return this.mongoose.Schema(definition, { collection : sisSchema.name });
+    for (k in META_FIELDS) {
+        if (ignoredMeta.indexOf(k) == -1) {
+            thisMetaDef[k] = META_FIELDS[k];
+        }
+    }
+
+    if (!isInternal) {
+        // always add owner
+        thisMetaDef[SIS.FIELD_OWNER] = META_FIELDS[SIS.FIELD_OWNER];
+    }
+
+    definition[SIS.FIELD_SIS_META] = thisMetaDef;
+
+    return this.mongoose.Schema(definition, { collection : sisSchema.name, versionKey : SIS.FIELD_VERS });
 };
 
 // wrap this so we can handle the error case
@@ -488,7 +511,7 @@ SchemaManager.prototype.getEntityModel = function(sisSchema, isInternal) {
     }
     // convert to mongoose
     try {
-        var schema = this._getMongooseSchema(sisSchema);
+        var schema = this._getMongooseSchema(sisSchema, isInternal);
         var result = this.mongoose.model(name, schema);
         var pathsWithDefaultVal = [];
         var pathsWithArray = [];
@@ -512,7 +535,7 @@ SchemaManager.prototype.getEntityModel = function(sisSchema, isInternal) {
         schema._sis_references = SIS.UTIL_GET_OID_PATHS(schema);
         schema._sis_defaultpaths = pathsWithDefaultVal;
 
-        if ('indexes' in sisSchema) {
+        if ('indexes' in sisSchema && isInternal) {
             for (var i = 0; i < sisSchema.indexes.length; ++i) {
                 schema.index(sisSchema.indexes[i]);
             }

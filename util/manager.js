@@ -487,7 +487,7 @@ Manager.prototype.bulkDelete = function(condition, options) {
 // Expects a valid object - should be called at the end of
 // a validate routine and changes the owner to an array
 // if it is a string
-Manager.prototype.validateOwner = function(obj) {
+Manager.prototype.validateOwner = function(obj, options) {
     if (!this.authEnabled) {
         return null;
     }

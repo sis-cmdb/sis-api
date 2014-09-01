@@ -3,6 +3,20 @@
 
 var SIS = require('./constants');
 
+var sisMetaDef = { };
+sisMetaDef[SIS.FIELD_CREATED_AT] = { "type" : "Number", "default" : function() { return Date.now(); } };
+sisMetaDef[SIS.FIELD_UPDATED_AT] = { "type" : "Number" };
+sisMetaDef[SIS.FIELD_CREATED_BY] = { "type" : "String" };
+sisMetaDef[SIS.FIELD_UPDATED_BY] = { "type" : "String" };
+sisMetaDef[SIS.FIELD_LOCKED] = { type : "Boolean", required : true, "default" : false };
+sisMetaDef[SIS.FIELD_IMMUTABLE] = { type : "Boolean", "default" : false };
+sisMetaDef[SIS.FIELD_TAGS] = { type: [String], index: true };
+sisMetaDef[SIS.FIELD_SIS_VERSION] = "String";
+
+
+// meta fields
+module.exports.metaDef = sisMetaDef;
+
 // schema definitions
 module.exports.schemas = [
     // sis_schemas
@@ -11,8 +25,6 @@ module.exports.schemas = [
         definition : {
             name : { type : "String", required : true, unique : true, match : /^[a-z0-9_]+$/ },
             description : { type : "String" },
-            sis_locked : { type : "Boolean", required : true, "default" : false },
-            owner : { type : ["String"], required : true },
             definition : { type : {}, required : true },
             locked_fields : { type : ["String"] },
             track_history : { type : "Boolean", default : true },
@@ -20,7 +32,11 @@ module.exports.schemas = [
             id_field : { type : "String", default : "_id" },
             is_public : { type : "Boolean", default : false },
             any_owner_can_modify : { type : "Boolean", default : false },
-            _references : ["String"]
+            // sis meta
+            _sis : {
+                owner : { type : ["String"], required : true },
+                references : ["String"]
+            }
         }
     },
     // sis_hooks
@@ -38,9 +54,11 @@ module.exports.schemas = [
             retry_count : { type : "Number", min : 0, max : 20, "default" : 0 },
             retry_delay : { type : "Number", min : 1, max : 60, "default" : 1 },
             events : { type : [{ type : "String", enum : SIS.EVENTS_ENUM }], required : true },
-            owner : { type : ["String"] },
             entity_type : { type: "String", required: true },
-            sis_locked : { type : "Boolean", required : true, "default" : false },
+            // sis meta
+            _sis : {
+                owner : { type : ["String"], required : true }
+            }
         }
     },
     // sis_hiera
@@ -48,8 +66,11 @@ module.exports.schemas = [
         name : SIS.SCHEMA_HIERA,
         definition : {
             name : { type : "String", required : true, unique : true },
-            owner : { type : ["String"] },
-            hieradata : { type : {}, required : true }
+            hieradata : { type : {}, required : true },
+            // sis meta
+            _sis : {
+                owner : { type : ["String"], required : true }
+            }
         }
     },
     // sis_commits
@@ -66,6 +87,11 @@ module.exports.schemas = [
         },
         indexes : [
             { type: 1, entity_id: 1 }
+        ],
+        ignored_meta : [
+            SIS.FIELD_TAGS,
+            SIS.FIELD_IMMUTABLE,
+            SIS.FIELD_LOCKED
         ]
     },
     // sis_users
