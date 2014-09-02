@@ -49,7 +49,6 @@ UserManager.prototype.applyUpdate = function(obj, updateObj) {
     if (updateObj[SIS.FIELD_PW]) {
         updateObj[SIS.FIELD_PW] = this.hashPw(updateObj[SIS.FIELD_PW]);
     }
-    //return this.applyPartial(obj, updateObj);
     return Manager.prototype.applyUpdate.call(this, obj, updateObj);
 };
 

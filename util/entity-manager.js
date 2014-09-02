@@ -163,21 +163,6 @@ EntityManager.prototype.authorize = function(evt, doc, user, mergedDoc) {
     return Manager.prototype.authorize.call(this, evt, doc, user, mergedDoc);
 };
 
-var getValueForPath = function(path, obj) {
-    if (!obj) {
-        return null;
-    }
-    var paths = path.split(".");
-    for (var i = 0; i < paths.length; ++i) {
-        var p = paths[i];
-        obj = obj[p];
-        if (!obj) {
-            return null;
-        }
-    }
-    return obj;
-};
-
 // get a single object by id.
 EntityManager.prototype.getById = function(id, options) {
     // id could be _id or idField
@@ -212,6 +197,22 @@ EntityManager.prototype.applyUpdate = function(result, entity) {
         return ret;
     }, { });
     result.set(entity);
+
+    var getValueForPath = function(path, obj) {
+        if (!obj) {
+            return null;
+        }
+        var paths = path.split(".");
+        for (var i = 0; i < paths.length; ++i) {
+            var p = paths[i];
+            obj = obj[p];
+            if (!obj) {
+                return null;
+            }
+        }
+        return obj;
+    };
+
     // restore mixed objects w/ merge
     this.mixedTypes.forEach(function(p) {
         var old = oldMixed[p];
