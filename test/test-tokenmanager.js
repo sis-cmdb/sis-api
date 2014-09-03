@@ -51,7 +51,7 @@ describe('Token Manager', function() {
                 var userManager = schemaManager.auth[SIS.SCHEMA_USERS];
                 var tokenManager = schemaManager.auth[SIS.SCHEMA_TOKENS];
                 var user = users.admin1;
-                userManager.createTempToken(user, function(e, token) {
+                userManager.createTempToken(user).nodeify(function(e, token) {
                     should.not.exist(e);
                     should.exist(token);
                     'admin1'.should.eql(token[SIS.FIELD_USERNAME]);
