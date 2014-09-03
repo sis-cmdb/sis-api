@@ -326,9 +326,16 @@ Manager.prototype._update = function(id, obj, options, saveFunc) {
         .then(this._preSave)
         .then(saveFunc)
         .then(function(updated) {
+            return this.finishUpdate(old, updated);
+        })
+        .then(function(updated) {
             return Promise.resolve([old, updated]);
         });
     });
+};
+
+Manager.prototype.finishUpdate = function(old, updated) {
+    return Promise.resolve(updated);
 };
 
 Manager.prototype._getCasSave = function(obj, cas) {

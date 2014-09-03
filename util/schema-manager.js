@@ -138,11 +138,17 @@ SchemaManager.prototype.validate = function(modelObj, toUpdate, options) {
             }
         }
         var mongooseSchema = new this.mongoose.Schema(modelObj.definition, { collection : "__test__" });
-        // set the references
-        var refs = SIS.UTIL_GET_OID_PATHS(mongooseSchema);
-        modelObj[SIS.FIELD_REFERENCES] = refs.map(function(ref) {
+
+        var refs = SIS.UTIL_GET_OID_PATHS(mongooseSchema).map(function(ref) {
             return ref.ref;
         });
+        if (options.version == "v1") {
+            // set the references
+            modelObj[SIS.FIELD_REFERENCES] = refs;
+        } else {
+            // set them on sis meta
+            modelObj[SIS.FIELD_SIS_META][SIS.FIELD_REFERENCES] = refs;
+        }
 
         mongooseSchema.eachPath(function(path, schemaType) {
             if (schemaType.instance == "String" &&
@@ -159,10 +165,13 @@ SchemaManager.prototype.validate = function(modelObj, toUpdate, options) {
                 throw "owner must be a String array.";
             }
         });
-        // set the model object to have owners
-        if (options.version == "v1") {
-            modelObj.definition[SIS.FIELD_OWNER] = ["String"];
-        }
+
+        // add the default meta def
+        var metaDef = { };
+        metaDef[SIS.FIELD_OWNER] = { type : ["String"], required: true };
+        metaDef[SIS.FIELD_ANY_ADMIN_MOD] = { type : "Boolean", default : false };
+        modelObj.definition[SIS.FIELD_SIS_META] = metaDef;
+
     } catch (ex) {
         return "Schema is invalid: " + ex;
     }
@@ -221,54 +230,25 @@ SchemaManager.prototype._diffSchemas = function(schema1, schema2) {
 };
 
 // only called on entity schemas
-SchemaManager.prototype.applyUpdate = function(currentSchema, sisSchema) {
-    // now we have the persisted schema document.
-    // we will get the mongoose model to unset any fields
-    // then we will delete the mongoose cached versions and
-    // create a new schema/model using the updated one
-    // and finally save the document after it's been converted.
+SchemaManager.prototype.finishUpdate = function(oldSchema, updatedSchema) {
+    // do the definition diff
     var self = this;
-    var currentMongooseModel = this.getEntityModel(currentSchema);
-    var currentMongooseSchema = currentMongooseModel.schema;
-    var name = sisSchema.name;
+    var oldMongooseModel = this.getEntityModel(oldSchema);
+    var oldMongooseSchema = oldMongooseModel.schema;
+    var name = updatedSchema.name;
 
-    var newDef = sisSchema.definition;
-    var newSchema = this._getMongooseSchema(sisSchema);
+    var newDef = updatedSchema.definition;
+    var newSchema = this._getMongooseSchema(updatedSchema);
 
-    var diff = this._diffSchemas(currentMongooseSchema, newSchema);
-
+    var diff = this._diffSchemas(oldMongooseSchema, newSchema);
     var defChanged = diff.reduce(function(c, paths) {
         return c || paths.length > 0;
     }, false);
 
-    var setIfPresent = function(field) {
-        if (field in sisSchema) {
-            currentSchema[field] = sisSchema[field];
-        }
-    };
-
-    // update optional fields
-    setIfPresent(SIS.FIELD_DESCRIPTION);
-    setIfPresent(SIS.FIELD_ID_FIELD);
-    setIfPresent(SIS.FIELD_LOCKED_FIELDS);
-    setIfPresent(SIS.FIELD_IS_OPEN);
-    setIfPresent(SIS.FIELD_IS_PUBLIC);
-    setIfPresent(SIS.FIELD_ANY_ADMIN_MOD);
-
-    // set meta fields
-    var currentMeta = currentSchema[SIS.FIELD_SIS_META] || { };
-    var updateMeta = sisSchema[SIS.FIELD_SIS_META] || { };
-
-    SIS.MUTABLE_META_FIELDS.forEach(function(k) {
-        if (k in updateMeta) {
-            currentMeta[k] = updateMeta[k];
-        }
-    });
-
     if (!defChanged) {
         // definition didn't change so we don't need to delete any models
         // or anything
-        return Promise.resolve(currentSchema);
+        return Promise.resolve(updatedSchema);
     }
 
     // see if any paths changed that require index changes
@@ -285,16 +265,14 @@ SchemaManager.prototype.applyUpdate = function(currentSchema, sisSchema) {
         return p[0];
     });
 
-    var indeces = currentMongooseSchema.indexes();
-
-    // update the def and cache
-    currentSchema.definition = newDef;
+    var indeces = oldMongooseSchema.indexes();
+    // invalidate the existing schema
     this._invalidateSchema(name);
-    currentMongooseModel = self.getEntityModel(currentSchema);
 
+    var currentMongooseModel = self.getEntityModel(updatedSchema);
     var collection = Promise.promisifyAll(currentMongooseModel.collection);
 
-    var resultPromise = Promise.resolve(currentSchema);
+    var resultPromise = Promise.resolve(updatedSchema);
     if (pathsWithIndecesToRemove.length) {
         // build up the index objects to remove
         var toRemove = [];
@@ -323,7 +301,7 @@ SchemaManager.prototype.applyUpdate = function(currentSchema, sisSchema) {
     resultPromise = resultPromise.then(function() {
         var d = Promise.pending();
         currentMongooseModel.ensureIndexes(function(err) {
-            d.resolve(currentSchema);
+            d.resolve(updatedSchema);
         });
         return d.promise;
     });
@@ -334,19 +312,12 @@ SchemaManager.prototype.applyUpdate = function(currentSchema, sisSchema) {
         return resultPromise;
     }
 
-    // if sisSchema is a v1, then we do not want to unset
-    // the meta fields
-
-    var lockedFields = currentSchema[SIS.FIELD_LOCKED_FIELDS] || [];
-
-    var pathsObj = { };
-    for (var i = 0; i < pathsToDelete.length; ++i) {
-        var path = pathsToDelete[i];
-        if (lockedFields.indexOf(path) != -1) {
-            return Promise.reject(SIS.ERR_BAD_REQ("Cannot remove field " + path));
-        }
-        pathsObj[path] = "";
-    }
+    // build up the path object that we'll use to unset
+    // properties
+    var pathsObj = pathsToDelete.reduce(function(ret, p) {
+        ret[p] = "";
+        return ret;
+    }, { });
 
     resultPromise = resultPromise.then(function(currSchema) {
         // unset any indeces
@@ -379,12 +350,73 @@ SchemaManager.prototype.applyUpdate = function(currentSchema, sisSchema) {
         resultPromise = resultPromise.then(function(currSchema) {
             return currentMongooseModel.updateAsync({},{ $unset : pathsObj}, {multi: true, safe : true, strict: false})
             .then(function() {
-                return currentSchema;
+                return updatedSchema;
             });
         });
     }
 
     return resultPromise;
+};
+
+SchemaManager.prototype.applyUpdate = function(currentSchema, updatedSchema) {
+    // now we have the persisted schema document.
+    // need to set the schema object fields
+    // and also validate that the fields being removed
+    // do not
+    var self = this;
+    var currentMongooseModel = this.getEntityModel(currentSchema);
+    var currentMongooseSchema = currentMongooseModel.schema;
+    var name = updatedSchema.name;
+
+    var newDef = updatedSchema.definition;
+    var newSchema = this._getMongooseSchema(updatedSchema);
+
+    var setIfPresent = function(field) {
+        if (field in updatedSchema) {
+            currentSchema[field] = updatedSchema[field];
+        }
+    };
+
+    currentSchema[SIS.FIELD_ID_FIELD] = updatedSchema[SIS.FIELD_ID_FIELD] || '_id';
+    currentSchema[SIS.FIELD_DESCRIPTION] = updatedSchema[SIS.FIELD_DESCRIPTION];
+    // update optional fields that have default vals
+    setIfPresent(SIS.FIELD_LOCKED);
+    setIfPresent(SIS.FIELD_LOCKED_FIELDS);
+    setIfPresent(SIS.FIELD_IS_OPEN);
+    setIfPresent(SIS.FIELD_IS_PUBLIC);
+    setIfPresent(SIS.FIELD_IMMUTABLE);
+    setIfPresent(SIS.FIELD_ANY_ADMIN_MOD);
+
+    currentSchema.definition = newDef;
+
+    // validate the diff against locked fields
+    var diff = this._diffSchemas(currentMongooseSchema, newSchema);
+
+    var defChanged = diff.reduce(function(c, paths) {
+        return c || paths.length > 0;
+    }, false);
+
+    if (!defChanged) {
+        // definition didn't change so we don't need to delete any models
+        // or anything
+        return Promise.resolve(currentSchema);
+    }
+
+    // find all paths that need to be unset/deleted
+    var pathsToDelete = diff[1].map(function(p) { return p[0]; });
+    if (!pathsToDelete.length) {
+        return Promise.resolve(currentSchema);
+    }
+
+    var lockedFields = currentSchema[SIS.FIELD_LOCKED_FIELDS] || [];
+    for (var i = 0; i < pathsToDelete.length; ++i) {
+        var path = pathsToDelete[i];
+        if (lockedFields.indexOf(path) != -1) {
+            return Promise.reject(SIS.ERR_BAD_REQ("Cannot remove field " + path));
+        }
+    }
+
+    return Promise.resolve(currentSchema);
 };
 
 SchemaManager.prototype.objectRemoved = function(schema) {
@@ -471,11 +503,6 @@ SchemaManager.prototype._getMongooseSchema = function(sisSchema, isInternal) {
         }
     }
 
-    if (!isInternal) {
-        // always add owner
-        thisMetaDef[SIS.FIELD_OWNER] = META_FIELDS[SIS.FIELD_OWNER];
-    }
-
     definition[SIS.FIELD_SIS_META] = thisMetaDef;
 
     return this.mongoose.Schema(definition, { collection : sisSchema.name, versionKey : SIS.FIELD_VERS });
@@ -516,18 +543,15 @@ SchemaManager.prototype.getEntityModel = function(sisSchema, isInternal) {
         var pathsWithDefaultVal = [];
         var pathsWithArray = [];
         schema.eachPath(function(pathName, schemaType) {
+            if (pathName.indexOf(SIS.FIELD_SIS_META) === 0) {
+                return;
+            }
             if (schemaType.default()) {
                 pathsWithDefaultVal.push(pathName);
             }
-            if (pathName != SIS.FIELD_OWNER && schemaType.constructor.name.indexOf('Array') != -1) {
+            if (schemaType.constructor.name.indexOf('Array') != -1) {
                 pathsWithArray.push(pathName);
             }
-        });
-
-        var self = this;
-        schema.pre('save', function(next) {
-            self.applyPreSaveFields(this);
-            next();
         });
 
         // precalculate sis data and store on the schema
