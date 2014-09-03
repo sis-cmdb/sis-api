@@ -25,6 +25,7 @@ UserController.prototype.attach = function(app, prefix) {
     ApiController.prototype.attach.call(this, app, prefix);
     this.auth_token_path = this.apiPrefix + "/auth_token";
     app.post(this.auth_token_path, function(req, res) {
+        req.isAuthTokenReq = true;
         var p = this.authenticate(req, res, 'basic')
             .then(this.manager.createTempToken.bind(this.manager));
         // hacky
@@ -38,7 +39,7 @@ UserController.prototype.convertToResponseObject = function(req, o) {
     if (typeof res.toObject == 'function') {
         res = o.toObject();
     }
-    if (req.method == "POST" && req.path == this.auth_token_path) {
+    if (req.isAuthTokenReq) {
         // token
         var expireDate = o[SIS.FIELD_EXPIRES];
         var timeLeft = expireDate.getTime() - Date.now();
