@@ -135,7 +135,12 @@ describe('@API - Schema API', function() {
             ApiServer.post("/api/v1/schemas")
                 .set('Content-Type', 'application/json')
                 .send(jsData)
-                .expect(201, done);
+                .expect(201, function(e, r) {
+                    if (e) {
+                        console.log(r.body);
+                    }
+                    done(e);
+                });
         });
         it("Should get the schema", function(done) {
             ApiServer.get("/api/v1/schemas/test_network_element")

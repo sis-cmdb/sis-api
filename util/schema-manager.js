@@ -123,7 +123,7 @@ SchemaManager.prototype.validate = function(modelObj, toUpdate, options) {
             return "Cannot add an empty schema.";
         }
         for (var i = 0; i < fields.length; ++i) {
-            if (fields[i][0] == '_' ||
+            if ((fields[i][0] == '_' && fields[i] != SIS.FIELD_SIS_META) ||
                 (fields[i].indexOf('sis_') === 0 && options.version == "v1")) {
                 return fields[i] + " is a reserved field";
             }
@@ -168,7 +168,7 @@ SchemaManager.prototype.validate = function(modelObj, toUpdate, options) {
 
         // add the default meta def
         var metaDef = { };
-        metaDef[SIS.FIELD_OWNER] = { type : ["String"], required: true };
+        metaDef[SIS.FIELD_OWNER] = ["String"];
         metaDef[SIS.FIELD_ANY_ADMIN_MOD] = { type : "Boolean", default : false };
         modelObj.definition[SIS.FIELD_SIS_META] = metaDef;
 

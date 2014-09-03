@@ -5,6 +5,37 @@
 var util = require('util');
 var diff = require('jsondiffpatch');
 
+var V1_TO_SIS_META = {
+    'sis_tags'      : 'tags',
+    'sis_locked'    : 'locked',
+    'sis_immutable' : 'immutable',
+    'owner'         : 'owner',
+    '_references'   : '_references',
+    '_created_at'   : '_created_at',
+    '_updated_at'   : '_updated_at',
+    '_created_by'   : '_created_by',
+    '_updated_by'   : '_updated_by',
+    '_trans_id'     : '_trans_id'
+};
+
+var SIS_META_TO_V1 = function() {
+    var res = { };
+    for (var k in V1_TO_SIS_META) {
+        var v = V1_TO_SIS_META[k];
+        res[v] = k;
+    }
+    return res;
+}();
+
+var FIELD_LOCKED = "locked";
+var FIELD_IMMUTABLE = "immutable";
+var FIELD_OWNER = "owner";
+var FIELD_TAGS = "tags";
+var FIELD_SIS_META = "_sis";
+var FIELD_SIS_VERSION = "_version";
+var CURRENT_VERSION = "v1.1";
+var FIELD_VERS = "_v";
+
 module.exports = {
 
     // events / actions
@@ -27,7 +58,7 @@ module.exports = {
 
     // fields
     FIELD_ID : "_id",
-    FIELD_VERS : "_v",
+    FIELD_VERS : FIELD_VERS,
     FIELD_NAME : "name",
     FIELD_EXPIRES : "expires",
     FIELD_TOKEN : "token",
@@ -51,26 +82,28 @@ module.exports = {
 
     // meta fields
     // container
-    FIELD_SIS_META : "_sis",
+    FIELD_SIS_META : FIELD_SIS_META,
     // fields
     // those that start w/ _ are readonly
-    FIELD_LOCKED : "locked",
-    FIELD_IMMUTABLE : "immutable",
-    FIELD_OWNER : "owner",
-    FIELD_TAGS : "tags",
+
     FIELD_REFERENCES : "_references",
     FIELD_TRANSACTION_ID : "_trans_id",
-    FIELD_SIS_VERSION : "_version",
+    FIELD_SIS_VERSION : FIELD_SIS_VERSION,
     FIELD_CREATED_AT : "_created_at",
     FIELD_UPDATED_AT : "_updated_at",
     FIELD_CREATED_BY : "_created_by",
     FIELD_UPDATED_BY : "_updated_by",
+    FIELD_LOCKED : FIELD_LOCKED,
+    FIELD_IMMUTABLE : FIELD_IMMUTABLE,
+    FIELD_OWNER : FIELD_OWNER,
+    FIELD_TAGS : FIELD_TAGS,
+
 
     MUTABLE_META_FIELDS : [
-        "locked",
-        "immutable",
-        "owner",
-        "tags"
+        FIELD_TAGS,
+        FIELD_IMMUTABLE,
+        FIELD_OWNER,
+        FIELD_LOCKED
     ],
 
     // schema names
@@ -98,7 +131,7 @@ module.exports = {
 
     // supported versions
     SUPPORTED_VERSIONS : ["v1","v1.1"],
-    CURRENT_VERSION : "v1.1",
+    CURRENT_VERSION : CURRENT_VERSION,
 
     ROLE_USER : "user",
     ROLE_ADMIN : "admin",
@@ -301,51 +334,40 @@ module.exports = {
     },
 
     // field mapping
-    V1_TO_SIS_META : {
-        'sis_tags'      : 'tags',
-        'sis_locked'    : 'locked',
-        'sis_immutable' : 'immutable',
-        'owner'         : 'owner',
-        '_references'   : '_references',
-        '_created_at'   : '_created_at',
-        '_updated_at'   : '_updated_at',
-        '_created_by'   : '_created_by',
-        '_updated_by'   : '_updated_by',
-        '_trans_id'     : '_trans_id'
-    },
+    V1_TO_SIS_META : V1_TO_SIS_META,
 
-    SIS_META_TO_V1 : function() {
-        var res = { };
-        for (var k in this.V1_TO_SIS_META) {
-            var v = this.V1_TO_SIS_META[k];
-            res[v] = k;
-        }
-        return res;
-    }(),
+    SIS_META_TO_V1 : SIS_META_TO_V1,
 
-    UTIL_IN_PLC_FROM_V1 : function(obj) {
-        if (obj[this.FIELD_SIS_META]) {
+    UTIL_FROM_V1 : function(obj) {
+        if (obj[FIELD_SIS_META]) {
             // done
             return obj;
         }
-        var sisMeta = {};
-        for (var k in this.V1_TO_SIS_META) {
-            if (k in obj) {
-                sisMeta[k] = obj[k];
-                delete obj[k];
+        // returns a shallow copy
+        var result = { };
+        var sisMeta = { };
+        for (var k in obj) {
+            if (!(k in V1_TO_SIS_META) &&
+                k != '__v') {
+                result[k] = obj[k];
             }
         }
-        sisMeta[this.FIELD_SIS_VERSION] = this.CURRENT_VERSION;
+        for (k in V1_TO_SIS_META) {
+            if (k in obj) {
+                sisMeta[V1_TO_SIS_META[k]] = obj[k];
+            }
+        }
+        sisMeta[FIELD_SIS_VERSION] = CURRENT_VERSION;
         // convert __v to _v
         if ('__v' in obj) {
-            obj[this.FIELD_VERS] = obj.__v;
-            delete obj.__v;
+            result[FIELD_VERS] = obj.__v;
         }
-        return obj;
+        result[FIELD_SIS_META] = sisMeta;
+        return result;
     },
 
     UTIL_TO_V1 : function(obj) {
-        if (!obj[this.FIELD_SIS_META]) {
+        if (!obj[FIELD_SIS_META]) {
             return obj;
         }
         // not in place
@@ -353,16 +375,15 @@ module.exports = {
         for (var k in obj) {
             result[k] = obj[k];
         }
-        var sisMeta = obj[this.FIELD_SIS_META];
-        for (k in this.SIS_META_TO_V1) {
+        var sisMeta = obj[FIELD_SIS_META];
+        for (k in SIS_META_TO_V1) {
             if (k in sisMeta) {
-                result[this.SIS_META_TO_V1[k]] = sisMeta[k];
+                result[SIS_META_TO_V1[k]] = sisMeta[k];
             }
         }
         if ('_v' in obj) {
             result.__v = obj._v;
         }
-        delete obj[this.FIELD_SIS_META];
         return result;
     },
 };

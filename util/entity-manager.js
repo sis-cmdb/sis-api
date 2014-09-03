@@ -66,23 +66,36 @@ EntityManager.prototype.fixSubObject = function(entity, reference, isUpdate) {
 EntityManager.prototype.validate = function(entity, toUpdate, options) {
     var keys = Object.keys(entity);
     var i = 0;
+    var rf;
     if (toUpdate) {
         // remove reserved fields..
         for (i = 0; i < keys.length; ++i) {
-            var rf = keys[i];
-            if (rf[0] == '_') {
-                delete entity[rf];
+            rf = keys[i];
+            if (rf[0] == "_") {
+                // v1 does not allow any _
+                // v1.1+ allows SIS.FIELD_SIS_META
+                if (options.version == "v1" ||
+                    rf != SIS.FIELD_SIS_META) {
+                    delete entity[rf];
+                }
             }
         }
         keys = Object.keys(entity);
     }
     try {
-        if (!keys.length) {
+        if (!keys.length ||
+            (keys.length == 1 && keys[0] == SIS.FIELD_SIS_META)) {
             return "entity cannot be empty";
         }
         for (i = 0; i < keys.length; ++i) {
-            if (keys[i][0] == '_') {
-                return keys[i] + " is a reserved field";
+            rf = keys[i];
+            if (rf[0] == "_") {
+                // v1 does not allow any _
+                // v1.1+ allows SIS.FIELD_SIS_META
+                if (options.version == "v1" ||
+                    rf != SIS.FIELD_SIS_META) {
+                    return rf + " is a reserved field";
+                }
             }
         }
         // // handle sub objects
@@ -92,9 +105,9 @@ EntityManager.prototype.validate = function(entity, toUpdate, options) {
         //         return err;
         //     }
         // }
-        if (SIS.FIELD_OWNER in entity) {
-            if (entity[SIS.FIELD_OWNER] instanceof Array &&
-                !entity[SIS.FIELD_OWNER].length) {
+        var owners = this.getOwners(entity);
+        if (owners) {
+            if (owners instanceof Array && !owners.length) {
                 // let the authorize call take care of setting
                 // sub owners
                 return null;
@@ -104,8 +117,7 @@ EntityManager.prototype.validate = function(entity, toUpdate, options) {
                 return err;
             }
             // ensure the document is a subset of owners of the schema
-            var owners = entity[SIS.FIELD_OWNER];
-            var schemaOwners = this.schema[SIS.FIELD_OWNER];
+            var schemaOwners = this.getOwners(this.schema);
             for (i = 0; i < owners.length; ++i) {
                 if (schemaOwners.indexOf(owners[i]) == -1) {
                     // must be a subset
@@ -119,17 +131,18 @@ EntityManager.prototype.validate = function(entity, toUpdate, options) {
     return null;
 };
 
-function getOwnerSubset(user, schema) {
+EntityManager.prototype._getOwnerSubset = function(user, schema) {
     if (!user[SIS.FIELD_ROLES]) {
         return [];
     }
-    var schemaOwners = schema[SIS.FIELD_OWNER];
+    var schemaOwners = this.getOwners(schema);
     var userRoles = Object.keys(user[SIS.FIELD_ROLES]);
     return userRoles.filter(function(owner) {
         return schemaOwners.indexOf(owner) != -1;
     });
-}
+};
 
+// authorize always gets meta in v1.1 support
 EntityManager.prototype.authorize = function(evt, doc, user, mergedDoc) {
     if (!this.authEnabled) {
         return Manager.prototype.authorize.call(this, evt, doc, user, mergedDoc);
@@ -142,23 +155,26 @@ EntityManager.prototype.authorize = function(evt, doc, user, mergedDoc) {
         if (!userGroups.length) {
             return SIS.ERR_BAD_REQ("User must have roles assigned.");
         }
-        if (mergedDoc && !mergedDoc[SIS.FIELD_OWNER]) {
-            mergedDoc[SIS.FIELD_OWNER] = userGroups;
-        } else if (!doc[SIS.FIELD_OWNER]) {
-            doc[SIS.FIELD_OWNER] = userGroups;
+        var meta = mergedDoc ? mergedDoc[SIS.FIELD_SIS_META] : doc[SIS.FIELD_SIS_META];
+        if (!meta[SIS.FIELD_OWNER]) {
+            meta[SIS.FIELD_OWNER] = ownerSubset;
         }
         return Manager.prototype.authorize.call(this, evt, doc, user, mergedDoc);
     }
     // authorize against entity subset or schema
-    var ownerSubset = getOwnerSubset(user, this.schema);
+    var ownerSubset = this._getOwnerSubset(user, this.schema);
     if (!ownerSubset.length) {
         return Promise.reject(SIS.ERR_BAD_CREDS("Insufficient privileges to operate on entities in this schema."));
     }
-    if (!doc[SIS.FIELD_OWNER] || !doc[SIS.FIELD_OWNER].length) {
-        doc[SIS.FIELD_OWNER] = ownerSubset;
+    var docMeta = doc[SIS.FIELD_SIS_META];
+    if (!docMeta[SIS.FIELD_OWNER] || !docMeta[SIS.FIELD_OWNER].length) {
+        docMeta[SIS.FIELD_OWNER] = ownerSubset;
     }
-    if (mergedDoc && !mergedDoc[SIS.FIELD_OWNER]) {
-        mergedDoc[SIS.FIELD_OWNER] = ownerSubset;
+    if (mergedDoc) {
+        docMeta = mergedDoc[SIS.FIELD_SIS_META];
+        if (!docMeta[SIS.FIELD_OWNER] || !docMeta[SIS.FIELD_OWNER].length) {
+            docMeta[SIS.FIELD_OWNER] = ownerSubset;
+        }
     }
     return Manager.prototype.authorize.call(this, evt, doc, user, mergedDoc);
 };
@@ -372,8 +388,8 @@ EntityManager.prototype.ensureReferences = function(obj) {
 };
 
 EntityManager.prototype._preSave = function(obj) {
-    // ensure references
-    return this.ensureReferences(obj);
+    return Manager.prototype._preSave.call(this, obj)
+        .bind(this).then(this.ensureReferences);
 };
 //////////
 

@@ -415,18 +415,28 @@ ApiController.prototype._enableCommitApi = function(app, prefix) {
 
 ApiController.prototype._convertToResponseObject = function(req, obj) {
     var self = this;
+    var isV1 = req.params.version == "v1";
     if (req.params.isBulk) {
         // change the success array
         obj.success = obj.success.map(function(o) {
+            if (isV1) {
+                o = SIS.UTIL_TO_V1(o);
+            }
             return self.convertToResponseObject(req, o);
         });
         return obj;
     }
     if (obj instanceof Array) {
         obj = obj.map(function(o) {
+            if (isV1) {
+                o = SIS.UTIL_TO_V1(o);
+            }
             return self.convertToResponseObject(req, o);
         });
     } else {
+        if (isV1) {
+            obj = SIS.UTIL_TO_V1(obj);
+        }
         obj = self.convertToResponseObject(req, obj);
     }
     return obj;
@@ -567,7 +577,7 @@ ApiController.prototype._finish = function(req, res, p, code) {
 ApiController.prototype._getReqOptions = function(req) {
     return {
         user : req.user,
-        version : req.version
+        version : req.params.version
     };
 };
 

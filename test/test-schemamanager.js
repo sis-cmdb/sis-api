@@ -75,7 +75,7 @@ describe('SchemaManager', function() {
           bgpip6: "String"
         }
       };
-      schemaManager.add(schema).nodeify(function(err, entity) {
+      schemaManager.add(schema, { version : "v1" }).nodeify(function(err, entity) {
         should.not.exist(err);
 
         entity.should.have.property('name', 'network_element');
@@ -186,7 +186,7 @@ describe('SchemaManager', function() {
       "definition" : schemaDef
     };
     before(function(done) {
-      schemaManager.add(fullSchema).nodeify(function(err, entity) {
+      schemaManager.add(fullSchema, {version : "v1"}).nodeify(function(err, entity) {
         if (err) {
           done(err);
           return;
@@ -197,10 +197,12 @@ describe('SchemaManager', function() {
           done("Entity type is null");
           return;
         }
-        var doc = new EntityType({f1 : "f1", f2 : "f2"});
+        var doc = new EntityType({f1 : "f1", f2 : "f2" } );
         doc.save(function(err, e) {
+          should.not.exist(err);
           // assert there is an item
           EntityType.count({}, function(err, result) {
+            should.not.exist(err);
             result.should.eql(1);
             done(err);
           });
@@ -237,8 +239,9 @@ describe('SchemaManager', function() {
     });
 
     it("Should have no documents ", function(done) {
-      schemaManager.add(fullSchema).nodeify(function(err, entity) {
+      schemaManager.add(fullSchema, { version : "v1" }).nodeify(function(err, entity) {
         if (err) {
+          console.log(err);
           done(err);
           return;
         }
@@ -277,7 +280,7 @@ describe('SchemaManager', function() {
     // create the schema and add an entity
     before(function(done) {
         schemaManager.delete(schema.name).nodeify(function() {
-            schemaManager.add(schema).nodeify(function(err, result) {
+            schemaManager.add(schema, { version : "v1" }).nodeify(function(err, result) {
               if (err) return done(err);
               var EntityType = schemaManager.getEntityModel(schema);
               var doc = new EntityType(initialEntity);
@@ -298,7 +301,7 @@ describe('SchemaManager', function() {
       delete schema.definition.num;
       schema.definition.bool = 'String';
       schema.definition.newBool = "Boolean";
-      schemaManager.update(schema.name, schema).nodeify(function(err, updated) {
+      schemaManager.update(schema.name, schema, { version : "v1" }).nodeify(function(err, updated) {
         should.not.exist(err);
         updated = updated[1];
         should.exist(updated.definition);

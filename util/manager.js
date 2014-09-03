@@ -133,17 +133,25 @@ Manager.prototype.getPopulateFields = function(schemaManager) {
 };
 
 Manager.prototype._commonAuth = function(evt, doc, user, mergedDoc) {
+    var docMeta = doc[SIS.FIELD_SIS_META];
     if (evt == SIS.EVENT_DELETE) {
-        if (doc[SIS.FIELD_LOCKED]) {
+        if (docMeta[SIS.FIELD_LOCKED]) {
             return SIS.ERR_BAD_CREDS("Cannot delete a locked object.");
         }
     } else if (evt == SIS.EVENT_UPDATE) {
-        if (doc[SIS.FIELD_IMMUTABLE]) {
+        if (docMeta[SIS.FIELD_IMMUTABLE]) {
+            var mergeMeta = mergedDoc[SIS.FIELD_SIS_META];
             var diff = jsondiffpatch.diff(doc, mergedDoc.toObject()) || { };
             var changedKeys = Object.keys(diff).filter(function(k) {
                 return k[0] != '_';
             });
-            if (changedKeys.length != 1 || changedKeys[0] != SIS.FIELD_IMMUTABLE) {
+            if (changedKeys.length > 0) {
+                return SIS.ERR_BAD_REQ("Cannot change an immutable object unless only changing immutable state");
+            }
+            // ensure only sis meta immutable is being changed
+            diff = jsondiffpatch.diff(docMeta, mergeMeta) || { };
+            changedKeys = Object.keys(diff);
+            if (changedKeys.length != 1 && changedKeys[0] != SIS.FIELD_IMMUTABLE) {
                 return SIS.ERR_BAD_REQ("Cannot change an immutable object unless only changing immutable state");
             }
         }
@@ -186,6 +194,7 @@ Manager.prototype.add = function(obj, options) {
     if (err) {
         return Promise.reject(SIS.ERR_BAD_REQ(err));
     }
+    obj = SIS.UTIL_FROM_V1(obj);
     var p = this.authorize(SIS.EVENT_INSERT, obj, user).bind(this)
         .then(this._addByFields(user, SIS.EVENT_INSERT))
         .then(this._preSave)
@@ -205,15 +214,13 @@ Manager.prototype.bulkAdd = function(items, options) {
     var transactionCond = { };
     transactionCond[SIS.FIELD_TRANSACTION_ID + ".id"] = transactionId;
     var prepPromises = items.map(function(item, idx) {
+        var err = this.validate(item, null, options);
+        if (err) {
+            return Promise.reject(SIS.ERR_BAD_REQ(err));
+        }
+        item = SIS.UTIL_FROM_V1(item);
         return this.authorize(SIS.EVENT_INSERT, item, user)
-        .bind(this).then(function(item) {
-            var err = this.validate(item, null, options);
-            if (err) {
-                return Promise.reject(SIS.ERR_BAD_REQ(err));
-            }
-            return item;
-        })
-        .then(this._addByFields(user, SIS.EVENT_INSERT))
+        .bind(this).then(this._addByFields(user, SIS.EVENT_INSERT))
         .then(this._preSave)
         .then(function(res) {
             // convert to mongoose obj
@@ -308,17 +315,39 @@ Manager.prototype._update = function(id, obj, options, saveFunc) {
 
         // init the mongoose doc - must use .init per comment in mongoose
         // otherwise there are problems like _id mod errors from mongo
-        var tmp = found;
+        var old = found;
+        var isUpgradeFromV1 = false;
+        if (!found[SIS.FIELD_SIS_META]) {
+            // v1 - need to convert to v1.1
+            found = SIS.UTIL_FROM_V1(found);
+            isUpgradeFromV1 = true;
+        }
+
         found = new this.model();
-        found.init(tmp, { });
+        found.init(old, { });
         found.isNew = false;
 
         // need to save found's old state
         // HACK - see
         // https://github.com/LearnBoost/mongoose/pull/1981
         found.$__error(null);
-        var old = found.toObject();
+        var oldV11 = found.toObject();
         var user = options.user;
+
+        // always convert the obj to V1.1
+        obj = SIS.UTIL_FROM_V1(obj);
+
+        // update metas
+        // set meta fields
+        var currentMeta = found[SIS.FIELD_SIS_META] || { };
+        var updateMeta = obj[SIS.FIELD_SIS_META] || { };
+
+        SIS.MUTABLE_META_FIELDS.forEach(function(k) {
+            if (k in updateMeta) {
+                currentMeta[k] = updateMeta[k];
+            }
+        });
+
         return this._merge(found, obj).bind(this).then(function(merged) {
             return this.authorize(SIS.EVENT_UPDATE, old, user, merged);
         })
@@ -326,10 +355,15 @@ Manager.prototype._update = function(id, obj, options, saveFunc) {
         .then(this._preSave)
         .then(saveFunc)
         .then(function(updated) {
-            return this.finishUpdate(old, updated);
+            if (isUpgradeFromV1) {
+
+            } else {
+                return this.finishUpdate(oldV11, updated);
+            }
         })
         .then(function(updated) {
-            return Promise.resolve([old, updated]);
+            // return
+            return Promise.resolve([oldV11, updated, isUpgradeFromV1 ? old : null]);
         });
     });
 };
@@ -395,6 +429,7 @@ Manager.prototype.delete = function(id, options) {
     var user = options.user;
     var self = this;
     var p = this.getById(id, { lean : true }).then(function(obj) {
+            obj = SIS.UTIL_FROM_V1(obj);
             return self.authorize(SIS.EVENT_DELETE, obj, user);
         })
         .then(this._remove.bind(this))
@@ -498,7 +533,16 @@ Manager.prototype.validateOwner = function(obj, options) {
     if (!this.authEnabled) {
         return null;
     }
-    if (!obj || !obj[SIS.FIELD_OWNER]) {
+    if (!obj) {
+        return SIS.FIELD_OWNER + " field is required.";
+    }
+    if (options.version != "v1") {
+        obj = obj[SIS.FIELD_SIS_META];
+        if (!obj) {
+            return SIS.FIELD_OWNER + " field is required in " + SIS.FIELD_SIS_META;
+        }
+    }
+    if (!obj[SIS.FIELD_OWNER]) {
         return SIS.FIELD_OWNER + " field is required.";
     }
     var owner = obj[SIS.FIELD_OWNER];
@@ -520,6 +564,13 @@ Manager.prototype.validateOwner = function(obj, options) {
     return null;
 };
 
+Manager.prototype.getOwners = function(obj) {
+    if (SIS.FIELD_SIS_META in obj) {
+        obj = SIS.FIELD_SIS_META;
+    }
+    return obj[SIS.FIELD_OWNER];
+};
+
 // expects object to have an owners array - i.e. should have passed
 // validateOwners
 Manager.prototype.getPermissionsForObject = function(obj, user) {
@@ -536,7 +587,7 @@ Manager.prototype.getPermissionsForObject = function(obj, user) {
     if (!user[SIS.FIELD_ROLES]) {
         return SIS.PERMISSION_NONE;
     }
-    var owners = obj[SIS.FIELD_OWNER];
+    var owners = obj[SIS.FIELD_SIS_META][SIS.FIELD_OWNER];
     var roles = user[SIS.FIELD_ROLES];
     var userRoleCount = 0;
     var adminRoleCount = 0;
@@ -641,8 +692,21 @@ Manager.prototype.applyPreSaveFields = function(obj) {
     obj[SIS.FIELD_UPDATED_AT] = Date.now();
 };
 
+Manager.prototype._upgradeFromV1 = function(item) {
+    var unsetObj = Object.keys(SIS.V1_TO_SIS_META)
+        .reduce(function(ret, k) {
+            ret[k] = "";
+            return ret;
+        }, { });
+    return this.model.updateAsync({ _id : item._id }, { $unset : unsetObj}, { safe : true, strict : false })
+        .then(function() {
+            return item;
+        });
+};
+
 // do one last bit of validation for subclasses
 Manager.prototype._preSave = function(obj) {
+    this.applyPreSaveFields(obj);
     return Promise.resolve(obj);
 };
 
@@ -672,11 +736,12 @@ Manager.prototype._addByFields = function(user, event) {
         if (!user || !doc) {
             return Promise.resolve(doc);
         }
+        var docMeta = doc[SIS.FIELD_SIS_META];
         if (event == SIS.EVENT_UPDATE) {
-            doc[SIS.FIELD_UPDATED_BY] = user[SIS.FIELD_NAME];
+            docMeta[SIS.FIELD_UPDATED_BY] = user[SIS.FIELD_NAME];
         } else if (event == SIS.EVENT_INSERT) {
-            doc[SIS.FIELD_CREATED_BY] = user[SIS.FIELD_NAME];
-            doc[SIS.FIELD_UPDATED_BY] = user[SIS.FIELD_NAME];
+            docMeta[SIS.FIELD_CREATED_BY] = user[SIS.FIELD_NAME];
+            docMeta[SIS.FIELD_UPDATED_BY] = user[SIS.FIELD_NAME];
         }
         return Promise.resolve(doc);
     };
