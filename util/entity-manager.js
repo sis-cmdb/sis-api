@@ -334,8 +334,15 @@ EntityManager.prototype.getEnsureReferencePromise = function(ref, obj) {
             if (!model) {
                 return Promise.reject(SIS.ERR_BAD_REQ("No schema named " + refModelName));
             }
+            // reduce to a set
+            var distinctItems = currObj.reduce(function(ret, id) {
+                // just to string it..
+                ret['' + id] = true;
+                return ret;
+            }, { });
+            distinctItems = Object.keys(distinctItems);
             return model.findAsync({ '_id' : { "$in" : currObj }}, '_id', {lean : true}).then(function(r) {
-                if (!r || r.length != currObj.length) {
+                if (!r || r.length != distinctItems.length) {
                     return Promise.reject(SIS.ERR_BAD_REQ("Some IDs do not exist in " + JSON.stringify(currObj)));
                 } else {
                     return true;
