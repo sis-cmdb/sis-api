@@ -22,7 +22,8 @@ require('util').inherits(HieraController, ApiController);
 
 // The GET/:id request needs to send only the hiera object back
 HieraController.prototype.convertToResponseObject = function(req, obj) {
-    if (req.method == "GET" && req.params.id) {
+    if (req.method == "GET" && req.params.id &&
+        !req.params.isCommitApi) {
         return obj.hieradata;
     }
     return obj;

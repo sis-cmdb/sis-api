@@ -360,6 +360,7 @@ ApiController.prototype._enableCommitApi = function(app, prefix) {
     // all history
     var self = this;
     app.get(prefix + "/:id/commits", function(req, res) {
+        req.params.isCommitApi = true;
         var type = this.getType(req);
         var id = req.params.id;
         var rq = this.parseQuery(req);
@@ -389,10 +390,16 @@ ApiController.prototype._enableCommitApi = function(app, prefix) {
         var type = this.getType(req);
         var id = req.params.id;
         var hid = req.params.hid;
+        req.params.isCommitApi = true;
         this.commitManager.getVersionById(type, id, hid, function(err, result) {
             if (err || !result) {
                 self.sendError(res, SIS.ERR_NOT_FOUND("commit", hid));
             } else {
+                if (req.params.version == "v1") {
+                    result = SIS.UTIL_TO_V1(result);
+                    result.value_at = SIS.UTIL_TO_V1(result.value_at);
+                }
+                result.value_at = self.convertToResponseObject(req, result.value_at);
                 self.sendObject(res, 200, result);
             }
         });
@@ -402,10 +409,15 @@ ApiController.prototype._enableCommitApi = function(app, prefix) {
         var type = this.getType(req);
         var id = req.params.id;
         var utc = req.params.utc;
+        req.params.isCommitApi = true;
         this.commitManager.getVersionByUtc(type, id, utc, function(err, result) {
             if (err || !result) {
                 self.sendError(res, SIS.ERR_NOT_FOUND("commit at time", utc));
             } else {
+                result = self.convertToResponseObject(req, result);
+                if (req.params.version == "v1") {
+                    result = SIS.UTIL_TO_V1(result);
+                }
                 self.sendObject(res, 200, result);
             }
         });

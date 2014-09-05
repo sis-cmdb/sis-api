@@ -18,6 +18,22 @@ function SchemaController(config) {
 
 // inherit
 require('util').inherits(SchemaController, ApiController);
+
+SchemaController.prototype.convertToResponseObject = function(req, obj) {
+    if (req.params.version === "v1") {
+        if (obj.toObject) {
+            obj = obj.toObject();
+        }
+        // convert the definition to v1
+        var defn = obj.definition;
+        if (defn[SIS.FIELD_SIS_META]) {
+            delete defn[SIS.FIELD_SIS_META];
+            defn[SIS.FIELD_OWNER] = ["String"];
+        }
+    }
+    return obj;
+};
+
 /////////////////////////////////
 
 // all route controllers expose a setup method

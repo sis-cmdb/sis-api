@@ -484,7 +484,7 @@ describe('@API - Entity API', function() {
         });
 
         it("should update with cas object", function(done) {
-            var casOp = { _updated_at : doc._updated_at };
+            var casOp = { num : doc.num };
             var update = { num : 1 };
             ApiServer.put(entityUrl + '/' + doc._id)
             .query({ cas : casOp }).send(update)
@@ -498,7 +498,7 @@ describe('@API - Entity API', function() {
         });
 
         it("should update with cas string", function(done) {
-            var casOp = JSON.stringify({ _updated_at : doc._updated_at });
+            var casOp = JSON.stringify({ num : doc.num });
             var update = { num : 2 };
             ApiServer.put(entityUrl + '/' + doc._id)
             .query({ cas : casOp }).send(update)
@@ -512,7 +512,7 @@ describe('@API - Entity API', function() {
         });
 
         it("should succeed only once", function(done) {
-            var casOp = { _updated_at : doc._updated_at, num : doc.num };
+            var casOp = { num : doc.num };
             var aggregate = {
                 doc : null,
                 success : [],

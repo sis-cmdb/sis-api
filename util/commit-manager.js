@@ -50,12 +50,14 @@ function CommitManager(schemaManager) {
             }
             commit.commit_data = docToPojo(item);
             if (action == 'insert') {
-                commit.date_modified = item[SIS.FIELD_UPDATED_AT];
+                commit.date_modified = item[SIS.FIELD_SIS_META][SIS.FIELD_UPDATED_AT];
             } else {
                 commit.date_modified = ts;
             }
-            commit[SIS.FIELD_UPDATED_AT] = ts;
-            commit[SIS.FIELD_CREATED_AT] = ts;
+            var commitMeta = { };
+            commitMeta[SIS.FIELD_UPDATED_AT] = ts;
+            commitMeta[SIS.FIELD_CREATED_AT] = ts;
+            commit[SIS.FIELD_SIS_META] = commitMeta;
             return new self.model(commit).toObject();
         });
         // do a bulk insert directly
@@ -79,7 +81,7 @@ function CommitManager(schemaManager) {
         switch (action) {
             case 'insert':
                 doc.commit_data = docToPojo(newDoc);
-                doc.date_modified = newDoc[SIS.FIELD_UPDATED_AT];
+                doc.date_modified = newDoc[SIS.FIELD_SIS_META][SIS.FIELD_UPDATED_AT];
                 break;
             case 'delete':
                 doc.commit_data = docToPojo(oldDoc);
@@ -90,6 +92,7 @@ function CommitManager(schemaManager) {
                 var left = docToPojo(oldDoc);
                 var right = docToPojo(newDoc);
                 doc.commit_data = differ.diff(left, right);
+                var mod_date = newDoc[SIS.FIELD_SIS_META][SIS.FIELD_UPDATED_AT];
                 var hasChanged = Object.keys(doc.commit_data).some(function(k) {
                     return k[0] != '_';
                 });
@@ -97,7 +100,7 @@ function CommitManager(schemaManager) {
                     // just exit
                     return callback(null, null);
                 }
-                doc.date_modified = newDoc[SIS.FIELD_UPDATED_AT];
+                doc.date_modified = mod_date;
                 break;
             default:
                 break;

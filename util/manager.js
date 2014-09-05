@@ -384,6 +384,7 @@ Manager.prototype._getCasSave = function(obj, cas) {
         return validate().bind(this).then(function() {
             // set the ID on the id field
             cas[this.idField] = doc[this.idField];
+            obj = SIS.UTIL_FROM_V1(obj);
             // find and update
             // need to add the update time
             this.applyPreSaveFields(obj);
@@ -695,7 +696,7 @@ Manager.prototype._merge = function(doc, update) {
 };
 
 Manager.prototype.applyPreSaveFields = function(obj) {
-    obj[SIS.FIELD_UPDATED_AT] = Date.now();
+    obj[SIS.FIELD_SIS_META][SIS.FIELD_UPDATED_AT] = Date.now();
 };
 
 Manager.prototype._upgradeFromV1 = function(item) {
