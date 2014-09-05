@@ -195,6 +195,10 @@ Manager.prototype.add = function(obj, options) {
         return Promise.reject(SIS.ERR_BAD_REQ(err));
     }
     obj = SIS.UTIL_FROM_V1(obj);
+    // if (!this.getOwners(obj)) {
+    //     console.log("Pre: " + JSON.stringify(pre));
+    //     console.log("Post: " + JSON.stringify(obj));
+    // }
     var p = this.authorize(SIS.EVENT_INSERT, obj, user).bind(this)
         .then(this._addByFields(user, SIS.EVENT_INSERT))
         .then(this._preSave)
@@ -566,7 +570,7 @@ Manager.prototype.validateOwner = function(obj, options) {
 
 Manager.prototype.getOwners = function(obj) {
     if (SIS.FIELD_SIS_META in obj) {
-        obj = SIS.FIELD_SIS_META;
+        obj = obj[SIS.FIELD_SIS_META];
     }
     return obj[SIS.FIELD_OWNER];
 };
@@ -587,7 +591,7 @@ Manager.prototype.getPermissionsForObject = function(obj, user) {
     if (!user[SIS.FIELD_ROLES]) {
         return SIS.PERMISSION_NONE;
     }
-    var owners = obj[SIS.FIELD_SIS_META][SIS.FIELD_OWNER];
+    var owners = this.getOwners(obj);
     var roles = user[SIS.FIELD_ROLES];
     var userRoleCount = 0;
     var adminRoleCount = 0;

@@ -367,13 +367,21 @@ module.exports = {
     },
 
     UTIL_TO_V1 : function(obj) {
+        if (!obj) {
+            return obj;
+        }
+        if (typeof obj.toObject === "function") {
+            obj = obj.toObject();
+        }
         if (!obj[FIELD_SIS_META]) {
             return obj;
         }
         // not in place
         var result = { };
         for (var k in obj) {
-            result[k] = obj[k];
+            if (k != FIELD_SIS_META) {
+                result[k] = obj[k];
+            }
         }
         var sisMeta = obj[FIELD_SIS_META];
         for (k in SIS_META_TO_V1) {

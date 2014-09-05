@@ -419,25 +419,29 @@ ApiController.prototype._convertToResponseObject = function(req, obj) {
     if (req.params.isBulk) {
         // change the success array
         obj.success = obj.success.map(function(o) {
+            o = self.convertToResponseObject(req, o);
             if (isV1) {
                 o = SIS.UTIL_TO_V1(o);
             }
-            return self.convertToResponseObject(req, o);
+            return o;
         });
         return obj;
     }
     if (obj instanceof Array) {
         obj = obj.map(function(o) {
+            o = self.convertToResponseObject(req, o);
             if (isV1) {
                 o = SIS.UTIL_TO_V1(o);
             }
-            return self.convertToResponseObject(req, o);
+            return o;
         });
     } else {
+        var pre = obj;
+        obj = self.convertToResponseObject(req, obj);
+        var pre2 = obj;
         if (isV1) {
             obj = SIS.UTIL_TO_V1(obj);
         }
-        obj = self.convertToResponseObject(req, obj);
     }
     return obj;
 };

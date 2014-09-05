@@ -105,8 +105,8 @@ EntityManager.prototype.validate = function(entity, toUpdate, options) {
         //         return err;
         //     }
         // }
-        var owners = this.getOwners(entity);
-        if (owners) {
+        if (this._hasOwners(entity, options)) {
+            var owners = this.getOwners(entity);
             if (owners instanceof Array && !owners.length) {
                 // let the authorize call take care of setting
                 // sub owners
@@ -131,6 +131,15 @@ EntityManager.prototype.validate = function(entity, toUpdate, options) {
     return null;
 };
 
+EntityManager.prototype._hasOwners = function(obj, options) {
+    if (options.version == "v1") {
+        return SIS.FIELD_OWNER in obj;
+    } else {
+        return SIS.FIELD_SIS_META in obj &&
+            SIS.FIELD_OWNER in obj[SIS.FIELD_SIS_META];
+    }
+};
+
 EntityManager.prototype._getOwnerSubset = function(user, schema) {
     if (!user[SIS.FIELD_ROLES]) {
         return [];
@@ -140,6 +149,15 @@ EntityManager.prototype._getOwnerSubset = function(user, schema) {
     return userRoles.filter(function(owner) {
         return schemaOwners.indexOf(owner) != -1;
     });
+};
+
+EntityManager.prototype.getOwners = function(obj) {
+    var owners = Manager.prototype.getOwners.call(this, obj);
+    if (!owners) {
+        // defer to schema owners
+        owners = Manager.prototype.getOwners.call(this, this.schema);
+    }
+    return owners;
 };
 
 // authorize always gets meta in v1.1 support
@@ -157,7 +175,7 @@ EntityManager.prototype.authorize = function(evt, doc, user, mergedDoc) {
         }
         var meta = mergedDoc ? mergedDoc[SIS.FIELD_SIS_META] : doc[SIS.FIELD_SIS_META];
         if (!meta[SIS.FIELD_OWNER]) {
-            meta[SIS.FIELD_OWNER] = ownerSubset;
+            meta[SIS.FIELD_OWNER] = userGroups;
         }
         return Manager.prototype.authorize.call(this, evt, doc, user, mergedDoc);
     }
