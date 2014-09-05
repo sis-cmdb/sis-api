@@ -591,7 +591,7 @@ SchemaManager.prototype.getPermissionsForObject = function(schema, user) {
 };
 
 SchemaManager.prototype._isPartialAdmin = function(obj, user) {
-    var owners = obj[SIS.FIELD_OWNER] || [];
+    var owners = this.getOwners(obj);
     var roles = user[SIS.FIELD_ROLES] || { };
     return owners.some(function(o) {
         return roles[o] == SIS.ROLE_ADMIN;

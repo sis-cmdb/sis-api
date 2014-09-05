@@ -216,11 +216,13 @@ Manager.prototype.bulkAdd = function(items, options) {
     var toAdd = [];
     var transactionId = hat(64) + Date.now();
     var transactionCond = { };
-    transactionCond[SIS.FIELD_TRANSACTION_ID + ".id"] = transactionId;
+    transactionCond[SIS.FIELD_SIS_META + "." + SIS.FIELD_TRANSACTION_ID + ".id"] = transactionId;
     var prepPromises = items.map(function(item, idx) {
         var err = this.validate(item, null, options);
         if (err) {
-            return Promise.reject(SIS.ERR_BAD_REQ(err));
+            err = SIS.ERR_BAD_REQ(err);
+            memo.errors.push({ err : err, value : item });
+            return Promise.resolve(memo);
         }
         item = SIS.UTIL_FROM_V1(item);
         return this.authorize(SIS.EVENT_INSERT, item, user)
@@ -233,7 +235,7 @@ Manager.prototype.bulkAdd = function(items, options) {
             this.applyPreSaveFields(res);
             // add the transaction field in case
             // we need to nuke them later
-            res[SIS.FIELD_TRANSACTION_ID] = {
+            res[SIS.FIELD_SIS_META][SIS.FIELD_TRANSACTION_ID] = {
                 id : transactionId,
                 idx : idx
             };
@@ -249,12 +251,12 @@ Manager.prototype.bulkAdd = function(items, options) {
         // some things failed..
         // find the ones that failed
         var successIds = inserted.reduce(function(ret, i) {
-            var idx = i[SIS.FIELD_TRANSACTION_ID].idx;
+            var idx = i[SIS.FIELD_SIS_META][SIS.FIELD_TRANSACTION_ID].idx;
             ret[idx] = true;
             return ret;
         }, { });
         toAdd.forEach(function(item) {
-            if (!(item[SIS.FIELD_TRANSACTION_ID].idx in successIds)) {
+            if (!(item[SIS.FIELD_SIS_META][SIS.FIELD_TRANSACTION_ID].idx in successIds)) {
                 memo.errors.push({
                     value : item,
                     err : SIS.ERR_BAD_REQ("Insert failed.")
