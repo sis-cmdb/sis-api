@@ -280,6 +280,8 @@ describe('@API - Entity References', function() {
             savedS5.embedded_docs.forEach(function(ed, idx) {
                 var ref_to_push = good_refs[(idx + 1) % good_refs.length];
                 ed.refs.push(ref_to_push._id);
+                // add a dupe
+                ed.refs.push(ed.refs[0]);
             });
             ApiServer.put("/api/v1/entities/ref_5/" + savedS5._id)
                 .send(savedS5).expect(200, done);
