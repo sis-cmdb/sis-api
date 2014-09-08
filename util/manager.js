@@ -188,17 +188,14 @@ Manager.prototype.authorize = function(evt, doc, user, mergedDoc) {
 
 // Ensures the user can add the object and then add it
 Manager.prototype.add = function(obj, options) {
-    options = options || { };
+    // default to v1
+    options = options || { version : "v1" };
     var user = options.user;
     var err = this.validate(obj, null, options);
     if (err) {
         return Promise.reject(SIS.ERR_BAD_REQ(err));
     }
     obj = SIS.UTIL_FROM_V1(obj);
-    // if (!this.getOwners(obj)) {
-    //     console.log("Pre: " + JSON.stringify(pre));
-    //     console.log("Post: " + JSON.stringify(obj));
-    // }
     var p = this.authorize(SIS.EVENT_INSERT, obj, user).bind(this)
         .then(this._addByFields(user, SIS.EVENT_INSERT))
         .then(this._preSave)
@@ -208,7 +205,7 @@ Manager.prototype.add = function(obj, options) {
 
 
 Manager.prototype.bulkAdd = function(items, options) {
-    options = options || { };
+    options = options || { version : "v1" };
     var user = options.user;
     var allOrNone = options.allOrNone;
     var memo = { success: [], errors: [] };
@@ -363,7 +360,7 @@ Manager.prototype._update = function(id, obj, options, saveFunc) {
         .then(saveFunc)
         .then(function(updated) {
             if (isUpgradeFromV1) {
-                // need to unset the old SIS fields
+                // need to unset the old SIS fields of the individual object
 
             } else {
                 return this.finishUpdate(oldV11, updated);
@@ -422,7 +419,7 @@ Manager.prototype.upsert = function(id, obj, options) {
 
 // Ensures the user can update the object and then update it
 Manager.prototype.update = function(id, obj, options) {
-    options = options || { };
+    options = options || { version : "v1" };
     var cas = options.cas;
     var saveFunc = this._save;
     // if cas, use the cas save rather than generic save
@@ -742,10 +739,17 @@ Manager.prototype._save = function(obj) {
 // the _updated_by and _created_by fields
 Manager.prototype._addByFields = function(user, event) {
     return function(doc) {
-        if (!user || !doc) {
+        if (!doc) {
             return Promise.resolve(doc);
         }
         var docMeta = doc[SIS.FIELD_SIS_META];
+        if (event == SIS.EVENT_INSERT) {
+            docMeta[SIS.FIELD_CREATED_AT] = Date.now();
+        }
+        if (!user) {
+            return Promise.resolve(doc);
+        }
+
         if (event == SIS.EVENT_UPDATE) {
             docMeta[SIS.FIELD_UPDATED_BY] = user[SIS.FIELD_NAME];
         } else if (event == SIS.EVENT_INSERT) {

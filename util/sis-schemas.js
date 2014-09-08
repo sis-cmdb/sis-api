@@ -4,13 +4,13 @@
 var SIS = require('./constants');
 
 var sisMetaDef = { };
-sisMetaDef[SIS.FIELD_CREATED_AT] = { "type" : "Number", "default" : function() { return Date.now(); } };
+sisMetaDef[SIS.FIELD_CREATED_AT] = { "type" : "Number" };
 sisMetaDef[SIS.FIELD_UPDATED_AT] = { "type" : "Number" };
 sisMetaDef[SIS.FIELD_CREATED_BY] = { "type" : "String" };
 sisMetaDef[SIS.FIELD_UPDATED_BY] = { "type" : "String" };
 sisMetaDef[SIS.FIELD_LOCKED] = { type : "Boolean", required : true, "default" : false };
 sisMetaDef[SIS.FIELD_IMMUTABLE] = { type : "Boolean", "default" : false };
-sisMetaDef[SIS.FIELD_TAGS] = { type: [String], index: true };
+sisMetaDef[SIS.FIELD_TAGS] = { type: ["String"], index: true };
 sisMetaDef[SIS.FIELD_SIS_VERSION] = "String";
 
 
@@ -35,7 +35,7 @@ module.exports.schemas = [
             // sis meta
             _sis : {
                 owner : { type : ["String"], required : true },
-                references : ["String"]
+                _references : ["String"]
             }
         }
     },

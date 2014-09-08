@@ -75,7 +75,7 @@ describe('SchemaManager', function() {
           bgpip6: "String"
         }
       };
-      schemaManager.add(schema, { version : "v1" }).nodeify(function(err, entity) {
+      schemaManager.add(schema).nodeify(function(err, entity) {
         should.not.exist(err);
 
         entity.should.have.property('name', 'network_element');
@@ -239,7 +239,7 @@ describe('SchemaManager', function() {
     });
 
     it("Should have no documents ", function(done) {
-      schemaManager.add(fullSchema, { version : "v1" }).nodeify(function(err, entity) {
+      schemaManager.add(fullSchema).nodeify(function(err, entity) {
         if (err) {
           console.log(err);
           done(err);
@@ -280,7 +280,7 @@ describe('SchemaManager', function() {
     // create the schema and add an entity
     before(function(done) {
         schemaManager.delete(schema.name).nodeify(function() {
-            schemaManager.add(schema, { version : "v1" }).nodeify(function(err, result) {
+            schemaManager.add(schema).nodeify(function(err, result) {
               if (err) return done(err);
               var EntityType = schemaManager.getEntityModel(schema);
               var doc = new EntityType(initialEntity);
@@ -301,7 +301,7 @@ describe('SchemaManager', function() {
       delete schema.definition.num;
       schema.definition.bool = 'String';
       schema.definition.newBool = "Boolean";
-      schemaManager.update(schema.name, schema, { version : "v1" }).nodeify(function(err, updated) {
+      schemaManager.update(schema.name, schema).nodeify(function(err, updated) {
         should.not.exist(err);
         updated = updated[1];
         should.exist(updated.definition);
@@ -483,7 +483,7 @@ describe('SchemaManager', function() {
               indeces = EntityType.schema.indexes();
               indeces = indeces.filter(function(ind) {
                   var keys = Object.keys(ind[0]);
-                  return keys.length != 1 || keys[0].indexOf('sis_') !== 0;
+                  return keys.length != 1 || keys[0].indexOf('_sis') !== 0;
               });
               indeces.length.should.eql(0);
               done();

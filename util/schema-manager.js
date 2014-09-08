@@ -277,10 +277,10 @@ SchemaManager.prototype.finishUpdate = function(oldSchema, updatedSchema) {
         // build up the index objects to remove
         var toRemove = [];
         pathsWithIndecesToRemove.forEach(function(p) {
-            indeces.filter(function(idx) {
-                return p in idx[0];
-            }).forEach(function(idx) {
-                toRemove.push(idx);
+            indeces.filter(function(index) {
+                return p in index[0];
+            }).forEach(function(index) {
+                toRemove.push(index);
             });
         });
         if (toRemove.length) {
@@ -380,11 +380,10 @@ SchemaManager.prototype.applyUpdate = function(currentSchema, updatedSchema) {
     currentSchema[SIS.FIELD_ID_FIELD] = updatedSchema[SIS.FIELD_ID_FIELD] || '_id';
     currentSchema[SIS.FIELD_DESCRIPTION] = updatedSchema[SIS.FIELD_DESCRIPTION];
     // update optional fields that have default vals
-    setIfPresent(SIS.FIELD_LOCKED);
+    // meta fields already updated
     setIfPresent(SIS.FIELD_LOCKED_FIELDS);
     setIfPresent(SIS.FIELD_IS_OPEN);
     setIfPresent(SIS.FIELD_IS_PUBLIC);
-    setIfPresent(SIS.FIELD_IMMUTABLE);
     setIfPresent(SIS.FIELD_ANY_ADMIN_MOD);
 
     currentSchema.definition = newDef;

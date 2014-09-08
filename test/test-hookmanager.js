@@ -184,7 +184,6 @@ describe('HookManager', function() {
         should.not.exist(err);
 
         entity.should.have.property('name', 'test_hook');
-        JSON.stringify(entity.owner).should.eql(JSON.stringify(["Test"]));
         entity.should.have.property('entity_type', 'Schema');
         entity.target.should.eql(hook.target);
 
@@ -287,7 +286,6 @@ describe('HookManager', function() {
         should.not.exist(err);
         should.exist(updated);
         updated = updated[1];
-        JSON.stringify(updated.owner).should.eql(JSON.stringify(["Bob"]));
         updated.should.have.property('entity_type','EntityA');
         updated.target.should.eql(updatedHook.target);
         JSON.stringify(updated.events).should.eql(JSON.stringify(updatedHook.events));
