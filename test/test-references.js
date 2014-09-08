@@ -70,7 +70,21 @@ describe('@API - Entity References', function() {
             }
         };
 
-        var schemas = [schema_1, schema_2, schema_3, schema_4];
+        var schema_5 = {
+            name : "ref_5",
+            owner : "entity_test",
+            definition : {
+                name : "String",
+                embedded_docs : [{
+                    e_name : "String",
+                    refs : [
+                        { type : "ObjectId", ref : "ref_1" }
+                    ]
+                }]
+            }
+        };
+
+        var schemas = [schema_1, schema_2, schema_3, schema_4, schema_5];
         var entities = {
             'ref_1' : [],
             'ref_3' : []
@@ -83,7 +97,7 @@ describe('@API - Entity References', function() {
                     return done(err, res);
                 }
                 var req = ApiServer;
-                async.map(['foo', 'bar', 'baz'], function(name, callback) {
+                async.map(['foo', 'bar', 'baz', 'qux', 'quux'], function(name, callback) {
                     req.post("/api/v1/entities/ref_1")
                         .set("Content-Type", "application/json")
                         .query("populate=false")
@@ -236,6 +250,41 @@ describe('@API - Entity References', function() {
                     done();
                 });
             });
+        });
+
+        var savedS5 = null;
+
+        it("should add items in an array of embedded docs containing arrays of refs", function(done) {
+            var docs = [];
+            var good_refs = entities.ref_1;
+            entities.ref_1.forEach(function(r, idx) {
+                docs.push({
+                    e_name : "d" + idx,
+                    refs : [r._id]
+                });
+            });
+            var s5Item = {
+                name : "s5_test",
+                embedded_docs : docs
+            };
+            ApiServer.post("/api/v1/entities/ref_5")
+            .send(s5Item).expect(201, function(e, r) {
+                if (e) { return done(e); }
+                savedS5 = r.body;
+                done();
+            });
+        });
+
+        it("should update items in an array of embedded docs containing arrays of refs", function(done) {
+            var good_refs = entities.ref_1;
+            savedS5.embedded_docs.forEach(function(ed, idx) {
+                var ref_to_push = good_refs[(idx + 1) % good_refs.length];
+                ed.refs.push(ref_to_push._id);
+                // add a dupe
+                ed.refs.push(ed.refs[0]);
+            });
+            ApiServer.put("/api/v1/entities/ref_5/" + savedS5._id)
+                .send(savedS5).expect(200, done);
         });
     });
 
