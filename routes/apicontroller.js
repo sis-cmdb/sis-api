@@ -105,6 +105,9 @@ ApiController.prototype.parseQuery = function(req) {
     } catch (ex) {
         query = {};
     }
+    if (req.params.version == "v1") {
+        query = SIS.UTIL_QUERY_FROM_V1(query);
+    }
     var limit = parseInt(req.query.limit, 10) || SIS.MAX_RESULTS;
     if (limit > SIS.MAX_RESULTS) { limit = SIS.MAX_RESULTS; }
     var offset = parseInt(req.query.offset, 10) || 0;
@@ -259,6 +262,9 @@ ApiController.prototype.update = function(req, res) {
             !Object.keys(cas).length) {
             // invalid query
             return this.sendError(res, SIS.ERR_BAD_REQ("CAS condition must be an object."));
+        }
+        if (req.params.version == "v1") {
+            cas = SIS.UTIL_QUERY_FROM_V1(cas);
         }
         options.cas = cas;
     }

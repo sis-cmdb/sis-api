@@ -34,7 +34,6 @@ describe('Convert from v1 to v1.1', function() {
             };
 
             var converted = SIS.UTIL_FROM_V1(item);
-            console.log(converted);
             var keys = Object.keys(converted);
             keys.length.should.eql(5);
             var meta = converted[SIS.FIELD_SIS_META];

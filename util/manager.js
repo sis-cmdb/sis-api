@@ -359,9 +359,11 @@ Manager.prototype._update = function(id, obj, options, saveFunc) {
         })
         .then(this._addByFields(user, SIS.EVENT_UPDATE))
         .then(this._preSave)
+        .then(this._preSave)
         .then(saveFunc)
         .then(function(updated) {
             if (isUpgradeFromV1) {
+                // need to unset the old SIS fields
 
             } else {
                 return this.finishUpdate(oldV11, updated);
@@ -713,7 +715,6 @@ Manager.prototype._upgradeFromV1 = function(item) {
 
 // do one last bit of validation for subclasses
 Manager.prototype._preSave = function(obj) {
-    this.applyPreSaveFields(obj);
     return Promise.resolve(obj);
 };
 
@@ -732,6 +733,7 @@ Manager.prototype._save = function(obj) {
         }
     }
     var d = Promise.pending();
+    this.applyPreSaveFields(m);
     m.save(this._getModCallback(d));
     return d.promise;
 };

@@ -394,4 +394,30 @@ module.exports = {
         }
         return result;
     },
+
+    UTIL_QUERY_FROM_V1 : function(query) {
+        var andDoc = query.$and || [];
+        if (!(andDoc instanceof Array)) {
+            andDoc = [andDoc];
+        }
+        for (var k in V1_TO_SIS_META) {
+            if (k in query) {
+                var tmp = query[k];
+                delete query[k];
+                // change it to an or
+                var v1Doc = {};
+                v1Doc[k] = tmp;
+                var v11Doc = {};
+                v11Doc[FIELD_SIS_META + "." + k] = tmp;
+                var orDoc = {
+                    $or : [v1Doc, v11Doc]
+                };
+                andDoc.push(orDoc);
+            }
+        }
+        if (andDoc.length) {
+            query.$and = andDoc;
+        }
+        return query;
+    }
 };

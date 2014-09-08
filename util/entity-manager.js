@@ -406,8 +406,7 @@ EntityManager.prototype.ensureReferences = function(obj) {
 };
 
 EntityManager.prototype._preSave = function(obj) {
-    return Manager.prototype._preSave.call(this, obj)
-        .bind(this).then(this.ensureReferences);
+    return this.ensureReferences(obj);
 };
 //////////
 

@@ -81,7 +81,7 @@ function CommitManager(schemaManager) {
         switch (action) {
             case 'insert':
                 doc.commit_data = docToPojo(newDoc);
-                doc.date_modified = newDoc[SIS.FIELD_SIS_META][SIS.FIELD_UPDATED_AT];
+                doc.date_modified = newDoc[SIS.FIELD_SIS_META][SIS.FIELD_CREATED_AT];
                 break;
             case 'delete':
                 doc.commit_data = docToPojo(oldDoc);

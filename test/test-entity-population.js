@@ -105,6 +105,16 @@ describe('@API - Entity Population API', function() {
             async.map(names, deleteSchema, done);
         });
 
+        function stripSisFields(obj) {
+            var result = SIS.UTIL_FROM_V1(obj);
+            delete result._sis;
+            return result;
+        }
+
+        function shouldEql(obj1, obj2) {
+            stripSisFields(obj1).should.eql(stripSisFields(obj2));
+        }
+
         it("Should populate test_pop_schema_2 ref_field", function(done) {
             // test it with the GET /
             ApiServer.get("/api/v1/entities/test_pop_schema_3")
@@ -116,7 +126,8 @@ describe('@API - Entity Population API', function() {
                     should.exist(res.stuff);
                     res.stuff.should.eql("ps3 stuff");
                     should.exist(res.ref_field);
-                    res.ref_field.should.eql(entities[1][1]);
+                    //res.ref_field.should.eql(entities[1][1]);
+                    shouldEql(res.ref_field, entities[1][1]);
                     done();
                 });
         });
@@ -131,7 +142,8 @@ describe('@API - Entity Population API', function() {
                     should.exist(res.type);
                     res.type.should.eql("ps2_type");
                     should.exist(res.ref_field);
-                    res.ref_field.should.eql(entities[0][1]);
+                    //res.ref_field.should.eql(entities[0][1]);
+                    shouldEql(res.ref_field, entities[0][1]);
                     done();
                 });
         });

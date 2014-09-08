@@ -1,4 +1,4 @@
-describe('API at the Edge ', function() {
+describe('Readonly API ', function() {
     "use strict";
 
     var schema = {
@@ -26,7 +26,7 @@ describe('API at the Edge ', function() {
         ApiServer.start(config, function(err, sd) {
             if (err) { return done(err); }
             app = sd.app;
-            var options = { user : sd.superUser };
+            var options = { user : sd.superUser, version : "v1" };
             sd.schemaManager.delete(schema.name, options).nodeify(function() {
                 sd.schemaManager.add(schema, options).nodeify(done);
             });
