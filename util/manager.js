@@ -361,7 +361,7 @@ Manager.prototype._update = function(id, obj, options, saveFunc) {
         });
 
         return this._merge(found, obj).bind(this).then(function(merged) {
-            return this.authorize(SIS.EVENT_UPDATE, old, user, merged);
+            return this.authorize(SIS.EVENT_UPDATE, oldV11, user, merged);
         })
         .then(this._addByFields(user, SIS.EVENT_UPDATE))
         .then(this._preSave)
