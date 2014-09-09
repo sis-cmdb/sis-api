@@ -463,6 +463,7 @@ Manager.prototype.bulkDelete = function(condition, options) {
         }
         var toDelete = [];
         var authPromises = items.map(function(item) {
+            item = SIS.UTIL_FROM_V1(item);
             return this.authorize(SIS.EVENT_DELETE, item, user)
             .then(function(res) {
                 toDelete.push(res);
