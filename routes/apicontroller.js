@@ -440,6 +440,8 @@ ApiController.prototype._convertToResponseObject = function(req, obj) {
             o = self.convertToResponseObject(req, o);
             if (isV1) {
                 o = SIS.UTIL_TO_V1(o);
+            } else {
+                o = SIS.UTIL_FROM_V1(o);
             }
             return o;
         });
@@ -450,15 +452,17 @@ ApiController.prototype._convertToResponseObject = function(req, obj) {
             o = self.convertToResponseObject(req, o);
             if (isV1) {
                 o = SIS.UTIL_TO_V1(o);
+            } else {
+                o = SIS.UTIL_FROM_V1(o);
             }
             return o;
         });
     } else {
-        var pre = obj;
         obj = self.convertToResponseObject(req, obj);
-        var pre2 = obj;
         if (isV1) {
             obj = SIS.UTIL_TO_V1(obj);
+        } else {
+            obj = SIS.UTIL_FROM_V1(obj);
         }
     }
     return obj;

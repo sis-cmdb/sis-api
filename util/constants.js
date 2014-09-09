@@ -339,13 +339,16 @@ module.exports = {
     SIS_META_TO_V1 : SIS_META_TO_V1,
 
     UTIL_FROM_V1 : function(obj) {
-        if (obj[FIELD_SIS_META]) {
+        if (obj[FIELD_SIS_META] && obj[FIELD_SIS_META][FIELD_SIS_VERSION]) {
             // done
             return obj;
         }
+        if (typeof obj.toObject === "function") {
+            obj = obj.toObject();
+        }
         // returns a shallow copy
         var result = { };
-        var sisMeta = { };
+        var sisMeta = obj[FIELD_SIS_META] || { };
         for (var k in obj) {
             if (!(k in V1_TO_SIS_META) &&
                 k != '__v') {

@@ -138,18 +138,6 @@ SchemaManager.prototype.validate = function(modelObj, toUpdate, options) {
             }
         }
         var mongooseSchema = new this.mongoose.Schema(modelObj.definition, { collection : "__test__", autoIndex: false });
-
-        var refs = SIS.UTIL_GET_OID_PATHS(mongooseSchema).map(function(ref) {
-            return ref.ref;
-        });
-        if (options.version == "v1") {
-            // set the references
-            modelObj[SIS.FIELD_REFERENCES] = refs;
-        } else {
-            // set them on sis meta
-            modelObj[SIS.FIELD_SIS_META][SIS.FIELD_REFERENCES] = refs;
-        }
-
         mongooseSchema.eachPath(function(path, schemaType) {
             if (schemaType.instance == "String" &&
                 schemaType.options && schemaType.options.match) {
@@ -165,13 +153,6 @@ SchemaManager.prototype.validate = function(modelObj, toUpdate, options) {
                 throw "owner must be a String array.";
             }
         });
-
-        // add the default meta def
-        var metaDef = { };
-        metaDef[SIS.FIELD_OWNER] = ["String"];
-        metaDef[SIS.FIELD_ANY_ADMIN_MOD] = { type : "Boolean", default : false };
-        modelObj.definition[SIS.FIELD_SIS_META] = metaDef;
-
     } catch (ex) {
         return "Schema is invalid: " + ex;
     }
@@ -498,6 +479,12 @@ SchemaManager.prototype._getMongooseSchema = function(sisSchema, isInternal) {
         }
     }
 
+    if (!isInternal) {
+        // add the default meta def for entities
+        thisMetaDef[SIS.FIELD_OWNER] = ["String"];
+        thisMetaDef[SIS.FIELD_ANY_ADMIN_MOD] = { type : "Boolean", default : false };
+    }
+
     definition[SIS.FIELD_SIS_META] = thisMetaDef;
 
     return this.mongoose.Schema(definition, { collection : sisSchema.name, versionKey : SIS.FIELD_VERS });
@@ -591,6 +578,15 @@ SchemaManager.prototype._isPartialAdmin = function(obj, user) {
     return owners.some(function(o) {
         return roles[o] == SIS.ROLE_ADMIN;
     });
+};
+
+SchemaManager.prototype._preSave = function(obj) {
+    var mongooseSchema = new this.mongoose.Schema(obj.definition, { collection : "__test__", autoIndex: false });
+    var refs = SIS.UTIL_GET_OID_PATHS(mongooseSchema).map(function(ref) {
+        return ref.ref;
+    });
+    obj[SIS.FIELD_SIS_META][SIS.FIELD_REFERENCES] = refs;
+    return Promise.resolve(obj);
 };
 
 SchemaManager.prototype.authorize = function(evt, doc, user, mergedDoc) {
