@@ -361,7 +361,7 @@ Manager.prototype._update = function(id, obj, options, saveFunc) {
         .then(function(updated) {
             if (isUpgradeFromV1) {
                 // need to unset the old SIS fields of the individual object
-
+                return this.finishUpdate(oldV11, updated);
             } else {
                 return this.finishUpdate(oldV11, updated);
             }

@@ -137,7 +137,7 @@ SchemaManager.prototype.validate = function(modelObj, toUpdate, options) {
                 return "ID Field must be required and unique.";
             }
         }
-        var mongooseSchema = new this.mongoose.Schema(modelObj.definition, { collection : "__test__" });
+        var mongooseSchema = new this.mongoose.Schema(modelObj.definition, { collection : "__test__", autoIndex: false });
 
         var refs = SIS.UTIL_GET_OID_PATHS(mongooseSchema).map(function(ref) {
             return ref.ref;
@@ -299,11 +299,7 @@ SchemaManager.prototype.finishUpdate = function(oldSchema, updatedSchema) {
     }
 
     resultPromise = resultPromise.then(function() {
-        var d = Promise.pending();
-        currentMongooseModel.ensureIndexes(function(err) {
-            d.resolve(updatedSchema);
-        });
-        return d.promise;
+        return updatedSchema;
     });
 
     // find all paths that need to be unset/deleted
