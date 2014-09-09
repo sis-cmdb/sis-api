@@ -439,7 +439,7 @@ describe('SchemaManager', function() {
           });
 
       });
-
+      //
       after(function(done) {
           schemaManager.delete(schema.name).nodeify(done);
       });
@@ -461,14 +461,15 @@ describe('SchemaManager', function() {
       });
 
       it("Should remove the unique index", function(done) {
+          this.timeout(600000);
           delete schema.definition.str.unique;
           schemaManager.update(schema.name, schema).then(function(result) {
               schemaDoc = result[1].toObject();
               var EntityType = schemaManager.getEntityModel(schemaDoc);
               var doc2 = new EntityType({ str : "foo", other : "bar" });
               doc2.save(function(err) {
-                 should.not.exist(err);
-                 done();
+                  should.not.exist(err);
+                  done();
               });
           }).catch(done);
       });
@@ -490,165 +491,5 @@ describe('SchemaManager', function() {
           }).catch(done);
       });
 
-  });
-
-  describe("lock-schema", function() {
-    var schema = {
-      "name":"test_lock_entity",
-      "owner" : "test",
-      "locked_fields" : ["str", "num"],
-      "definition": {
-        "str":   "String",
-        "num":   "Number",
-        "date":  "Date",
-        "bool":  "Boolean",
-        "arr": []
-      }
-    };
-
-    var schemaDoc = null;
-
-    // create the schema and add an entity
-    before(function(done) {
-        schemaManager.add(schema).nodeify(function(err, result) {
-          if (err) return done(err);
-          schemaDoc = result;
-          schemaDoc.toObject()[SIS.FIELD_LOCKED].should.eql(false);
-          done();
-        });
-    });
-    after(function(done) {
-        schemaManager.delete(schema.name).nodeify(done);
-    });
-
-    it("Should lock the schema", function(done) {
-        var obj = schemaDoc.toObject();
-        obj[SIS.FIELD_LOCKED] = true;
-        schemaManager.update("test_lock_entity", obj).nodeify(function(e, r) {
-            should.not.exist(e);
-            schemaDoc = r[1];
-            schemaDoc.toObject()[SIS.FIELD_LOCKED].should.eql(true);
-            done();
-        });
-    });
-
-    it("Should not delete the schema", function(done) {
-        schemaManager.delete("test_lock_entity").nodeify(function(e, r) {
-            should.exist(e);
-            should.not.exist(r);
-            done();
-        });
-    });
-
-    it("Should unlock the schema", function(done) {
-        var obj = schemaDoc.toObject();
-        obj[SIS.FIELD_LOCKED] = false;
-        schemaManager.update("test_lock_entity", obj).nodeify(function(e, r) {
-            should.not.exist(e);
-            schemaDoc = r[1];
-            schemaDoc.toObject()[SIS.FIELD_LOCKED].should.eql(false);
-            done();
-        });
-    });
-
-    it("Should prevent updating the schema", function(done) {
-        var obj = schemaDoc.toObject();
-        delete obj.definition.str;
-        schemaManager.update("test_lock_entity", obj).nodeify(function(e, r) {
-            should.exist(e);
-            should.not.exist(r);
-            done();
-        });
-    });
-
-    it("Should delete the date field", function(done) {
-        var obj = schemaDoc.toObject();
-        delete obj.definition.date;
-        schemaManager.update("test_lock_entity", obj).nodeify(function(e, r) {
-            should.exist(r);
-            should.not.exist(e);
-            done();
-        });
-    });
-    it("Should delete the str field", function(done) {
-        var obj = schemaDoc.toObject();
-        delete obj.definition.str;
-        obj[SIS.FIELD_LOCKED_FIELDS] = ["num"];
-        schemaManager.update("test_lock_entity", obj).nodeify(function(e, r) {
-            should.exist(r);
-            should.not.exist(e);
-            done();
-        });
-    });
-  });
-
-  describe("immutable schemas", function() {
-      var schema = {
-        "name":"test_immutable_schema",
-        "owner" : ["test"],
-        "definition": {
-          "str":   "String"
-        }
-      };
-
-      var schemaDoc = null;
-
-      // create the schema and add an entity
-      before(function(done) {
-          schemaManager.add(schema).nodeify(function(err, result) {
-            if (err) return done(err);
-            schemaDoc = result;
-            done();
-          });
-      });
-      after(function(done) {
-          schemaManager.delete(schema.name).nodeify(done);
-      });
-
-      it("Should mark the schema immutable and add num", function(done) {
-          var obj = schemaDoc.toObject();
-          obj[SIS.FIELD_IMMUTABLE] = true;
-          obj.definition.num = "Number";
-          schemaManager.update(schema.name, obj).spread(function(old, updated) {
-              schemaDoc = updated;
-              var schemaObj = schemaDoc.toObject();
-              schemaObj[SIS.FIELD_IMMUTABLE].should.eql(true);
-              schemaObj.definition.num.should.eql("Number");
-              done();
-          }).catch(done);
-      });
-
-      it("Should fail to update the schema", function(done) {
-         var obj = schemaDoc.toObject();
-         obj.definition.other = "Number";
-         schemaManager.update(schema.name, obj).spread(function(o, r) {
-             done("Should not have updated.");
-         }).catch(function(e) {
-             // good this should error
-             should.exist(e);
-             done();
-         });
-      });
-
-      it("Should make the schema mutable", function(done) {
-          var obj = schemaDoc.toObject();
-          obj[SIS.FIELD_IMMUTABLE] = false;
-          schemaManager.update(schema.name, obj).spread(function(old, updated) {
-              schemaDoc = updated;
-              var schemaObj = schemaDoc.toObject();
-              schemaObj[SIS.FIELD_IMMUTABLE].should.eql(false);
-              done();
-          }).catch(done);
-      });
-
-      it("Should update the schema now", function(done) {
-          var obj = schemaDoc.toObject();
-          obj.definition.other = "Number";
-          schemaManager.update(schema.name, obj).spread(function(old, updated) {
-              schemaDoc = updated;
-              schemaDoc.toObject().definition.other.should.eql("Number");
-              done();
-          }).catch(done);
-      });
   });
 });

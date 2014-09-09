@@ -142,13 +142,11 @@ UserManager.prototype.authorize = function(evt, doc, user, mergedDoc) {
                     }
                 }
                 // non role fields can't be changed here.
-                for (k in doc) {
-                    if (k != SIS.FIELD_ROLES && k != SIS.FIELD_UPDATED_BY) {
-                        if (k in mergedDoc && mergedDoc[k].toString() != doc[k].toString()) {
-                            // can't change this field.
-                            return Promise.reject(SIS.ERR_BAD_CREDS("Only the user or a super user can change non role fields. (" + k + ")"));
-                        }
-                    }
+                var docDiff = jsondiff.diff(doc, mergedDoc.toObject());
+                delete docDiff[SIS.FIELD_ROLES];
+                for (k in docDiff) {
+                    // can't change this field.
+                    return Promise.reject(SIS.ERR_BAD_CREDS("Only the user or a super user can change non role fields. (" + k + ")"));
                 }
             } else {
                 // not changing roles.. only fields

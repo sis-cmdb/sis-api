@@ -322,4 +322,170 @@ describe('@API - Schema API', function() {
             });
         });
     });
+
+    // TODO - move to v1 and v1.1 meta APIs
+    describe("lock-schema", function() {
+      var schema = {
+        "name":"test_lock_entity",
+        "owner" : "test",
+        "locked_fields" : ["str", "num"],
+        "definition": {
+          "str":   "String",
+          "num":   "Number",
+          "date":  "Date",
+          "bool":  "Boolean",
+          "arr": []
+        }
+      };
+
+      var schemaDoc = null;
+
+      // create the schema and add an entity
+      before(function(done) {
+          ApiServer.del('/api/v1/schemas/' + schema.name)
+              .end(function() {
+              ApiServer.post('/api/v1/schemas').send(schema)
+              .expect(201, function(err, result) {
+                  if (err) return done(err);
+                  schemaDoc = result.body;
+                  schemaDoc['sis_' + SIS.FIELD_LOCKED].should.eql(false);
+                  done();
+              });
+          });
+      });
+      after(function(done) {
+          ApiServer.del('/api/v1/schemas/' + schema.name).expect(200, done);
+      });
+
+      it("Should lock the schema", function(done) {
+          schemaDoc['sis_' + SIS.FIELD_LOCKED] = true;
+          ApiServer.put("/api/v1/schemas/" + schema.name)
+          .send(schemaDoc).expect(200, function(err, result) {
+              should.not.exist(err);
+              schemaDoc = result.body;
+              schemaDoc['sis_' + SIS.FIELD_LOCKED].should.eql(true);
+              done();
+          });
+      });
+
+      it("Should not delete the schema", function(done) {
+          ApiServer.del('/api/v1/schemas/' + schema.name)
+          .expect(401, done);
+      });
+
+      it("Should unlock the schema", function(done) {
+          schemaDoc['sis_' + SIS.FIELD_LOCKED] = false;
+          ApiServer.put("/api/v1/schemas/" + schema.name)
+          .send(schemaDoc).expect(200, function(err, result) {
+              should.not.exist(err);
+              schemaDoc = result.body;
+              schemaDoc['sis_' + SIS.FIELD_LOCKED].should.eql(false);
+              done();
+          });
+      });
+
+      it("Should prevent updating the schema with locked_fields", function(done) {
+          var obj = JSON.parse(JSON.stringify(schemaDoc));
+          delete obj.definition.str;
+          ApiServer.put("/api/v1/schemas/" + schema.name)
+          .send(obj).expect(400, done);
+      });
+
+      it("Should delete the date field", function(done) {
+          var obj = JSON.parse(JSON.stringify(schemaDoc));
+          delete obj.definition.date;
+          ApiServer.put("/api/v1/schemas/" + schema.name)
+          .send(obj).expect(200, function(err, res) {
+              should.not.exist(err);
+              schemaDoc = res.body;
+              should.not.exist(schemaDoc.definition.date);
+              done();
+          });
+      });
+      it("Should delete the str field", function(done) {
+          var obj = JSON.parse(JSON.stringify(schemaDoc));
+          delete obj.definition.str;
+          obj[SIS.FIELD_LOCKED_FIELDS] = ["num"];
+          ApiServer.put("/api/v1/schemas/" + schema.name)
+          .send(obj).expect(200, function(err, res) {
+              should.not.exist(err);
+              schemaDoc = res.body;
+              should.not.exist(schemaDoc.definition.str);
+              done();
+          });
+      });
+    });
+
+    describe("immutable schemas", function() {
+        var schema = {
+          "name":"test_immutable_schema",
+          "owner" : ["test"],
+          "definition": {
+            "str":   "String"
+          }
+        };
+
+        var schemaDoc = null;
+
+        // create the schema and add an entity
+        before(function(done) {
+            ApiServer.del('/api/v1/schemas/' + schema.name)
+                .end(function() {
+                ApiServer.post('/api/v1/schemas').send(schema)
+                .expect(201, function(err, result) {
+                    if (err) return done(err);
+                    schemaDoc = result.body;
+                    schemaDoc['sis_' + SIS.FIELD_LOCKED].should.eql(false);
+                    done();
+                });
+            });
+        });
+        after(function(done) {
+            ApiServer.del('/api/v1/schemas/' + schema.name).expect(200, done);
+        });
+
+        it("Should mark the schema immutable and add num", function(done) {
+            var obj = JSON.parse(JSON.stringify(schemaDoc));
+            obj['sis_' + SIS.FIELD_IMMUTABLE] = true;
+            obj.definition.num = "Number";
+            ApiServer.put("/api/v1/schemas/" + schema.name)
+            .send(obj).expect(200, function(err, res) {
+                should.not.exist(err);
+                schemaDoc = res.body;
+                schemaDoc['sis_' + SIS.FIELD_IMMUTABLE].should.eql(true);
+                schemaDoc.definition.num.should.eql("Number");
+                done();
+            });
+        });
+
+        it("Should fail to update the schema", function(done) {
+           var obj = JSON.parse(JSON.stringify(schemaDoc));
+           obj.definition.other = "Number";
+           ApiServer.put("/api/v1/schemas/" + schema.name)
+           .send(obj).expect(401, done);
+        });
+
+        it("Should make the schema mutable", function(done) {
+            var obj = JSON.parse(JSON.stringify(schemaDoc));
+            obj['sis_' + SIS.FIELD_IMMUTABLE] = false;
+            ApiServer.put("/api/v1/schemas/" + schema.name)
+            .send(obj).expect(200, function(err, res) {
+                should.not.exist(err);
+                schemaDoc = res.body;
+                schemaDoc['sis_' + SIS.FIELD_IMMUTABLE].should.eql(false);
+                done();
+            });
+        });
+
+        it("Should update the schema now", function(done) {
+            var obj = JSON.parse(JSON.stringify(schemaDoc));
+            obj.definition.other = "Number";
+            ApiServer.put("/api/v1/schemas/" + schema.name)
+            .send(obj).expect(200, function(err, res) {
+                var obj = res.body;
+                obj.definition.other.should.eql("Number");
+                done();
+            });
+        });
+    });
 });

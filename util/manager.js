@@ -50,6 +50,14 @@ Manager.prototype.objectRemoved = function(obj) {
     return Promise.resolve(obj);
 };
 
+Manager.prototype._getDefaultOptions = function(options) {
+    options = options || { };
+    if (!('version' in options)) {
+        options.version = "v1";
+    }
+    return options;
+};
+
 /** Common methods - rare to override these **/
 // Get a single object that has certain properties.
 Manager.prototype.getSingleByCondition = function(condition, name, options) {
@@ -140,19 +148,20 @@ Manager.prototype._commonAuth = function(evt, doc, user, mergedDoc) {
         }
     } else if (evt == SIS.EVENT_UPDATE) {
         if (docMeta[SIS.FIELD_IMMUTABLE]) {
+            mergedDoc = mergedDoc.toObject();
             var mergeMeta = mergedDoc[SIS.FIELD_SIS_META];
-            var diff = jsondiffpatch.diff(doc, mergedDoc.toObject()) || { };
+            var diff = jsondiffpatch.diff(doc, mergedDoc) || { };
             var changedKeys = Object.keys(diff).filter(function(k) {
                 return k[0] != '_';
             });
             if (changedKeys.length > 0) {
-                return SIS.ERR_BAD_REQ("Cannot change an immutable object unless only changing immutable state");
+                return SIS.ERR_BAD_CREDS("Cannot change an immutable object unless only changing immutable state");
             }
             // ensure only sis meta immutable is being changed
             diff = jsondiffpatch.diff(docMeta, mergeMeta) || { };
             changedKeys = Object.keys(diff);
             if (changedKeys.length != 1 && changedKeys[0] != SIS.FIELD_IMMUTABLE) {
-                return SIS.ERR_BAD_REQ("Cannot change an immutable object unless only changing immutable state");
+                return SIS.ERR_BAD_CREDS("Cannot change an immutable object unless only changing immutable state");
             }
         }
     }
@@ -189,7 +198,7 @@ Manager.prototype.authorize = function(evt, doc, user, mergedDoc) {
 // Ensures the user can add the object and then add it
 Manager.prototype.add = function(obj, options) {
     // default to v1
-    options = options || { version : "v1" };
+    options = this._getDefaultOptions(options);
     var user = options.user;
     var err = this.validate(obj, null, options);
     if (err) {
@@ -205,7 +214,7 @@ Manager.prototype.add = function(obj, options) {
 
 
 Manager.prototype.bulkAdd = function(items, options) {
-    options = options || { version : "v1" };
+    options = this._getDefaultOptions(options);
     var user = options.user;
     var allOrNone = options.allOrNone;
     var memo = { success: [], errors: [] };
@@ -404,7 +413,7 @@ Manager.prototype.canInsertWithId = function(id, obj) {
 };
 
 Manager.prototype.upsert = function(id, obj, options) {
-    options = options || { };
+    options = this._getDefaultOptions(options);
     // get by id first
     return this.getById(id, { lean : true }).bind(this).then(function(found) {
         return this.update(id, obj, options);
@@ -419,7 +428,7 @@ Manager.prototype.upsert = function(id, obj, options) {
 
 // Ensures the user can update the object and then update it
 Manager.prototype.update = function(id, obj, options) {
-    options = options || { version : "v1" };
+    options = this._getDefaultOptions(options);
     var cas = options.cas;
     var saveFunc = this._save;
     // if cas, use the cas save rather than generic save
@@ -431,7 +440,7 @@ Manager.prototype.update = function(id, obj, options) {
 
 // Ensures the user can delete the object and then delete it
 Manager.prototype.delete = function(id, options) {
-    options = options || { };
+    options = this._getDefaultOptions(options);
     var user = options.user;
     var self = this;
     var p = this.getById(id, { lean : true }).then(function(obj) {
@@ -444,7 +453,7 @@ Manager.prototype.delete = function(id, options) {
 };
 
 Manager.prototype.bulkDelete = function(condition, options) {
-    options = options || { };
+    options = this._getDefaultOptions(options);
     var user = options.user;
     var memo = { success: [], errors: [] };
     return this.getAll(condition, { lean: true })
