@@ -7,7 +7,7 @@ Table of Contents
     - [Errors](#errors)
     - [SIS Resources](#sis-resources)
         - [SIS Fields](#sis-fields)
-    - [Changes in V1.1](#changes-in-v1.1)
+    - [Changes in V1.1](#changes-in-v11)
         - [Transitioning](#transitioning)
 - [Endpoint API](#endpoint-api)
     - [List retrieval options](#list-retrieval-options)
