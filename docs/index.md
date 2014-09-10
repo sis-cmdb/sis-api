@@ -7,6 +7,8 @@ Table of Contents
     - [Errors](#errors)
     - [SIS Resources](#sis-resources)
         - [SIS Fields](#sis-fields)
+    - [Changes in V1.1](#changes-in-v1.1)
+        - [Transitioning](#transitioning)
 - [Endpoint API](#endpoint-api)
     - [List retrieval options](#list-retrieval-options)
         - [Pagination](#pagination)
@@ -110,10 +112,98 @@ Additionally, SIS provides the following fields on all objects that authorized u
 
 With the exception of `owner`, all SIS fields are prefixed with `_` or `sis_`.
 
+## Changes in V1.1
+
+In the V1 API, all SIS fields are in the top level of the object.  For instance, the following entity may
+exist in V1:
+
+```javascript
+{
+    // SIS fields
+    "_id" : "some_id",
+    "__v" : 0,
+    "_created_at" : 1,
+    "_updated_at" : 2,
+    "_updated_by" : "user2",
+    "_created_by" : "user1",
+    "sis_locked" : false,
+    "sis_immutable" : true,
+    "sis_tags" : ['tag1'],
+    "owner" : ['sis_documentation'],
+
+    // entity fields
+    "name" : "some_name",
+    "number" : 10,
+    "bool" : false
+    // etc..
+}
+```
+
+The embedding of fields in the top level can be problematic for client parsers and also clutters objects
+as new SIS fields are added.  In V1.1, all SIS fields *except* _id and __v are moved into a `_sis` sub object.
+For instance, the following represents the v1.1 representation of the above object:
+
+```javascript
+{
+    // SIS fields
+    "_id" : "some_id",
+    // __v has been renamed to _v
+    "_v" : 0,
+    // all sis fields have been moved into _sis
+    "_sis" : {
+        // immutable SIS metadata fields start with _
+        "_created_at" : 1,
+        "_updated_at" : 2,
+        "_updated_by" : "user2",
+        "_created_by" : "user1",
+        // sis_ fields have been renamed
+        // all mutable fields below
+        "locked" : false,
+        "immutable" : true,
+        "tags" : ["tag1"],
+        "owner" : ["sis_documentation"]
+    },
+
+    // entity fields
+    "name" : "some_name",
+    "number" : 10,
+    "bool" : false
+    // etc..
+}
+```
+
+When using the V1.1 API, to change any SIS metadata send the `_sis` object in the request body.  For instance,
+to change the tags of of the above object, send the above request body in the PUT request:
+
+```javascript
+{
+    "_sis" : {
+        "tags" : ["sis_documentation", "another_tag"]
+    }
+}
+```
+
+In other words, it looks like any other update request.
+
+Additionally, the v1.1 API no longer requires owner to be present on POST requests for non super users.
+The `_sis.owner` will be automatically inferred from the roles of the user.
+
+### Transitioning
+
+While V1.1 is new, SIS will continue to support the V1 API for the near future.  Clients should move all code
+to use the V1.1 API if possible.
+
+While V1 is supported, the SIS backend will return objects in th expected format.  Additionally, queries against SIS
+fields are converted to look at both V1 and V1.1 objects.
+
+Objects are stored in the backing database in V1.1 format on all inserts.  When issuing an update to a V1 object,
+the object is converted to V1.1.  All of this should be transparent to V1 clients.
+
 # Endpoint API
 
 All SIS resources expose an HTTP base endpoint.  The endpoint paths are versioned.
-For instance, the base endpoint for the version 1 schemas API is `/api/v1/schemas`.
+For instance, the base endpoint for the version 1 schemas API is `/api/v1/schemas`.  In version 1.1,
+the base endpoint is `/api/v1.1/schemas`.
 
 The following HTTP methods are common to all endpoints:
 
@@ -329,8 +419,9 @@ Upsert operations create or modify an object depending on if an object exists wi
 
 The [entities]('./entities.md') API supports upsert only if the schema has `id_field` set to something other than `_id`.
 
-The
+The following request upserts a schema with name "upserted_schema":
 
+`PUT /api/v1/schemas/upserted_schema?upsert=true` with the body containing the schema JSON.
 
 # Data Sharing and Organization
 
