@@ -411,7 +411,8 @@ module.exports = {
                 var v1Doc = {};
                 v1Doc[k] = tmp;
                 var v11Doc = {};
-                v11Doc[FIELD_SIS_META + "." + k] = tmp;
+                var metaField = V1_TO_SIS_META[k];
+                v11Doc[FIELD_SIS_META + "." + metaField] = tmp;
                 var orDoc = {
                     $or : [v1Doc, v11Doc]
                 };
