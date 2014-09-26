@@ -1,12 +1,14 @@
 describe('@API - Schema API', function() {
     "use strict";
 
-    var SIS = require("../util/constants");
-    var config = require('./fixtures/config');
     var should = require('should');
-    var TestUtil = require('./fixtures/util');
-    var ApiServer = new TestUtil.TestServer();
     var async = require('async');
+
+    var SIS = require("../../util/constants");
+    var config = require('../fixtures/config');
+    var TestUtil = require('../fixtures/util');
+
+    var ApiServer = new TestUtil.TestServer();
 
     it("Should setup fixtures", function(done) {
         ApiServer.start(config, function(e) {
@@ -18,7 +20,6 @@ describe('@API - Schema API', function() {
     after(function(done) {
         ApiServer.stop(done);
     });
-
 
     describe("Schema failure cases", function() {
         it("Should fail if type does not exist ", function(done) {

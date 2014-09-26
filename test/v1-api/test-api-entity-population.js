@@ -3,9 +3,11 @@ describe('@API - Entity Population API', function() {
 
     var should = require('should');
     var async = require('async');
-    var SIS = require("../util/constants");
-    var config = require('./fixtures/config');
-    var TestUtil = require('./fixtures/util');
+
+    var SIS = require("../../util/constants");
+    var config = require('../fixtures/config');
+    var TestUtil = require('../fixtures/util');
+
     var ApiServer = new TestUtil.TestServer();
 
     it("Should setup fixtures", function(done) {

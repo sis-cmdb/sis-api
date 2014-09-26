@@ -1,5 +1,7 @@
 "use strict";
 
+var Promise = require("bluebird");
+
 function TestServer() {
     var serverData = null;
 
@@ -114,7 +116,7 @@ function TestServer() {
             result.set("x-auth-token", this.authToken);
         }
         result.set('Accept', 'application/json');
-        return result;
+        return Promise.promisifyAll(result);
     };
 
     this.stop = function(callback) {

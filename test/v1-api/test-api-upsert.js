@@ -16,12 +16,15 @@
 
 describe('@API - Upsert', function() {
 
-    var SIS = require("../util/constants");
-    var config = require('./fixtures/config');
     var should = require('should');
-    var TestUtil = require('./fixtures/util');
-    var ApiServer = new TestUtil.TestServer();
     var Promise = require('bluebird');
+
+    var SIS = require("../../util/constants");
+    var config = require('../fixtures/config');
+    var TestUtil = require('../fixtures/util');
+
+    var ApiServer = new TestUtil.TestServer();
+
 
     it("Should setup fixtures", function(done) {
         ApiServer.start(config, function(e) {

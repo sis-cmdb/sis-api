@@ -2,10 +2,12 @@ describe('@API - Filtering API', function() {
     "use strict";
 
     var should = require('should');
-    var SIS = require("../util/constants");
-    var config = require('./fixtures/config');
-    var TestUtil = require('./fixtures/util');
     var async = require('async');
+
+    var SIS = require("../../util/constants");
+    var config = require('../fixtures/config');
+    var TestUtil = require('../fixtures/util');
+
     var ApiServer = new TestUtil.TestServer();
 
     var schema = {

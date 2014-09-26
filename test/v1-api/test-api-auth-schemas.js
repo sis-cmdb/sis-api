@@ -4,11 +4,10 @@ describe('@API - Authorization API Schemas', function() {
     var should = require('should');
     var async = require('async');
 
-    var SIS = require("../util/constants");
-    var config = require('./fixtures/config');
-    var TestUtil = require('./fixtures/util');
-
-    var AuthFixture = require("./fixtures/authdata");
+    var SIS = require("../../util/constants");
+    var config = require('../fixtures/config');
+    var TestUtil = require('../fixtures/util');
+    var AuthFixture = require("../fixtures/authdata");
 
     var ApiServer = new TestUtil.TestServer();
 

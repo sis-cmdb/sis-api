@@ -1,13 +1,15 @@
 describe('@API - Entity References', function() {
     "use strict";
 
-    var SIS = require("../util/constants");
-    var config = require('./fixtures/config');
     var should = require('should');
-    var TestUtil = require('./fixtures/util');
-    var ApiServer = new TestUtil.TestServer();
     var async = require('async');
     var Promise = require('bluebird');
+
+    var SIS = require("../../util/constants");
+    var config = require('../fixtures/config');
+    var TestUtil = require('../fixtures/util');
+
+    var ApiServer = new TestUtil.TestServer();
 
     before(function(done) {
         ApiServer.start(config, function(e) {

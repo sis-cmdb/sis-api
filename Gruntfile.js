@@ -57,7 +57,7 @@ module.exports = function(grunt) {
           timeout: 60000,
           require: 'test/fixtures/coverage-blanket'
         },
-        src: ['test/init-tests.js', 'test/test-tokenmanager.js', 'test/test-*.js']
+        src: ['test/init-tests.js', 'test/test-tokenmanager.js', 'test/test-*.js', 'test/v1-api/*']
       },
       coverage: {
         options: {

@@ -1,13 +1,14 @@
 describe('@API - Entity Join API', function() {
     "use strict";
 
-    var SIS = require("../util/constants");
-    var config = require('./fixtures/config');
     var should = require('should');
-    var TestUtil = require('./fixtures/util');
-    var ApiServer = new TestUtil.TestServer();
-    var async = require('async');
     var Promise = require('bluebird');
+
+    var SIS = require("../../util/constants");
+    var config = require('../fixtures/config');
+    var TestUtil = require('../fixtures/util');
+
+    var ApiServer = new TestUtil.TestServer();
 
     it("Should setup fixtures", function(done) {
         ApiServer.start(config, function(e) {
@@ -61,27 +62,25 @@ describe('@API - Entity Join API', function() {
         }
 
         var addSchema = function(schema, callback) {
-            ApiServer.del('/api/v1/schemas/' + schema.name)
-                .end(function() {
-                ApiServer.post('/api/v1/schemas')
-                    .send(schema).expect(201, callback);
+            return ApiServer.del('/api/v1/schemas/' + schema.name)
+                .endAsync().then(function() {
+                    return ApiServer.post('/api/v1/schemas')
+                        .send(schema).expectAsync(201);
             });
         };
 
-        var deleteSchema = function(name, callback) {
-            ApiServer.del('/api/v1/schemas/' + name)
-                .expect(200, callback);
+        var deleteSchema = function(name) {
+            return ApiServer.del('/api/v1/schemas/' + name)
+                .expectAsync(200);
         };
 
         before(function(done) {
             // setup the schemas
-            async.map(schemas, addSchema, function(err, res) {
-                if (err) { return done(err, res); }
-
+            Promise.map(schemas, addSchema).then(function(res) {
                 // join_ent_2_2 will have ref_1 = join_ent_1_2 and ref_0 = join_ent_0_2
                 var createEntities = function(i) {
                     if (i >= entities.length) {
-                        return done();
+                        return Promise.resolve("success");
                     }
                     var entities2Add = entities[i];
                     if (i > 0) {
@@ -97,31 +96,26 @@ describe('@API - Entity Join API', function() {
                         }
                     }
 
-                    async.map(entities2Add, function(entity, callback) {
-                        ApiServer.post("/api/v1/entities/join_schema_" + i)
+                    return Promise.map(entities2Add, function(entity) {
+                        return ApiServer.post("/api/v1/entities/join_schema_" + i)
                             .set("Content-Type", "application/json")
                             .query("populate=false")
                             .send(entity)
-                            .expect(201, function(e, res) {
-                                if (e) { return callback(e, null); }
-                                callback(null, res.body);
+                            .expectAsync(201).then(function(res) {
+                                return res.body;
                             });
-                        }, function(err, result) {
-                            if (err) {
-                                return done(err);
-                            }
-                            entities[i] = result;
-                            createEntities(i + 1);
-                        }
-                    );
+                    }).then(function(result) {
+                        entities[i] = result;
+                        return createEntities(i + 1);
+                    });
                 };
-                createEntities(0);
-            });
+                return createEntities(0);
+            }).nodeify(done);
         });
 
         after(function(done) {
             var names = schemas.map(function(s) { return s.name; });
-            async.map(names, deleteSchema, done);
+            Promise.map(names, deleteSchema).nodeify(done);
         });
 
         it("should fetch join_ent_1_2", function(done) {

@@ -2,10 +2,13 @@ describe('@API - Bulk Insert API', function() {
     "use strict";
 
     var should = require('should');
-    var SIS = require("../util/constants");
-    var config = require('./fixtures/config');
-    var TestUtil = require('./fixtures/util');
     var async = require('async');
+
+    var SIS = require("../../util/constants");
+    var config = require('../fixtures/config');
+    var TestUtil = require('../fixtures/util');
+    var AuthFixture = require("../fixtures/authdata");
+
     var ApiServer = new TestUtil.TestServer();
 
     var schema = {
@@ -181,7 +184,6 @@ describe('@API - Bulk Insert API', function() {
     });
 
     describe("with Auth failures", function() {
-        var AuthFixture = require("./fixtures/authdata");
         var users = AuthFixture.createUsers();
         var userToTokens = { };
 
