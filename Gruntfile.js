@@ -78,7 +78,7 @@ module.exports = function(grunt) {
           grep: '@API',
           clearRequireCache: true
         },
-        src: ['test/test-*.js', 'test/v1-api/*', 'test/v1.1-api']
+        src: ['test/test-*.js', 'test/v1-api/*', 'test/v1.1-api/*']
       },
       repl : {
         options : {
