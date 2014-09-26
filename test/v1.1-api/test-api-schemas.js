@@ -92,7 +92,7 @@ describe('@API @V1.1API - Schema API', function() {
                     sis_name : "String"
                 }
             };
-            ApiServer.del("/api/v1.1/schemas" + schema.name)
+            ApiServer.del("/api/v1.1/schemas/" + schema.name)
             .endAsync().then(function() {
                 return ApiServer.post("/api/v1.1/schemas")
                     .send(schema)
@@ -109,12 +109,17 @@ describe('@API @V1.1API - Schema API', function() {
                         owner : type
                     }
                 };
-                ApiServer.del("/api/v1.1/schemas" + schema.name)
+                ApiServer.del("/api/v1.1/schemas/" + schema.name)
                 .endAsync().then(function() {
                     ApiServer.post("/api/v1.1/schemas")
                         .set("Content-type", "application/json")
                         .send(schema)
-                        .expectAsync(201).nodeify(done);
+                        .expectAsync(201).nodeify(function(err, res) {
+                            if (err) {
+                                console.log(res.body);
+                            }
+                            done(err);
+                        });
                 });
             });
         });

@@ -145,6 +145,15 @@ describe('@API @V1API - History API', function() {
     });
 
     data.map(function(test) {
+        // fix for repeats
+        var suffix = "_" + Date.now();
+        if (test.del_url) {
+            test.del_url += suffix;
+            test.entries.forEach(function(ent) {
+                ent.name += suffix;
+            });
+        }
+
         var prefix = test.prefix;
         var idField = test.id_field || 'name';
         var entries = test.entries;
