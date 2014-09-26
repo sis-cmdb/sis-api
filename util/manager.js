@@ -329,7 +329,8 @@ Manager.prototype._update = function(id, obj, options, saveFunc) {
         // otherwise there are problems like _id mod errors from mongo
         var old = found;
         var isUpgradeFromV1 = false;
-        if (!found[SIS.FIELD_SIS_META]) {
+        if (!found[SIS.FIELD_SIS_META] ||
+            found[SIS.FIELD_CREATED_AT]) {
             // v1 - need to convert to v1.1
             found = SIS.UTIL_FROM_V1(found);
             isUpgradeFromV1 = true;
@@ -365,12 +366,13 @@ Manager.prototype._update = function(id, obj, options, saveFunc) {
         })
         .then(this._addByFields(user, SIS.EVENT_UPDATE))
         .then(this._preSave)
-        .then(this._preSave)
         .then(saveFunc)
         .then(function(updated) {
             if (isUpgradeFromV1) {
                 // need to unset the old SIS fields of the individual object
-                return this.finishUpdate(oldV11, updated);
+                return this._unsetV1Fields(updated._id).then(function() {
+                    return this.finishUpdate(oldV11, updated);
+                });
             } else {
                 return this.finishUpdate(oldV11, updated);
             }
@@ -380,6 +382,16 @@ Manager.prototype._update = function(id, obj, options, saveFunc) {
             return Promise.resolve([oldV11, updated, isUpgradeFromV1 ? old : null]);
         });
     });
+};
+
+Manager.prototype._unsetV1Fields = function(id) {
+    // need to tell mongo to unset
+    var pathsToUnset = Object.keys(SIS.V1_TO_SIS_META).reduce(function(ret, k) {
+        ret[k] = "";
+        return ret;
+    }, { });
+    return this.model.updateAsync({ _id : id },{ $unset : pathsToUnset},
+                                  { safe : true, strict: false});
 };
 
 Manager.prototype.finishUpdate = function(old, updated) {

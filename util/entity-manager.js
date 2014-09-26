@@ -105,6 +105,10 @@ EntityManager.prototype.validate = function(entity, toUpdate, options) {
         //         return err;
         //     }
         // }
+        if (this.schema[SIS.FIELD_IS_OPEN] ||
+            this.schema[SIS.FIELD_IS_PUBLIC]) {
+            return null;
+        }
         if (this._hasOwners(entity, options)) {
             var owners = this.getOwners(entity);
             if (owners instanceof Array && !owners.length) {

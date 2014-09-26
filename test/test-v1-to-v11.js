@@ -43,6 +43,9 @@ describe('Convert from v1 to v1.1', function() {
             meta.immutable.should.eql(item.sis_immutable);
             meta.owner.should.eql(item.owner);
             converted._v.should.eql(item.__v);
+            for (var k in SIS.V1_TO_SIS_META) {
+                should.not.exist(converted[k]);
+            }
         });
     });
 });

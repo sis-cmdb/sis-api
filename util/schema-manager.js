@@ -144,13 +144,13 @@ SchemaManager.prototype.validate = function(modelObj, toUpdate, options) {
                 if (!toRegex(schemaType.options.match)) {
                     throw "match " + schemaType.options.match;
                 }
-            } else if (options.version == "v1" &&
-                       path === "owner" &&
-                       (schemaType.constructor.name !== 'SchemaArray' ||
-                        !schemaType.caster ||
-                        schemaType.caster.instance != "String")) {
-                // owner is invalid
-                throw "owner must be a String array.";
+            } else if (options.version == "v1" && path === "owner") {
+                if (schemaType.constructor.name !== 'SchemaArray' ||
+                    !schemaType.caster ||
+                    schemaType.caster.instance != "String") {
+                    // owner is invalid
+                    throw "owner must be a String array.";
+                }
             }
         });
     } catch (ex) {
