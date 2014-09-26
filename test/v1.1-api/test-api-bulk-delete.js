@@ -55,7 +55,11 @@ describe('@API @V1.1API - Bulk Delete API', function() {
     };
 
     var verifyDeletedItems = function(items, done) {
-        async.mapSeries(items, function(item, cb) {
+        var asyncFunc = async.mapSeries.bind(async);
+        if (process.env.SIS_REMOTE_URL) {
+            asyncFunc = async.map.bind(async);
+        }
+        asyncFunc(items, function(item, cb) {
             var parts = [
                 "/api/v1.1/entities",
                 schema.name,

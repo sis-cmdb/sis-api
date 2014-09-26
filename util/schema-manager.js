@@ -550,6 +550,9 @@ SchemaManager.prototype.getEntityModel = function(sisSchema, isInternal) {
             for (var i = 0; i < sisSchema.indexes.length; ++i) {
                 schema.index(sisSchema.indexes[i]);
             }
+            if (sisSchema.indexes.length) {
+                result.ensureIndexes();
+            }
         }
 
         this.entitySchemaToUpdateTime[name] = schemaTime;

@@ -64,6 +64,10 @@ describe('@API @V1.1API - Bulk Insert API', function() {
         var query = {
             q : getQuery(start, num)
         };
+        var asyncFunc = async.mapSeries.bind(async);
+        if (process.env.SIS_REMOTE_URL) {
+            asyncFunc = async.map.bind(async);
+        }
         ApiServer.get("/api/v1.1/entities/" + schema.name)
         .query(query)
         .expect(200, function(err, res) {
@@ -72,7 +76,7 @@ describe('@API @V1.1API - Bulk Insert API', function() {
             res.should.be.instanceof(Array);
             res.length.should.eql(num);
             // ensure commits
-            async.mapSeries(res, function(item, cb) {
+            asyncFunc(res, function(item, cb) {
                 var path = [
                     "/api/v1.1/entities",
                     schema.name,
