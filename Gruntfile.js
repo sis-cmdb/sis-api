@@ -57,7 +57,8 @@ module.exports = function(grunt) {
           timeout: 60000,
           require: 'test/fixtures/coverage-blanket'
         },
-        src: ['test/init-tests.js', 'test/test-tokenmanager.js', 'test/test-*.js', 'test/v1-api/*']
+        src: ['test/init-tests.js', 'test/test-tokenmanager.js', 'test/test-*.js',
+              'test/v1-api/test-*', 'test/v1.1-api/test-*']
       },
       coverage: {
         options: {
@@ -68,7 +69,7 @@ module.exports = function(grunt) {
           // output (the quiet option does not suppress this)
           captureFile: grunt.option('coverage_out') || '_reports/coverage.html'
         },
-        src: ['test/init-tests.js', 'test/test-*.js']
+        src: ['test/init-tests.js', 'test/test-*.js', 'test/v1-api/*', 'test/v1.1-api/*']
       },
       remote : {
         options: {
@@ -77,7 +78,7 @@ module.exports = function(grunt) {
           grep: '@API',
           clearRequireCache: true
         },
-        src: ['test/test-*.js']
+        src: ['test/test-*.js', 'test/v1-api/*', 'test/v1.1-api']
       },
       repl : {
         options : {

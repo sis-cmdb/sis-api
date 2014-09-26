@@ -1,4 +1,4 @@
-describe('@API @V1API - Entity References', function() {
+describe('@API @V1.1API - Entity References', function() {
     "use strict";
 
     var should = require('should');
@@ -23,15 +23,15 @@ describe('@API @V1API - Entity References', function() {
     });
 
     var addSchema = function(schema, callback) {
-        ApiServer.del('/api/v1/schemas/' + schema.name)
+        ApiServer.del('/api/v1.1/schemas/' + schema.name)
             .end(function() {
-            ApiServer.post('/api/v1/schemas')
+            ApiServer.post('/api/v1.1/schemas')
                 .send(schema).expect(201, callback);
         });
     };
 
     var deleteSchema = function(name, callback) {
-        ApiServer.del('/api/v1/schemas/' + name)
+        ApiServer.del('/api/v1.1/schemas/' + name)
             .expect(200, callback);
     };
 
@@ -39,7 +39,7 @@ describe('@API @V1API - Entity References', function() {
 
         var schema_1 = {
             "name" : "ref_1",
-            "owner" : "entity_test",
+            _sis : { "owner" : ["entity_test"] },
             "definition" : {
                 "name" : "String"
             }
@@ -47,7 +47,7 @@ describe('@API @V1API - Entity References', function() {
 
         var schema_2 = {
             "name" : "ref_2",
-            "owner" : "entity_test",
+            _sis : { "owner" : ["entity_test"] },
             "definition" : {
                 "name" : "String",
                 "refs" : [{ type : "ObjectId", ref : "ref_1"}]
@@ -56,7 +56,7 @@ describe('@API @V1API - Entity References', function() {
 
         var schema_3 = {
             "name" : "ref_3",
-            "owner" : "entity_test",
+            _sis : { "owner" : ["entity_test"] },
             "definition" : {
                 "name" : "String"
             }
@@ -64,7 +64,7 @@ describe('@API @V1API - Entity References', function() {
 
         var schema_4 = {
             "name" : "ref_4",
-            "owner" : "entity_test",
+            _sis : { "owner" : ["entity_test"] },
             "definition" : {
                 "name" : "String",
                 "ref" : { type : "ObjectId", ref : "ref_1" },
@@ -74,7 +74,7 @@ describe('@API @V1API - Entity References', function() {
 
         var schema_5 = {
             name : "ref_5",
-            owner : "entity_test",
+            _sis : { "owner" : ["entity_test"] },
             definition : {
                 name : "String",
                 embedded_docs : [{
@@ -100,7 +100,7 @@ describe('@API @V1API - Entity References', function() {
                 }
                 var req = ApiServer;
                 async.map(['foo', 'bar', 'baz', 'qux', 'quux'], function(name, callback) {
-                    req.post("/api/v1/entities/ref_1")
+                    req.post("/api/v1.1/entities/ref_1")
                         .set("Content-Type", "application/json")
                         .query("populate=false")
                         .send({
@@ -113,7 +113,7 @@ describe('@API @V1API - Entity References', function() {
                             result = result.body;
                             entities.ref_1.push(result);
 
-                            req.post("/api/v1/entities/ref_3")
+                            req.post("/api/v1.1/entities/ref_3")
                                 .set("Content-Type", "application/json")
                                 .query("populate=false")
                                 .send({
@@ -139,13 +139,13 @@ describe('@API @V1API - Entity References', function() {
 
 
         it("ref_2 should have oid reference paths", function(done) {
-            ApiServer.get("/api/v1/schemas/ref_2")
+            ApiServer.get("/api/v1.1/schemas/ref_2")
                 .expect(200, function(err, res) {
                 should.not.exist(err);
                 var schema = res.body;
-                should.exist(schema[SIS.FIELD_REFERENCES]);
-                schema[SIS.FIELD_REFERENCES].length.should.eql(1);
-                schema[SIS.FIELD_REFERENCES][0].should.eql('ref_1');
+                should.exist(schema._sis[SIS.FIELD_REFERENCES]);
+                schema._sis[SIS.FIELD_REFERENCES].length.should.eql(1);
+                schema._sis[SIS.FIELD_REFERENCES][0].should.eql('ref_1');
                 done();
             });
         });
@@ -157,7 +157,7 @@ describe('@API @V1API - Entity References', function() {
                 'name' : 'bad_ref_2',
                 'refs' : ids
             };
-            ApiServer.post("/api/v1/entities/ref_2")
+            ApiServer.post("/api/v1.1/entities/ref_2")
                 .set("Content-Type", "application/json")
                 .query("populate=false")
                 .send(entity)
@@ -175,14 +175,14 @@ describe('@API @V1API - Entity References', function() {
                 'refs' : ids
             };
             var req = ApiServer;
-            req.post("/api/v1/entities/ref_2")
+            req.post("/api/v1.1/entities/ref_2")
                 .set("Content-Type", "application/json")
                 .send(entity)
                 .expect(201, function(err, result) {
                     should.not.exist(err);
                     result = result.body;
                     var id = result._id;
-                    req.get("/api/v1/entities/ref_2/" + id)
+                    req.get("/api/v1.1/entities/ref_2/" + id)
                         .expect(200, function(e, r) {
                             should.not.exist(e);
                             result = r.body;
@@ -202,7 +202,7 @@ describe('@API @V1API - Entity References', function() {
                 'refs' : []
             };
             var req = ApiServer;
-            req.post("/api/v1/entities/ref_2")
+            req.post("/api/v1.1/entities/ref_2")
                 .set("Content-Type", "application/json")
                 .send(entity)
                 .expect(201, function(err, result) {
@@ -210,7 +210,7 @@ describe('@API @V1API - Entity References', function() {
                 // update the doc
                 result = result.body;
                 result.refs = ids;
-                req.put("/api/v1/entities/ref_2/" + result._id)
+                req.put("/api/v1.1/entities/ref_2/" + result._id)
                    .set("Content-Type", "application/json")
                    .send(result)
                    .expect(200, function(e, r) {
@@ -232,7 +232,7 @@ describe('@API @V1API - Entity References', function() {
                 'refs' : ids
             };
             var req = ApiServer;
-            req.post("/api/v1/entities/ref_2")
+            req.post("/api/v1.1/entities/ref_2")
                 .set("Content-Type", "application/json")
                 .send(entity)
                 .expect(201, function(err, result) {
@@ -240,7 +240,7 @@ describe('@API @V1API - Entity References', function() {
                 // update the doc
                 result = result.body;
                 result.refs = [null, ids[0]];
-                req.put("/api/v1/entities/ref_2/" + result._id)
+                req.put("/api/v1.1/entities/ref_2/" + result._id)
                    .set("Content-Type", "application/json")
                    .send(result)
                    .expect(200, function(e, r) {
@@ -269,7 +269,7 @@ describe('@API @V1API - Entity References', function() {
                 name : "s5_test",
                 embedded_docs : docs
             };
-            ApiServer.post("/api/v1/entities/ref_5")
+            ApiServer.post("/api/v1.1/entities/ref_5")
             .send(s5Item).expect(201, function(e, r) {
                 if (e) { return done(e); }
                 savedS5 = r.body;
@@ -285,7 +285,7 @@ describe('@API @V1API - Entity References', function() {
                 // add a dupe
                 ed.refs.push(ed.refs[0]);
             });
-            ApiServer.put("/api/v1/entities/ref_5/" + savedS5._id)
+            ApiServer.put("/api/v1.1/entities/ref_5/" + savedS5._id)
                 .send(savedS5).expect(200, done);
         });
     });
@@ -294,7 +294,7 @@ describe('@API @V1API - Entity References', function() {
 
         var schema1 = {
             name : "test_populate_schema_1",
-            owner : ["sistest"],
+            _sis : { owner : ["sistest"] },
             definition : {
                 name : "String",
                 other : { type : "ObjectId", ref : "test_populate_schema_2" }
@@ -303,7 +303,7 @@ describe('@API @V1API - Entity References', function() {
 
         var schema2 = {
             name : "test_populate_schema_2",
-            owner : ["sistest"],
+            _sis : { owner : ["sistest"] },
             definition : {
                 name : "String"
             }
@@ -313,13 +313,13 @@ describe('@API @V1API - Entity References', function() {
             addSchema(schema1, function(err, res) {
                 if (err) { return done(err); }
                 // add an entity
-                ApiServer.post("/api/v1/entities/test_populate_schema_1")
+                ApiServer.post("/api/v1.1/entities/test_populate_schema_1")
                     .send({ name : "test"}).expect(201, done);
             });
         });
 
         it("should fetch entities without test_populate_schema_2", function(done) {
-            ApiServer.get("/api/v1/entities/test_populate_schema_1")
+            ApiServer.get("/api/v1.1/entities/test_populate_schema_1")
                 .expect(200, function(err, res) {
                 should.not.exist(err);
                 res = res.body;
@@ -337,7 +337,7 @@ describe('@API @V1API - Entity References', function() {
         // need to test arrays of sub docs, arrays of object ids
         // and arrays of object ids -> sub array field
         var leaf_schema = {
-            "owner" : ["entity_test"],
+            _sis : { "owner" : ["entity_test"] },
             "name" : "ref_leaf_schema",
             "definition" : {
                 "name" : "String",
@@ -346,7 +346,7 @@ describe('@API @V1API - Entity References', function() {
         };
 
         var ancestor_schema = {
-            owner : ["entity_test"],
+            _sis : { "owner" : ["entity_test"] },
             name : "ref_ancestor_schema",
             definition : {
                 name : "String",
@@ -376,7 +376,7 @@ describe('@API @V1API - Entity References', function() {
                 });
             }
             var d = Promise.pending();
-            ApiServer.post("/api/v1/entities/" + leaf_schema.name)
+            ApiServer.post("/api/v1.1/entities/" + leaf_schema.name)
             .send(items).expect(200, function(err, res) {
                 if (err) { return d.reject(err); }
                 res.body.success.length.should.eql(totalLeaves);
@@ -392,7 +392,7 @@ describe('@API @V1API - Entity References', function() {
             // delete/create all the schemas
             var promises = [leaf_schema, ancestor_schema].map(function(schema) {
                 var d = Promise.pending();
-                var url = "/api/v1/schemas";
+                var url = "/api/v1.1/schemas";
                 ApiServer.del(url + '/' + schema.name).end(function() {
                     ApiServer.post(url).send(schema).expect(201, function(err, res) {
                         if (err) { return d.reject(err); }
@@ -419,7 +419,7 @@ describe('@API @V1API - Entity References', function() {
             return dneObjId;
         };
 
-        var ANC_URL = "/api/v1/entities/" + ancestor_schema.name;
+        var ANC_URL = "/api/v1.1/entities/" + ancestor_schema.name;
 
         it("Should fail to create the ancestor via leaves", function(done) {
             var oid = getDneObjectId();

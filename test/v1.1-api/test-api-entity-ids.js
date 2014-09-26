@@ -1,4 +1,4 @@
-describe('@API @V1API - Entity ID fields', function() {
+describe('@API @V1.1API - Entity ID fields', function() {
     "use strict";
 
     var should = require('should');
@@ -25,7 +25,7 @@ describe('@API @V1API - Entity ID fields', function() {
         var schema = {
             name : "test_schema_id_field",
             id_field : "name",
-            owner : ["sistest"],
+            _sis : { owner : ["sistest"] },
             definition : {
                 name : { type : "String", required : true, unique : true },
                 short_name : { type : "String", required : true, unique : true },
@@ -36,17 +36,17 @@ describe('@API @V1API - Entity ID fields', function() {
         var entities = [];
 
         before(function(done) {
-            ApiServer.del('/api/v1/schemas/test_schema_id_field')
+            ApiServer.del('/api/v1.1/schemas/test_schema_id_field')
                 .end(done);
         });
 
         after(function(done) {
-            ApiServer.del('/api/v1/schemas/test_schema_id_field')
+            ApiServer.del('/api/v1.1/schemas/test_schema_id_field')
                 .end(done);
         });
 
         it("Should add the schema", function(done) {
-            ApiServer.post("/api/v1/schemas")
+            ApiServer.post("/api/v1.1/schemas")
                 .set("Content-type", "application/json")
                 .send(schema)
                 .expect(201, done);
@@ -62,7 +62,7 @@ describe('@API @V1API - Entity ID fields', function() {
                 };
             });
             var d = Promise.pending();
-            ApiServer.post('/api/v1/entities/test_schema_id_field')
+            ApiServer.post('/api/v1.1/entities/test_schema_id_field')
             .send(data)
             .expect(200, function(err, res) {
                 if (err) {
@@ -85,7 +85,7 @@ describe('@API @V1API - Entity ID fields', function() {
         };
 
         var fetchUpdateAndDelete = function(e, field) {
-            var url = '/api/v1/entities/test_schema_id_field/' + e[field];
+            var url = '/api/v1.1/entities/test_schema_id_field/' + e[field];
             var d = Promise.pending();
             ApiServer.get(url).expect(200, function(err, res) {
                 if (err) { return d.reject(err); }
@@ -93,7 +93,7 @@ describe('@API @V1API - Entity ID fields', function() {
                     return d.reject('ID mismatch');
                 }
                 // fetch by _id should always work
-                var idUrl = '/api/v1/entities/test_schema_id_field/' + e._id;
+                var idUrl = '/api/v1.1/entities/test_schema_id_field/' + e._id;
                 ApiServer.get(idUrl).expect(200, function(err, res) {
                     if (err) { return d.reject(err); }
                     if (res.body._id != e._id) {
@@ -152,14 +152,14 @@ describe('@API @V1API - Entity ID fields', function() {
         });
 
         it("Should 404 on a non existent entity", function(done) {
-            ApiServer.get("/api/v1/entities/test_schema_id_field/foobar")
+            ApiServer.get("/api/v1.1/entities/test_schema_id_field/foobar")
             .expect(404, done);
         });
 
         it("Should fail to update to a bad ID field", function(done) {
             var update = JSON.parse(JSON.stringify(schema));
             update.id_field = 'other';
-            ApiServer.put("/api/v1/schemas/test_schema_id_field")
+            ApiServer.put("/api/v1.1/schemas/test_schema_id_field")
                 .send(update)
                 .expect(400, done);
 
@@ -168,7 +168,7 @@ describe('@API @V1API - Entity ID fields', function() {
         it("Should fail to change attributes on name", function(done) {
             var update = JSON.parse(JSON.stringify(schema));
             update.definition.name = "String";
-            ApiServer.put("/api/v1/schemas/test_schema_id_field")
+            ApiServer.put("/api/v1.1/schemas/test_schema_id_field")
                 .send(update)
                 .expect(400, done);
         });
@@ -176,7 +176,7 @@ describe('@API @V1API - Entity ID fields', function() {
         it("Should update to a valid id field", function(done) {
             var update = JSON.parse(JSON.stringify(schema));
             update.id_field = 'short_name';
-            ApiServer.put("/api/v1/schemas/test_schema_id_field")
+            ApiServer.put("/api/v1.1/schemas/test_schema_id_field")
                 .send(update)
                 .expect(200, function(err, res) {
                     should.not.exist(err);
@@ -190,14 +190,14 @@ describe('@API @V1API - Entity ID fields', function() {
         });
 
         it("Should 404 on a non existent entity again", function(done) {
-            ApiServer.get("/api/v1/entities/test_schema_id_field/foobar_short")
+            ApiServer.get("/api/v1.1/entities/test_schema_id_field/foobar_short")
             .expect(404, done);
         });
 
         it("Should reset the id field to _id", function(done) {
             var update = JSON.parse(JSON.stringify(schema));
             update.id_field = null;
-            ApiServer.put("/api/v1/schemas/test_schema_id_field")
+            ApiServer.put("/api/v1.1/schemas/test_schema_id_field")
                 .send(update)
                 .expect(200, function(err, res) {
                     should.not.exist(err);

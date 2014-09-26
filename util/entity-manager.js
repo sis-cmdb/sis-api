@@ -83,9 +83,16 @@ EntityManager.prototype.validate = function(entity, toUpdate, options) {
         keys = Object.keys(entity);
     }
     try {
-        if (!keys.length ||
-            (keys.length == 1 && keys[0] == SIS.FIELD_SIS_META)) {
+        if (!keys.length) {
             return "entity cannot be empty";
+        } else if (keys.length == 1 && keys[0] == SIS.FIELD_SIS_META) {
+            if (!toUpdate) {
+                return "entity cannot be empty";
+            }
+            if (typeof entity[SIS.FIELD_SIS_META] !== 'object' ||
+                !Object.keys(entity[SIS.FIELD_SIS_META]).length) {
+                return "entity cannot be empty";
+            }
         }
         for (i = 0; i < keys.length; ++i) {
             rf = keys[i];

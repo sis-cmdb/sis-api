@@ -1,4 +1,4 @@
-describe('@API @V1API - Filtering API', function() {
+describe('@API @V1.1API - Filtering API', function() {
     "use strict";
 
     var should = require('should');
@@ -12,7 +12,7 @@ describe('@API @V1API - Filtering API', function() {
 
     var schema = {
         "name":"test_api_filters",
-        "owner" : ["test_g1"],
+        _sis : { "owner" : ["test_g1"] },
         "definition": {
             "str" : "String",
             "num": "Number",
@@ -39,13 +39,13 @@ describe('@API @V1API - Filtering API', function() {
             if (e) { return done(e); }
             ApiServer.becomeSuperUser(function(e) {
                 if (e) { return done(e); }
-                ApiServer.del('/api/v1/schemas/' + schema.name)
+                ApiServer.del('/api/v1.1/schemas/' + schema.name)
                 .end(function() {
-                    ApiServer.post('/api/v1/schemas')
+                    ApiServer.post('/api/v1.1/schemas')
                     .send(schema).expect(201, function(e) {
                         if (e) { return done(e); }
                         var items = createItems(0, NUM_ITEMS);
-                        ApiServer.post("/api/v1/entities/" + schema.name)
+                        ApiServer.post("/api/v1.1/entities/" + schema.name)
                         .send(items)
                         .expect(200, function(err, res) {
                             should.not.exist(err);
@@ -62,7 +62,7 @@ describe('@API @V1API - Filtering API', function() {
     });
 
     var runQuery = function(queryObj, numExpected, done) {
-        ApiServer.get("/api/v1/entities/" + schema.name)
+        ApiServer.get("/api/v1.1/entities/" + schema.name)
         .query({ q : JSON.stringify(queryObj) }).expect(200, function(err, res) {
             should.not.exist(err);
             res = res.body;

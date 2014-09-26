@@ -1,4 +1,4 @@
-describe('@API @V1API - Custom Types', function() {
+describe('@API @V1.1API - Custom Types', function() {
     "use strict";
 
     var should = require('should');
@@ -41,7 +41,7 @@ describe('@API @V1API - Custom Types', function() {
     describe("IpAddress Single", function() {
         var schema = {
             "name" : "test_host",
-            "owner" : "ip_test",
+            _sis : { "owner" : "ip_test" },
             "definition" : {
                 "name" : "String",
                 "ip" : { "type" : "IpAddress", "required" : true }
@@ -49,9 +49,9 @@ describe('@API @V1API - Custom Types', function() {
         };
 
         before(function(done) {
-            ApiServer.del('/api/v1/schemas/test_host')
+            ApiServer.del('/api/v1.1/schemas/test_host')
                 .end(function() {
-                ApiServer.post("/api/v1/schemas")
+                ApiServer.post("/api/v1.1/schemas")
                     .set('content-type', 'application/json')
                     .send(schema)
                     .expect(201, done);
@@ -59,7 +59,7 @@ describe('@API @V1API - Custom Types', function() {
         });
 
         after(function(done) {
-            ApiServer.del("/api/v1/schemas/test_host")
+            ApiServer.del("/api/v1.1/schemas/test_host")
                 .expect(200, done);
         });
 
@@ -68,7 +68,7 @@ describe('@API @V1API - Custom Types', function() {
                 name : "v4_test",
                 ip : "10.1.1.1/24"
             };
-            ApiServer.post("/api/v1/entities/test_host")
+            ApiServer.post("/api/v1.1/entities/test_host")
                 .set('content-type', 'application/json')
                 .send(entity)
                 .expect(201, function(e, res) {
@@ -85,7 +85,7 @@ describe('@API @V1API - Custom Types', function() {
                 name : "v6_test",
                 ip : "2001:0:ce49:7601:e866:efff:62c3:fffe/100"
             };
-            ApiServer.post("/api/v1/entities/test_host")
+            ApiServer.post("/api/v1.1/entities/test_host")
                 .set('content-type', 'application/json')
                 .send(entity)
                 .expect(201, function(e, res) {
@@ -101,7 +101,7 @@ describe('@API @V1API - Custom Types', function() {
             var query = {
                 q : { "ip.ip_address" : "10.1.1.1" }
             };
-            ApiServer.get("/api/v1/entities/test_host")
+            ApiServer.get("/api/v1.1/entities/test_host")
                 .query(query)
                 .expect(200, function(err, res) {
                     should.exist(res.body);
@@ -118,7 +118,7 @@ describe('@API @V1API - Custom Types', function() {
     describe("IpAddress Multi", function() {
         var schema = {
             "name" : "test_host",
-            "owner" : "ip_test",
+            _sis : { "owner" : "ip_test" },
             "definition" : {
                 "name" : "String",
                 "ips" : ["IpAddress"]
@@ -126,14 +126,14 @@ describe('@API @V1API - Custom Types', function() {
         };
 
         before(function(done) {
-            ApiServer.post("/api/v1/schemas")
+            ApiServer.post("/api/v1.1/schemas")
                 .set('content-type', 'application/json')
                 .send(schema)
                 .expect(201, done);
         });
 
         after(function(done) {
-            ApiServer.del("/api/v1/schemas/test_host")
+            ApiServer.del("/api/v1.1/schemas/test_host")
                 .expect(200, done);
         });
 
@@ -142,7 +142,7 @@ describe('@API @V1API - Custom Types', function() {
                 name : "v4_test",
                 ips : ["10.1.1.1/24", "2001:0:ce49:7601:e866:efff:62c3:fffe/100"]
             };
-            ApiServer.post("/api/v1/entities/test_host")
+            ApiServer.post("/api/v1.1/entities/test_host")
                 .set('content-type', 'application/json')
                 .send(entity)
                 .expect(201, function(e, res) {

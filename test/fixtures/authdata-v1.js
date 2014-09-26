@@ -92,11 +92,11 @@ module.exports.initUsers = function(ApiServer, token, users, callback) {
     async.parallel(names.map(function(name) {
         // delete user
         return function(cb) {
-            ApiServer.del('/api/v1.1/users/' + name, token)
+            ApiServer.del('/api/v1/users/' + name, token)
             .end(function(err, res) {
                 if (res.status == 404 || res.status == 200) {
                     var user = users[name];
-                    ApiServer.post('/api/v1.1/users', token)
+                    ApiServer.post('/api/v1/users', token)
                         .send(user)
                         .expect(201, cb);
                 } else {
@@ -125,7 +125,7 @@ module.exports.getAuthSchemas = function() {
     return {
         test_s1 : {
             name : 'test_s1',
-            _sis : { owner : ['test_g1', 'test_g2', 'test_g3'] },
+            owner : ['test_g1', 'test_g2', 'test_g3'],
             definition : {
                 str : "String",
                 num : "Number"
@@ -134,7 +134,7 @@ module.exports.getAuthSchemas = function() {
         },
         test_s2 : {
             name : 'test_s2',
-            _sis : { owner : ['test_g1', 'test_g2'] },
+            owner : ['test_g1', 'test_g2'],
             definition : {
                 str : "String",
                 num : "Number"
@@ -143,7 +143,7 @@ module.exports.getAuthSchemas = function() {
         },
         test_s3 : {
             name : 'test_s3',
-            _sis : { owner : ['test_g2'] },
+            owner : ['test_g2'],
             definition : {
                 str : "String",
                 num : "Number"
@@ -151,7 +151,7 @@ module.exports.getAuthSchemas = function() {
         },
         test_s4 : {
             name : "test_s4",
-            _sis : { owner : ['test_g2'] },
+            owner : ['test_g2'],
             is_open : true,
             definition : {
                 str : "String",
@@ -166,7 +166,7 @@ module.exports.deleteSchemas = function(ApiServer, schemas, ensureExists, callba
         schemas = TestUtil.objectValues(schemas);
     }
     async.map(schemas, function(schema, cb) {
-        var req = ApiServer.del("/api/v1.1/schemas/" + schema.name);
+        var req = ApiServer.del("/api/v1/schemas/" + schema.name);
         if (ensureExists) {
             req = req.expect(200);
         }
@@ -179,7 +179,7 @@ module.exports.addSchemas = function(ApiServer, schemas, callback) {
         schemas = TestUtil.objectValues(schemas);
     }
     async.map(schemas, function(schema, cb) {
-        ApiServer.post("/api/v1.1/schemas").send(schema)
+        ApiServer.post("/api/v1/schemas").send(schema)
             .expect(201, cb);
     }, callback);
 };
@@ -198,7 +198,7 @@ module.exports.createAuthEntities = function() {
             entity : {
                 str : "e2",
                 num : 2,
-                _sis : { owner : ["test_g1", "test_g2"] }
+                owner : ["test_g1", "test_g2"]
             }
         },
         test_s2_e3 : {
@@ -206,7 +206,7 @@ module.exports.createAuthEntities = function() {
             entity : {
                 str : "e3",
                 num : 3,
-                _sis : { owner : ["test_g3", "test_g4"] }
+                owner : ["test_g3", "test_g4"]
             }
         },
         test_s3_e4 : {

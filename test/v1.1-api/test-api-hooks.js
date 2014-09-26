@@ -1,4 +1,4 @@
-describe('@API @V1API - Hook API', function() {
+describe('@API @V1.1API - Hook API', function() {
     "use strict";
 
     var should = require('should');
@@ -25,14 +25,14 @@ describe('@API @V1API - Hook API', function() {
     describe("Hooks failure cases", function() {
         // no hooks.
         it("Should fail if name does not exist ", function(done) {
-            ApiServer.get("/api/v1/hooks/DNE").expect(404, done);
+            ApiServer.get("/api/v1.1/hooks/DNE").expect(404, done);
         });
         it("Should fail to delete non existent hook", function(done) {
-            ApiServer.del("/api/v1/hooks/DNE")
+            ApiServer.del("/api/v1.1/hooks/DNE")
                 .expect(404, done);
         });
         it("Should fail to create an invalid hook", function(done) {
-            ApiServer.post("/api/v1/hooks")
+            ApiServer.post("/api/v1.1/hooks")
                 .set("Content-Type", "application/json")
                 .send({"invalid" : "hook"})
                 .expect(400, done);
@@ -40,7 +40,7 @@ describe('@API @V1API - Hook API', function() {
         it("Should fail to update a hook that doens't exist", function(done) {
             var hook = {
                 "name" : "DNE",
-                "owner" : [ "Test" ],
+                _sis : { "owner" : [ "Test" ] },
                 "entity_type" : "Schema",
                 "target" : {
                     "action" : "POST",
@@ -48,7 +48,7 @@ describe('@API @V1API - Hook API', function() {
                 },
                 "events": ['insert','update']
             };
-            ApiServer.put("/api/v1/hooks/DNE")
+            ApiServer.put("/api/v1.1/hooks/DNE")
                 .set("Content-Type", "application/json")
                 .send(hook)
                 .expect(404, done);
@@ -58,7 +58,7 @@ describe('@API @V1API - Hook API', function() {
     describe("CRUD hooks", function() {
         var hook = {
             "name" : "test_hook",
-            "owner" : [ "Test" ],
+            _sis : { "owner" : [ "Test" ] },
             "entity_type" : "Schema",
             "target" : {
                 "action" : "POST",
@@ -67,22 +67,23 @@ describe('@API @V1API - Hook API', function() {
             "events": ['insert','update']
         };
         before(function(done) {
-            ApiServer.del('/api/v1/hooks/' + hook.name)
+            ApiServer.del('/api/v1.1/hooks/' + hook.name)
                 .end(done);
         });
 
         it("Should create new hook", function(done) {
-            ApiServer.post("/api/v1/hooks")
+            ApiServer.post("/api/v1.1/hooks")
                 .set('content-type', 'application/json')
                 .send(hook)
                 .expect(201, done);
         });
         it("Should retrieve the hook", function(done) {
-            ApiServer.get("/api/v1/hooks/test_hook")
+            ApiServer.get("/api/v1.1/hooks/test_hook")
                 .expect(200, function(err, res) {
                     should.not.exist(err);
                     should.exist(res.body);
                     for (var k in hook) {
+                        if (k === '_sis') { continue; }
                         hook[k].should.eql(res.body[k]);
                     }
                     done();
@@ -90,7 +91,7 @@ describe('@API @V1API - Hook API', function() {
         });
         it("Should update the hook", function(done) {
             hook.events = ['insert'];
-            ApiServer.put("/api/v1/hooks/test_hook")
+            ApiServer.put("/api/v1.1/hooks/test_hook")
                 .set("Content-Type", "application/json")
                 .send(hook)
                 .expect(200)
@@ -105,13 +106,13 @@ describe('@API @V1API - Hook API', function() {
         });
         it("Should fail to update the hook w/ invalid data", function(done) {
             delete hook.events;
-            ApiServer.put("/api/v1/hooks/test_hook")
+            ApiServer.put("/api/v1.1/hooks/test_hook")
                 .set("Content-Type", "application/json")
                 .send(hook)
                 .expect(400, done);
         });
         it ("Should delete the hook", function(done) {
-            ApiServer.del("/api/v1/hooks/test_hook")
+            ApiServer.del("/api/v1.1/hooks/test_hook")
                 .expect(200, done);
         });
     });
@@ -122,7 +123,7 @@ describe('@API @V1API - Hook API', function() {
             var hooks = [
                 {
                     "name" : "test_hook1",
-                    "owner" : "Test",
+                    _sis : { "owner" : [ "Test" ] },
                     "entity_type" : "Schema",
                     "target" : {
                         "action" : "POST",
@@ -132,7 +133,7 @@ describe('@API @V1API - Hook API', function() {
                 },
                 {
                     "name" : "test_hook2",
-                    "owner" : "Test",
+                    _sis : { "owner" : [ "Test" ] },
                     "entity_type" : "Schema",
                     "target" : {
                         "action" : "POST",
@@ -142,7 +143,7 @@ describe('@API @V1API - Hook API', function() {
                 },
                 {
                     "name" : "test_hook3",
-                    "owner" : "Test",
+                    _sis : { "owner" : [ "Test" ] },
                     "entity_type" : "Schema",
                     "target" : {
                         "action" : "POST",
@@ -153,19 +154,19 @@ describe('@API @V1API - Hook API', function() {
             ];
             // async magic - https://github.com/caolan/async
             async.map(hooks, function(hook, callback) {
-                ApiServer.post('/api/v1/hooks')
+                ApiServer.post('/api/v1.1/hooks')
                     .send(hook).expect(201, callback);
             }, done);
         });
         after(function(done) {
             async.map(['test_hook1', 'test_hook2', 'test_hook3'],
                 function(hook, callback) {
-                    ApiServer.del('/api/v1/hooks/' + hook)
+                    ApiServer.del('/api/v1.1/hooks/' + hook)
                              .expect(200, callback);
                 }, done);
         });
         it("Should return 2 results", function(done) {
-            ApiServer.get("/api/v1/hooks")
+            ApiServer.get("/api/v1.1/hooks")
                 .query({ offset : 1, limit : 2})
                 .expect(200)
                 .end(function(err, res) {
@@ -175,7 +176,7 @@ describe('@API @V1API - Hook API', function() {
                 });
         });
         it("Should return 1 results", function(done) {
-            ApiServer.get("/api/v1/hooks")
+            ApiServer.get("/api/v1.1/hooks")
                 .query({ q: JSON.stringify({"name" : "test_hook1"}) })
                 .expect(200)
                 .end(function(err, res) {

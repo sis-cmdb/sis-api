@@ -1,4 +1,4 @@
-describe('@API @V1API - Info API', function() {
+describe('@API @V1.1API - Info API', function() {
     "use strict";
 
     var should = require('should');
@@ -18,7 +18,7 @@ describe('@API @V1API - Info API', function() {
     });
 
     it("should receive API info", function(done) {
-        ApiServer.get("/api/v1/info")
+        ApiServer.get("/api/v1.1/info")
             .expect(200, function(err, res) {
                 should.not.exist(err);
                 should.exist(res.body);

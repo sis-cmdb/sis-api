@@ -437,33 +437,33 @@ ApiController.prototype._convertToResponseObject = function(req, obj) {
     if (req.params.isBulk) {
         // change the success array
         obj.success = obj.success.map(function(o) {
-            o = self.convertToResponseObject(req, o);
             if (isV1) {
                 o = SIS.UTIL_TO_V1(o);
             } else {
                 o = SIS.UTIL_FROM_V1(o);
             }
+            o = self.convertToResponseObject(req, o);
             return o;
         });
         return obj;
     }
     if (obj instanceof Array) {
         obj = obj.map(function(o) {
-            o = self.convertToResponseObject(req, o);
             if (isV1) {
                 o = SIS.UTIL_TO_V1(o);
             } else {
                 o = SIS.UTIL_FROM_V1(o);
             }
+            o = self.convertToResponseObject(req, o);
             return o;
         });
     } else {
-        obj = self.convertToResponseObject(req, obj);
         if (isV1) {
             obj = SIS.UTIL_TO_V1(obj);
         } else {
             obj = SIS.UTIL_FROM_V1(obj);
         }
+        obj = self.convertToResponseObject(req, obj);
     }
     return obj;
 };

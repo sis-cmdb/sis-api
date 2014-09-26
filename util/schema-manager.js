@@ -126,6 +126,11 @@ SchemaManager.prototype.validate = function(modelObj, toUpdate, options) {
             if ((fields[i][0] == '_' && fields[i] != SIS.FIELD_SIS_META) ||
                 (fields[i].indexOf('sis_') === 0 && options.version == "v1")) {
                 return fields[i] + " is a reserved field";
+            } else if (typeof modelObj.definition[fields[i]] === 'object') {
+                // if it is empty, convert to mixed
+                if (!Object.keys(modelObj.definition[fields[i]]).length) {
+                    modelObj.definition[fields[i]] = { type : "Mixed" };
+                }
             }
         }
         if (modelObj[SIS.FIELD_ID_FIELD] && modelObj[SIS.FIELD_ID_FIELD] != '_id') {
@@ -553,6 +558,7 @@ SchemaManager.prototype.getEntityModel = function(sisSchema, isInternal) {
         Promise.promisifyAll(result);
         return result;
     } catch (ex) {
+        console.log(ex);
         return null;
     }
 };

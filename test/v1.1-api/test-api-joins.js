@@ -1,4 +1,4 @@
-describe('@API @V1API - Entity Join API', function() {
+describe('@API @V1.1API - Entity Join API', function() {
     "use strict";
 
     var should = require('should');
@@ -31,7 +31,7 @@ describe('@API @V1API - Entity Join API', function() {
         // and join_schema_2 has a ref_0 to join_schema_0 and ref_1 to join_schema_1
         for (i = 0; i < numSchemas; ++i) {
             var schema = {
-                "owner" : "entity_test",
+                _sis : { "owner" : "entity_test" },
                 "name" : "join_schema_" + i,
                 "definition" : {
                     "name" : "String",
@@ -62,15 +62,15 @@ describe('@API @V1API - Entity Join API', function() {
         }
 
         var addSchema = function(schema, callback) {
-            return ApiServer.del('/api/v1/schemas/' + schema.name)
+            return ApiServer.del('/api/v1.1/schemas/' + schema.name)
                 .endAsync().then(function() {
-                    return ApiServer.post('/api/v1/schemas')
+                    return ApiServer.post('/api/v1.1/schemas')
                         .send(schema).expectAsync(201);
             });
         };
 
         var deleteSchema = function(name) {
-            return ApiServer.del('/api/v1/schemas/' + name)
+            return ApiServer.del('/api/v1.1/schemas/' + name)
                 .expectAsync(200);
         };
 
@@ -97,7 +97,7 @@ describe('@API @V1API - Entity Join API', function() {
                     }
 
                     return Promise.map(entities2Add, function(entity) {
-                        return ApiServer.post("/api/v1/entities/join_schema_" + i)
+                        return ApiServer.post("/api/v1.1/entities/join_schema_" + i)
                             .set("Content-Type", "application/json")
                             .query("populate=false")
                             .send(entity)
@@ -122,7 +122,7 @@ describe('@API @V1API - Entity Join API', function() {
             var query = {
                 q : { "ref_0.num" : 102 }
             };
-            ApiServer.get("/api/v1/entities/join_schema_1")
+            ApiServer.get("/api/v1.1/entities/join_schema_1")
                 .query(query)
                 .expect(200, function(err, res) {
                     res.statusCode.should.eql(200);
@@ -138,7 +138,7 @@ describe('@API @V1API - Entity Join API', function() {
             var query = {
                 q :  { "ref_1.ref_0.num" : 101 }
             };
-            ApiServer.get("/api/v1/entities/join_schema_2")
+            ApiServer.get("/api/v1.1/entities/join_schema_2")
                 .query(query)
                 .expect(200, function(err, res) {
                     should.exist(res.body);
@@ -158,7 +158,7 @@ describe('@API @V1API - Entity Join API', function() {
                     "ref_1.ref_0.num" : { "$lt" : 106 }
                 }
             };
-            ApiServer.get("/api/v1/entities/join_schema_2")
+            ApiServer.get("/api/v1.1/entities/join_schema_2")
                 .query(query)
                 .expect(200, function(err, res) {
                     should.exist(res.body);
@@ -178,7 +178,7 @@ describe('@API @V1API - Entity Join API', function() {
                     "ref_1.ref_1.num" : { "$lt" : 106 }
                 }
             };
-            ApiServer.get("/api/v1/entities/join_schema_2")
+            ApiServer.get("/api/v1.1/entities/join_schema_2")
                 .query(query)
                 .expect(200, function(err, res) {
                     should.exist(res.body);
@@ -196,7 +196,7 @@ describe('@API @V1API - Entity Join API', function() {
                     "ref_1.ref_0." : { "$lt" : 106 }
                 }
             };
-            ApiServer.get("/api/v1/entities/join_schema_2")
+            ApiServer.get("/api/v1.1/entities/join_schema_2")
                 .query(query)
                 .expect(200, function(err, res) {
                     should.exist(res.body);
@@ -212,7 +212,7 @@ describe('@API @V1API - Entity Join API', function() {
         // need to test arrays of sub docs, arrays of object ids
         // and arrays of object ids -> sub array field
         var leaf_schema = {
-            "owner" : ["entity_test"],
+            _sis : { "owner" : ["entity_test"] },
             "name" : "join_leaf_schema",
             "definition" : {
                 "name" : "String",
@@ -221,7 +221,7 @@ describe('@API @V1API - Entity Join API', function() {
         };
 
         var ancestor_schema = {
-            owner : ["entity_test"],
+            _sis : { "owner" : ["entity_test"] },
             name : "join_ancestor_schema",
             definition : {
                 name : "String",
@@ -239,7 +239,7 @@ describe('@API @V1API - Entity Join API', function() {
         };
 
         var top_schema = {
-            owner : ["entity_test"],
+            _sis : { "owner" : ["entity_test"] },
             name : "join_top_schema",
             definition : {
                 name : "String",
@@ -274,7 +274,7 @@ describe('@API @V1API - Entity Join API', function() {
                 });
             }
             var d = Promise.pending();
-            ApiServer.post("/api/v1/entities/" + leaf_schema.name)
+            ApiServer.post("/api/v1.1/entities/" + leaf_schema.name)
             .send(items).expect(200, function(err, res) {
                 if (err) { return d.reject(err); }
                 res.body.success.length.should.eql(totalLeaves);
@@ -305,7 +305,7 @@ describe('@API @V1API - Entity Join API', function() {
                 });
             });
             var d = Promise.pending();
-            ApiServer.post("/api/v1/entities/" + ancestor_schema.name)
+            ApiServer.post("/api/v1.1/entities/" + ancestor_schema.name)
             .send(items).expect(200, function(err, res) {
                 if (err) { return d.reject(err); }
                 res.body.success.length.should.eql(totalAncs);
@@ -336,7 +336,7 @@ describe('@API @V1API - Entity Join API', function() {
                 });
             });
             var d = Promise.pending();
-            ApiServer.post("/api/v1/entities/" + top_schema.name)
+            ApiServer.post("/api/v1.1/entities/" + top_schema.name)
             .send(items).expect(200, function(err, res) {
                 if (err) { return d.reject(err); }
                 res.body.success.length.should.eql(totalTops);
@@ -356,7 +356,7 @@ describe('@API @V1API - Entity Join API', function() {
             // delete/create all the schemas
             var promises = [leaf_schema, ancestor_schema, top_schema].map(function(schema) {
                 var d = Promise.pending();
-                var url = "/api/v1/schemas";
+                var url = "/api/v1.1/schemas";
                 ApiServer.del(url + '/' + schema.name).end(function() {
                     ApiServer.post(url).send(schema).expect(201, function(err, res) {
                         if (err) { return d.reject(err); }
@@ -383,7 +383,7 @@ describe('@API @V1API - Entity Join API', function() {
             var query = {
                 "ancs.num" : 2
             };
-            ApiServer.get("/api/v1/entities/" + top_schema.name)
+            ApiServer.get("/api/v1.1/entities/" + top_schema.name)
             .query({q : JSON.stringify(query) }).expect(200, function(e, r) {
                 if (e) { return done(e); }
                 r = r.body;
@@ -397,7 +397,7 @@ describe('@API @V1API - Entity Join API', function() {
             var query = {
                 "anc_docs.anc.num" : 4
             };
-            ApiServer.get("/api/v1/entities/" + top_schema.name)
+            ApiServer.get("/api/v1.1/entities/" + top_schema.name)
             .query({q : JSON.stringify(query) }).expect(200, function(e, r) {
                 if (e) { return done(e); }
                 r = r.body;
@@ -411,7 +411,7 @@ describe('@API @V1API - Entity Join API', function() {
             var query = {
                 "ancs.leaves.num" : 17
             };
-            ApiServer.get("/api/v1/entities/" + top_schema.name)
+            ApiServer.get("/api/v1.1/entities/" + top_schema.name)
             .query({q : JSON.stringify(query) }).expect(200, function(e, r) {
                 if (e) { return done(e); }
                 r = r.body;
@@ -425,7 +425,7 @@ describe('@API @V1API - Entity Join API', function() {
             var query = {
                 "ancs.leaf_docs.leaf.num" : 17
             };
-            ApiServer.get("/api/v1/entities/" + top_schema.name)
+            ApiServer.get("/api/v1.1/entities/" + top_schema.name)
             .query({q : JSON.stringify(query) }).expect(200, function(e, r) {
                 if (e) { return done(e); }
                 r = r.body;

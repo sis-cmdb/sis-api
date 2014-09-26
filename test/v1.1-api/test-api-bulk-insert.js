@@ -1,4 +1,4 @@
-describe('@API @V1API - Bulk Insert API', function() {
+describe('@API @V1.1API - Bulk Insert API', function() {
     "use strict";
 
     var should = require('should');
@@ -7,13 +7,13 @@ describe('@API @V1API - Bulk Insert API', function() {
     var SIS = require("../../util/constants");
     var config = require('../fixtures/config');
     var TestUtil = require('../fixtures/util');
-    var AuthFixture = require("../fixtures/authdata-v1");
+    var AuthFixture = require("../fixtures/authdata");
 
     var ApiServer = new TestUtil.TestServer();
 
     var schema = {
         "name":"test_bulk_entity",
-        "owner" : ["test_g1"],
+        _sis : { "owner" : ["test_g1"] },
         "definition": {
             "num":   { type : "Number", unique : true, required : true }
         }
@@ -24,9 +24,9 @@ describe('@API @V1API - Bulk Insert API', function() {
             if (e) { return done(e); }
             ApiServer.becomeSuperUser(function(e) {
                 if (e) { return done(e); }
-                ApiServer.del('/api/v1/schemas/test_bulk_entity')
+                ApiServer.del('/api/v1.1/schemas/test_bulk_entity')
                 .end(function() {
-                    ApiServer.post('/api/v1/schemas')
+                    ApiServer.post('/api/v1.1/schemas')
                         .send(schema).expect(201, done);
                 });
             });
@@ -64,7 +64,7 @@ describe('@API @V1API - Bulk Insert API', function() {
         var query = {
             q : getQuery(start, num)
         };
-        ApiServer.get("/api/v1/entities/" + schema.name)
+        ApiServer.get("/api/v1.1/entities/" + schema.name)
         .query(query)
         .expect(200, function(err, res) {
             should.not.exist(err);
@@ -74,7 +74,7 @@ describe('@API @V1API - Bulk Insert API', function() {
             // ensure commits
             async.mapSeries(res, function(item, cb) {
                 var path = [
-                    "/api/v1/entities",
+                    "/api/v1.1/entities",
                     schema.name,
                     item._id,
                     "commits"
@@ -95,7 +95,7 @@ describe('@API @V1API - Bulk Insert API', function() {
     };
 
     it("should return a 400", function(done) {
-        ApiServer.post("/api/v1/entities/" + schema.name)
+        ApiServer.post("/api/v1.1/entities/" + schema.name)
             .send([])
             .expect(400, function(err, res) {
                 done(err);
@@ -106,7 +106,7 @@ describe('@API @V1API - Bulk Insert API', function() {
         var start = 0, num = 200;
         var items = createItems(start, num);
         this.timeout(num * 1000);
-        ApiServer.post("/api/v1/entities/" + schema.name)
+        ApiServer.post("/api/v1.1/entities/" + schema.name)
             .send(items)
             .expect(200, function(err, res) {
                 should.not.exist(err);
@@ -125,7 +125,7 @@ describe('@API @V1API - Bulk Insert API', function() {
         var start = 1000, num = 200;
         var items = createItems(start, num);
         this.timeout(num * 1000);
-        ApiServer.post("/api/v1/entities/" + schema.name)
+        ApiServer.post("/api/v1.1/entities/" + schema.name)
             .send(items)
             .expect(200, function(err, res) {
                 should.not.exist(err);
@@ -144,7 +144,7 @@ describe('@API @V1API - Bulk Insert API', function() {
         var start = 2000, num = 50;
         var items = createItems(start, num);
         items = items.concat(createItems(start, num));
-        ApiServer.post("/api/v1/entities/" + schema.name)
+        ApiServer.post("/api/v1.1/entities/" + schema.name)
             .query({ all_or_none : true })
             .send(items)
             .expect(200, function(err, res) {
@@ -155,7 +155,7 @@ describe('@API @V1API - Bulk Insert API', function() {
                 res.body.errors.length.should.eql(num);
                 // ensure nothing was added in the DB
                 var query = { q : getQuery(start, num) };
-                ApiServer.get("/api/v1/entities/" + schema.name)
+                ApiServer.get("/api/v1.1/entities/" + schema.name)
                     .query(query)
                     .expect(200, function(err, res) {
                         should.not.exist(err);
@@ -170,7 +170,7 @@ describe('@API @V1API - Bulk Insert API', function() {
         var start = 3000, num = 50;
         var items = createItems(start, num);
         items = items.concat(createItems(start, num));
-        ApiServer.post("/api/v1/entities/" + schema.name)
+        ApiServer.post("/api/v1.1/entities/" + schema.name)
             .query({ all_or_none : false })
             .send(items)
             .expect(200, function(err, res) {
@@ -201,11 +201,11 @@ describe('@API @V1API - Bulk Insert API', function() {
             var failNum = 40;
             var failures = createItems(failStart, failNum);
             failures.forEach(function(f) {
-                f.owner = ['test_g2'];
+                f._sis = { owner : ['test_g2'] };
             });
             var all = [].concat(items).concat(failures);
             var token = userToTokens.admin1.name;
-            ApiServer.post("/api/v1/entities/" + schema.name, token)
+            ApiServer.post("/api/v1.1/entities/" + schema.name, token)
                 .query({ all_or_none : false })
                 .send(all)
                 .expect(200, function(err, res) {

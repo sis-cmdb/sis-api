@@ -1,4 +1,4 @@
-describe('@API @V1API - Entity API', function() {
+describe('@API @V1.1API - Entity API', function() {
     "use strict";
 
     var should = require('should');
@@ -24,23 +24,23 @@ describe('@API @V1API - Entity API', function() {
     describe("Entity Failure cases", function() {
         // no schemas..
         it("Should fail if type is not specified ", function(done) {
-            ApiServer.get("/api/v1/entities").expect(404, done);
+            ApiServer.get("/api/v1.1/entities").expect(404, done);
         });
         it("Should fail if type does not exist ", function(done) {
-            ApiServer.get("/api/v1/entities/sis_dne").expect(404, done);
+            ApiServer.get("/api/v1.1/entities/sis_dne").expect(404, done);
         });
         it("Should fail to add an entity for a dne schema", function(done) {
-            ApiServer.post("/api/v1/entities/sis_dne")
+            ApiServer.post("/api/v1.1/entities/sis_dne")
                 .set("Content-Type", "application/json")
                 .send({"this" : "should", "not" : "work"})
                 .expect(404, done);
         });
         it("Should fail to get an entity by id of a particular type that does not exist", function(done) {
-            ApiServer.get("/api/v1/entities/sis_dne/some_id")
+            ApiServer.get("/api/v1.1/entities/sis_dne/some_id")
                 .expect(404, done);
         });
         it("Should fail to delete an entity for dne schema", function(done) {
-            ApiServer.del("/api/v1/entities/sis_dne/some_id")
+            ApiServer.del("/api/v1.1/entities/sis_dne/some_id")
                 .expect(404, done);
         });
     });
@@ -48,7 +48,7 @@ describe('@API @V1API - Entity API', function() {
     describe("CRUD Entity", function() {
         var schema = {
             "name":"test_entity",
-            "owner" : ["sistest"],
+            _sis : { "owner" : ["sistest"] },
             "definition": {
                 "str":   "String",
                 "num":   "Number",
@@ -58,9 +58,9 @@ describe('@API @V1API - Entity API', function() {
             }
         };
         before(function(done) {
-            ApiServer.del('/api/v1/schemas/test_entity')
+            ApiServer.del('/api/v1.1/schemas/test_entity')
                 .end(function() {
-                ApiServer.post('/api/v1/schemas')
+                ApiServer.post('/api/v1.1/schemas')
                     .send(schema).expect(201, done);
             });
 
@@ -97,7 +97,7 @@ describe('@API @V1API - Entity API', function() {
         };
 
         it("Should add the entity ", function(done) {
-            ApiServer.post("/api/v1/entities/" + schema.name)
+            ApiServer.post("/api/v1.1/entities/" + schema.name)
                 .set('Content-Type', 'application/json')
                 .send(expectedEntity)
                 .expect(201)
@@ -105,14 +105,14 @@ describe('@API @V1API - Entity API', function() {
         });
 
         it("Should retrieve the added entity ", function(done) {
-            ApiServer.get("/api/v1/entities/" + schema.name + "/" + entityId)
+            ApiServer.get("/api/v1.1/entities/" + schema.name + "/" + entityId)
                 .set('Content-Type', 'application/json')
                 .expect(200, createEndCallback(done));
         });
 
         it("Should update the str to foobar ", function(done) {
             expectedEntity.str = "foobar";
-            ApiServer.put("/api/v1/entities/" + schema.name + "/" + entityId)
+            ApiServer.put("/api/v1.1/entities/" + schema.name + "/" + entityId)
                 .set('Content-Type', 'application/json')
                 .send(expectedEntity)
                 .expect(200)
@@ -126,7 +126,7 @@ describe('@API @V1API - Entity API', function() {
                 "bool" : "bogus",
                 "arr" : "not an array"
             };
-            ApiServer.post("/api/v1/entities/" + schema.name)
+            ApiServer.post("/api/v1.1/entities/" + schema.name)
                 .set('Content-Type', 'application/json')
                 .send(invalid)
                 .expect(400, function(e, r) {
@@ -134,29 +134,29 @@ describe('@API @V1API - Entity API', function() {
                 });
         });
         it("Should delete the added entity", function(done) {
-            ApiServer.del("/api/v1/entities/" + schema.name + "/" + entityId)
+            ApiServer.del("/api/v1.1/entities/" + schema.name + "/" + entityId)
                 .expect(200, done);
         });
         it("Should fail to add an entity with _id", function(done) {
             expectedEntity._id = 'foobar';
-            ApiServer.post("/api/v1/entities/" + schema.name)
+            ApiServer.post("/api/v1.1/entities/" + schema.name)
                 .set("Content-Type", "application/json")
                 .send(expectedEntity)
                 .expect(400, done);
         });
         it("Should fail to update an entity that doesn't exist", function(done) {
             delete expectedEntity._id;
-            ApiServer.put("/api/v1/entities/" + schema.name + "/foobar")
+            ApiServer.put("/api/v1.1/entities/" + schema.name + "/foobar")
                 .set("Content-Type", "application/json")
                 .send(expectedEntity)
                 .expect(404, done);
         });
         it("Should fail to delete entity that doesn't exist", function(done) {
-            ApiServer.del("/api/v1/entities/" + schema.name + "/some_id")
+            ApiServer.del("/api/v1.1/entities/" + schema.name + "/some_id")
                 .expect(404, done);
         });
         it("Should fail to add an empty entity", function(done) {
-            ApiServer.post("/api/v1/entities/" + schema.name)
+            ApiServer.post("/api/v1.1/entities/" + schema.name)
                 .set("Content-Type", "application/json")
                 .send({})
                 .expect(400, done);
@@ -166,7 +166,7 @@ describe('@API @V1API - Entity API', function() {
     describe("Partial entity updates", function() {
         var schema = {
             "name":"test_nested_entity",
-            "owner" : ["sistest"],
+            _sis : { "owner" : ["sistest"] },
             "definition": {
                 "str":   "String",
                 "num":   "Number",
@@ -196,12 +196,12 @@ describe('@API @V1API - Entity API', function() {
             }
         };
         before(function(done) {
-            ApiServer.del("/api/v1/schemas/" + schema.name)
+            ApiServer.del("/api/v1.1/schemas/" + schema.name)
                 .end(function() {
-                ApiServer.post('/api/v1/schemas')
+                ApiServer.post('/api/v1.1/schemas')
                     .send(schema).expect(201, function(err, result) {
                     if (err) { return done(err, result); }
-                    ApiServer.post("/api/v1/entities/test_nested_entity")
+                    ApiServer.post("/api/v1.1/entities/test_nested_entity")
                         .set("Content-Type", "application/json")
                         .send(entity)
                         .expect(201, function(err, res) {
@@ -217,20 +217,18 @@ describe('@API @V1API - Entity API', function() {
             });
         });
         after(function(done) {
-            ApiServer.del("/api/v1/schemas/" + schema.name)
+            ApiServer.del("/api/v1.1/schemas/" + schema.name)
                       .expect(200, done);
         });
         it("Should update nested_obj.obj2.name only", function(done) {
             entity.nested_obj.obj2.name = "hello";
-            delete entity.__v;
-            ApiServer.put("/api/v1/entities/test_nested_entity/" + entity._id)
+            ApiServer.put("/api/v1.1/entities/test_nested_entity/" + entity._id)
                 .set("Content-Type", "application/json")
                 .send({"nested_obj" : { "obj2" : { "name" : "hello" } } })
                 .expect(200, function(err, result) {
                     result = result.body;
-                    delete result.__v;
-                    delete entity._updated_at;
-                    delete result._updated_at;
+                    delete entity._sis;
+                    delete result._sis;
                     result.should.eql(entity);
                     done(err, result);
                 });
@@ -238,14 +236,13 @@ describe('@API @V1API - Entity API', function() {
         it("Should update delete 'crazy' from mixed_obj and add 'awesome'", function(done) {
             delete entity.mixed_obj.crazy;
             entity.mixed_obj.awesome = 'here';
-            ApiServer.put("/api/v1/entities/test_nested_entity/" + entity._id)
+            ApiServer.put("/api/v1.1/entities/test_nested_entity/" + entity._id)
                 .set("Content-Type", "application/json")
                 .send({"mixed_obj" : {"crazy" : null, "awesome" : "here"}})
                 .expect(200, function(err, result) {
                     result = result.body;
-                    delete result.__v;
-                    delete entity._updated_at;
-                    delete result._updated_at;
+                    delete entity._sis;
+                    delete result._sis;
                     result.should.eql(entity);
                     done(err, result);
                 });
@@ -255,7 +252,7 @@ describe('@API @V1API - Entity API', function() {
     describe("Entity locking", function() {
         var schema = {
             "name":"test_locked_entity",
-            "owner" : ["sistest"],
+            _sis : { "owner" : ["sistest"] },
             "definition": {
                 "str":   "String",
                 "num":   "Number"
@@ -267,12 +264,12 @@ describe('@API @V1API - Entity API', function() {
         };
         var entityId = null;
         before(function(done) {
-            ApiServer.del("/api/v1/schemas/" + schema.name)
+            ApiServer.del("/api/v1.1/schemas/" + schema.name)
                 .end(function() {
-                ApiServer.post('/api/v1/schemas')
+                ApiServer.post('/api/v1.1/schemas')
                     .send(schema).expect(201, function(err, result) {
                     if (err) { return done(err, result); }
-                    ApiServer.post("/api/v1/entities/test_locked_entity")
+                    ApiServer.post("/api/v1.1/entities/test_locked_entity")
                         .send(initial)
                         .expect(201, function(err, res) {
                         var entity = res.body;
@@ -280,7 +277,7 @@ describe('@API @V1API - Entity API', function() {
                         should.exist(entity);
                         should.exist(entity.str);
                         should.exist(entity.num);
-                        should.exist(entity.sis_locked);
+                        should.exist(entity._sis.locked);
                         done(err, result);
                     });
                 });
@@ -288,9 +285,9 @@ describe('@API @V1API - Entity API', function() {
         });
         it("should lock the entity", function(done) {
             var locked = {
-                sis_locked : true
+                _sis : { locked : true }
             };
-            ApiServer.put("/api/v1/entities/test_locked_entity/" + entityId)
+            ApiServer.put("/api/v1.1/entities/test_locked_entity/" + entityId)
                 .send(locked).expect(200, function(err, res) {
                 should.not.exist(err);
                 var entity = res.body;
@@ -298,12 +295,12 @@ describe('@API @V1API - Entity API', function() {
                 entity.str.should.eql("foo");
                 entity.num.should.eql(20);
                 /* jshint expr: true */
-                entity.sis_locked.should.be.ok;
+                entity._sis.locked.should.be.ok;
                 done(err, res);
             });
         });
         it("should fail to delete the entity", function(done) {
-            ApiServer.del("/api/v1/entities/test_locked_entity/" + entityId)
+            ApiServer.del("/api/v1.1/entities/test_locked_entity/" + entityId)
                 .expect(401, function(err, res) {
                     done(err, res);
                 });
@@ -313,7 +310,7 @@ describe('@API @V1API - Entity API', function() {
                 str : "bar",
                 num : 10
             };
-            ApiServer.put("/api/v1/entities/test_locked_entity/" + entityId)
+            ApiServer.put("/api/v1.1/entities/test_locked_entity/" + entityId)
                 .send(data).expect(200, function(err, res) {
                 should.not.exist(err);
                 var entity = res.body;
@@ -321,15 +318,15 @@ describe('@API @V1API - Entity API', function() {
                 entity.str.should.eql("bar");
                 entity.num.should.eql(10);
                 /* jshint expr: true */
-                entity.sis_locked.should.be.ok;
+                entity._sis.locked.should.be.ok;
                 done(err, res);
             });
         });
         it("should unlock the entity", function(done) {
             var data = {
-                sis_locked : false
+                _sis : { locked : false }
             };
-            ApiServer.put("/api/v1/entities/test_locked_entity/" + entityId)
+            ApiServer.put("/api/v1.1/entities/test_locked_entity/" + entityId)
                 .send(data).expect(200, function(err, res) {
                 should.not.exist(err);
                 var entity = res.body;
@@ -337,18 +334,18 @@ describe('@API @V1API - Entity API', function() {
                 entity.str.should.eql("bar");
                 entity.num.should.eql(10);
                 /* jshint expr: true */
-                entity.sis_locked.should.not.be.ok;
+                entity._sis.locked.should.not.be.ok;
                 done(err, res);
             });
         });
         it("should delete the entity", function(done) {
-            ApiServer.del("/api/v1/entities/test_locked_entity/" + entityId)
+            ApiServer.del("/api/v1.1/entities/test_locked_entity/" + entityId)
             .expect(200, function(err, res) {
                 done(err, res);
             });
         });
         after(function(done) {
-            ApiServer.del("/api/v1/schemas/" + schema.name)
+            ApiServer.del("/api/v1.1/schemas/" + schema.name)
                       .expect(200, done);
         });
     });
@@ -356,7 +353,7 @@ describe('@API @V1API - Entity API', function() {
     describe("remove empty arrays", function() {
         var schema = {
             name : "test_empty_arrays",
-            owner : ["sistest"],
+            _sis : { owner : ["sistest"] },
             definition : {
                 name : "String",
                 arr : ["String"],
@@ -370,18 +367,18 @@ describe('@API @V1API - Entity API', function() {
                 }
             }
         };
-        var entityUrl = "/api/v1/entities/" + schema.name;
+        var entityUrl = "/api/v1.1/entities/" + schema.name;
         var fooDoc = { name : "foo" };
         var barDoc = { name : "bar", nested : { str : "baz" } };
         before(function(done) {
-            ApiServer.del("/api/v1/schemas/" + schema.name)
+            ApiServer.del("/api/v1.1/schemas/" + schema.name)
                 .end(function() {
-                ApiServer.post('/api/v1/schemas')
+                ApiServer.post('/api/v1.1/schemas')
                     .send(schema).expect(201, done);
             });
         });
         after(function(done) {
-            ApiServer.del("/api/v1/schemas/" + schema.name)
+            ApiServer.del("/api/v1.1/schemas/" + schema.name)
                       .expect(200, done);
         });
 
@@ -435,18 +432,18 @@ describe('@API @V1API - Entity API', function() {
 
         var schema = {
             name : "test_cas_entity",
-            owner : ["sistest"],
+            _sis : { owner : ["sistest"] },
             definition : {
                 name : "String",
                 num : "Number"
             }
         };
-        var entityUrl = "/api/v1/entities/" + schema.name;
+        var entityUrl = "/api/v1.1/entities/" + schema.name;
         var doc = { name : "CAStest", num : 0 };
         before(function(done) {
-            ApiServer.del("/api/v1/schemas/" + schema.name)
+            ApiServer.del("/api/v1.1/schemas/" + schema.name)
                 .end(function() {
-                ApiServer.post('/api/v1/schemas')
+                ApiServer.post('/api/v1.1/schemas')
                 .send(schema).expect(201, function(err, res) {
                     // add the entity
                     ApiServer.post(entityUrl).send(doc)
@@ -458,7 +455,7 @@ describe('@API @V1API - Entity API', function() {
             });
         });
         after(function(done) {
-            ApiServer.del("/api/v1/schemas/" + schema.name)
+            ApiServer.del("/api/v1.1/schemas/" + schema.name)
                       .expect(200, done);
         });
 

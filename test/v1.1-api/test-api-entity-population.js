@@ -1,4 +1,4 @@
-describe('@API @V1API - Entity Population API', function() {
+describe('@API @V1.1API - Entity Population API', function() {
     "use strict";
 
     var should = require('should');
@@ -24,7 +24,7 @@ describe('@API @V1API - Entity Population API', function() {
     describe("Populate entities", function() {
         var schema1 = {
             "name" : "test_pop_schema_1",
-            "owner" : ["entity_test"],
+            _sis : { "owner" : ["entity_test"] },
             "definition" : {
                 "ps1_name" : "String",
                 "num" : "Number"
@@ -33,7 +33,7 @@ describe('@API @V1API - Entity Population API', function() {
 
         var schema2 = {
             "name" : "test_pop_schema_2",
-            "owner" : ["entity_test"],
+            _sis : { "owner" : ["entity_test"] },
             "definition" : {
                 "ps2_name" : "String",
                 "type" : "String",
@@ -43,7 +43,7 @@ describe('@API @V1API - Entity Population API', function() {
 
         var schema3 = {
             "name" : "test_pop_schema_3",
-            "owner" : ["entity_test"],
+            _sis : { "owner" : ["entity_test"] },
             "definition" : {
                 "ps3_name" : "String",
                 "stuff" : "String",
@@ -60,16 +60,16 @@ describe('@API @V1API - Entity Population API', function() {
         var schemas = [schema1, schema2, schema3];
 
         var addSchema = function(schema, callback) {
-            ApiServer.del('/api/v1/schemas/' + schema.name)
+            ApiServer.del('/api/v1.1/schemas/' + schema.name)
             .end(function() {
-                ApiServer.post('/api/v1/schemas')
+                ApiServer.post('/api/v1.1/schemas')
                     .send(schema).expect(201, callback);
             });
 
         };
 
         var deleteSchema = function(name, callback) {
-            ApiServer.del('/api/v1/schemas/' + name)
+            ApiServer.del('/api/v1.1/schemas/' + name)
                 .expect(200, callback);
         };
 
@@ -86,7 +86,7 @@ describe('@API @V1API - Entity Population API', function() {
                         // assign _id of the previous entity
                         entities[i][1].ref_field = entities[i - 1][1]._id;
                     }
-                    ApiServer.post("/api/v1/entities/" + entities[i][0])
+                    ApiServer.post("/api/v1.1/entities/" + entities[i][0])
                         .set("Content-Type", "application/json")
                         .query("populate=false")
                         .send(entities[i][1])
@@ -108,9 +108,7 @@ describe('@API @V1API - Entity Population API', function() {
         });
 
         function stripSisFields(obj) {
-            var result = SIS.UTIL_FROM_V1(obj);
-            delete result._sis;
-            return result;
+            return obj;
         }
 
         function shouldEql(obj1, obj2) {
@@ -119,7 +117,7 @@ describe('@API @V1API - Entity Population API', function() {
 
         it("Should populate test_pop_schema_2 ref_field", function(done) {
             // test it with the GET /
-            ApiServer.get("/api/v1/entities/test_pop_schema_3")
+            ApiServer.get("/api/v1.1/entities/test_pop_schema_3")
                 .set('Content-Type', 'application/json')
                 .expect(200, function(err, res) {
                     if (err) { return done(err, res); }
@@ -135,7 +133,7 @@ describe('@API @V1API - Entity Population API', function() {
         });
 
         it("Should populate test_pop_schema_1 ref_field", function(done) {
-            ApiServer.get("/api/v1/entities/test_pop_schema_2/" + entities[1][1]._id)
+            ApiServer.get("/api/v1.1/entities/test_pop_schema_2/" + entities[1][1]._id)
                 .set("Content-Type", "application/json")
                 .expect(200, function(err, res) {
                     if (err) { return done(err, res); }
@@ -152,7 +150,7 @@ describe('@API @V1API - Entity Population API', function() {
 
         it("Should not populate test_pop_schema_2 ref_field", function(done) {
             // test it with the GET /
-            ApiServer.get("/api/v1/entities/test_pop_schema_3")
+            ApiServer.get("/api/v1.1/entities/test_pop_schema_3")
                 .query("populate=false")
                 .set('Content-Type', 'application/json')
                 .expect(200, function(err, res) {
@@ -165,7 +163,7 @@ describe('@API @V1API - Entity Population API', function() {
         });
 
         it("Should not populate test_pop_schema_1 ref_field", function(done) {
-            ApiServer.get("/api/v1/entities/test_pop_schema_2/" + entities[1][1]._id)
+            ApiServer.get("/api/v1.1/entities/test_pop_schema_2/" + entities[1][1]._id)
                 .query("populate=false")
                 .set("Content-Type", "application/json")
                 .expect(200, function(err, res) {
@@ -183,7 +181,7 @@ describe('@API @V1API - Entity Population API', function() {
             entity = JSON.parse(JSON.stringify(entity));
             entity.ref_field = entities[2][1]._id;
             // try to update
-            ApiServer.put("/api/v1/entities/test_pop_schema_2/" + entity._id)
+            ApiServer.put("/api/v1.1/entities/test_pop_schema_2/" + entity._id)
                 .set("Content-Type", "application/json")
                 .send(entity)
                 .expect(400, function(err, res) {
@@ -195,7 +193,7 @@ describe('@API @V1API - Entity Population API', function() {
         it("Should not add test_pop_schema_1 with a bad ref", function(done) {
             var entity = {"ps2_name" : "ps2.bad", "type" : "ps2_type.bad"};
             entity.ref_field = entities[2][1]._id;
-            ApiServer.post("/api/v1/entities/test_pop_schema_2")
+            ApiServer.post("/api/v1.1/entities/test_pop_schema_2")
                         .set("Content-Type", "application/json")
                         .send(entity)
                         .expect(400, function(err, res) {

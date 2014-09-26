@@ -120,7 +120,10 @@ function TestServer() {
     };
 
     this.stop = function(callback) {
-        if (!serverData || !serverData.local) {
+        if (!serverData) {
+            return callback("NOTHING TO STOP");
+        }
+        if (!serverData.local) {
             return callback();
         }
         serverData.server.stopServer(serverData.http, function() {
@@ -142,7 +145,7 @@ function TestServer() {
         if (!serverData) {
             return callback("server not started.");
         }
-        var req = this.post("/api/v1/users/auth_token")
+        var req = this.post("/api/v1.1/users/auth_token")
                                     .auth(username, password)
                                     .send("auth");
         req.set('Content-Type', null);

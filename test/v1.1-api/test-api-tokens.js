@@ -1,4 +1,4 @@
-describe('@API @V1API - Authorization API Tokens', function() {
+describe('@API @V1.1API - Authorization API Tokens', function() {
     "use strict";
 
     var should = require('should');
@@ -7,18 +7,22 @@ describe('@API @V1API - Authorization API Tokens', function() {
     var SIS = require("../../util/constants");
     var config = require('../fixtures/config');
     var TestUtil = require('../fixtures/util');
-    var AuthFixture = require("../fixtures/authdata-v1");
+    var AuthFixture = require("../fixtures/authdata");
 
     var ApiServer = new TestUtil.TestServer();
 
     it("Should setup fixtures", function(done) {
         ApiServer.start(config, function(err) {
-            if (err) { return done(err); }
+            if (err) {
+                console.log(err);
+                return done(err);
+            }
             // issue create requests
             var creds = ApiServer.getSuperCreds();
             ApiServer.getTempToken(creds.username, creds.password,
             function(e, t) {
                 if (e) {
+                    console.log(e);
                     return done(e);
                 }
                 var token = t.name;
@@ -43,6 +47,9 @@ describe('@API @V1API - Authorization API Tokens', function() {
                 // first token is a temp token
                 var user = users[name];
                 ApiServer.getTempToken(name, name, function(err, token) {
+                    if (err) {
+                        console.log(err);
+                    }
                     should.not.exist(err);
                     should.exist(token);
                     name.should.eql(token.username);
@@ -51,7 +58,7 @@ describe('@API @V1API - Authorization API Tokens', function() {
                     var data = {
                         'desc' : 'persistent token'
                     };
-                    var req = ApiServer.post("/api/v1/users/" + name + "/tokens", token.name)
+                    var req = ApiServer.post("/api/v1.1/users/" + name + "/tokens", token.name)
                                   .send(data);
                     if (user.super_user) {
                         req.expect(400, function(err, res) {
@@ -105,7 +112,7 @@ describe('@API @V1API - Authorization API Tokens', function() {
                 var testName = name + " should get tokens for " + pass;
                 it(testName, function(done) {
                     var reqToken = userToTokens[name][0].name;
-                    ApiServer.get('/api/v1/users/' + pass + '/tokens', reqToken)
+                    ApiServer.get('/api/v1.1/users/' + pass + '/tokens', reqToken)
                         .expect(200, function(err, res) {
                         if (err) {
                             console.log(JSON.stringify(err));
@@ -122,7 +129,7 @@ describe('@API @V1API - Authorization API Tokens', function() {
                 var testName = name + " should not get tokens for " + fail;
                 it(testName, function(done) {
                     var reqToken = userToTokens[name][0].name;
-                    ApiServer.get('/api/v1/users/' + fail + '/tokens', reqToken)
+                    ApiServer.get('/api/v1.1/users/' + fail + '/tokens', reqToken)
                         .expect(401, function(err, res) {
                         should.not.exist(err);
                         done();
@@ -138,7 +145,7 @@ describe('@API @V1API - Authorization API Tokens', function() {
             it(testName, function(done) {
                 var tokens = userToTokens[name];
                 async.map(tokens, function(token, callback) {
-                    var url = "/api/v1/users/" + name + "/tokens/" + token.name;
+                    var url = "/api/v1.1/users/" + name + "/tokens/" + token.name;
                     ApiServer.del(url, token.name)
                         .expect(200, function(err, res) {
                         should.not.exist(err);

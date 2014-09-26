@@ -1,4 +1,4 @@
-describe('@API @V1API - History API', function() {
+describe('@API @V1.1API - History API', function() {
     "use strict";
 
     var should = require('should');
@@ -13,25 +13,25 @@ describe('@API @V1API - History API', function() {
     // test on sample entity, hooks, schemas, and hiera
     var data = [
         // schemas
-        { "prefix" : "/api/v1/schemas",
+        { "prefix" : "/api/v1.1/schemas",
           "entries" : [
-            { "name" : "history_test",
-              "owner" : "test",
+            { "name" : "history_test_v11",
+              _sis : { "owner" : "test" },
               "definition" : {
                 "name" : "String",
                 "data" : "Number"
               }
             },
-            { "name" : "history_test",
-              "owner" : "test",
+            { "name" : "history_test_v11",
+              _sis : { "owner" : "test" },
               "definition" : {
                 "name" : "String",
                 "data" : "String",
                 "count" : "Number"
               }
             },
-            { "name" : "history_test",
-              "owner" : "test",
+            { "name" : "history_test_v11",
+              _sis : { "owner" : "test" },
               "definition" : {
                 "name" : "String",
                 "ip" : "Number",
@@ -39,14 +39,14 @@ describe('@API @V1API - History API', function() {
               }
             }
           ],
-          del_url : "/api/v1/schemas/history_test"
+          del_url : "/api/v1.1/schemas/history_test_v11"
         },
 
         // hooks
-        { "prefix" : "/api/v1/hooks",
+        { "prefix" : "/api/v1.1/hooks",
           "entries" : [
-            { "name" : "hist_hook",
-              "owner" : "test",
+            { "name" : "hist_hook_v11",
+              _sis : { "owner" : "test" },
               "entity_type" : "some_entity",
               "target" : {
                 "url" : "http://www.url.com",
@@ -54,8 +54,8 @@ describe('@API @V1API - History API', function() {
               },
               "events" : ["insert"]
             },
-            { "name" : "hist_hook",
-              "owner" : "test",
+            { "name" : "hist_hook_v11",
+              _sis : { "owner" : "test" },
               "entity_type" : "some_entity",
               "target" : {
                 "url" : "http://www.url.com/get",
@@ -63,8 +63,8 @@ describe('@API @V1API - History API', function() {
               },
               "events" : ["insert"]
             },
-            { "name" : "hist_hook",
-              "owner" : "test",
+            { "name" : "hist_hook_v11",
+              _sis : { "owner" : "test" },
               "entity_type" : "some_entity",
               "target" : {
                 "url" : "http://www.url.com/post",
@@ -73,29 +73,29 @@ describe('@API @V1API - History API', function() {
               "events" : ["insert", "update"]
             }
           ],
-          del_url : "/api/v1/hooks/hist_hook"
+          del_url : "/api/v1.1/hooks/hist_hook_v11"
         },
 
         // hiera
-        { "prefix" : "/api/v1/hiera",
+        { "prefix" : "/api/v1.1/hiera",
           "entries" : [
-            { "name" : "hist_hiera",
-              "owner" : "test",
+            { "name" : "hist_hiera_v11",
+              _sis : { "owner" : "test" },
               "hieradata" : {
                 "field" : "v1",
                 "field_n" : 0
               }
             },
-            { "name" : "hist_hiera",
-              "owner" : "test",
+            { "name" : "hist_hiera_v11",
+              _sis : { "owner" : "test" },
               "hieradata" : {
                 "field" : null,
                 "new_field" : "new",
                 "field_n" : 0
               }
             },
-            { "name" : "hist_hiera",
-              "owner" : "test",
+            { "name" : "hist_hiera_v11",
+              _sis : { "owner" : "test" },
               "hieradata" : {
                 "field" : "v3",
                 "field_n" : 20
@@ -103,11 +103,11 @@ describe('@API @V1API - History API', function() {
             }
           ],
           "type" : "hiera",
-          del_url : "/api/v1/hiera/hist_hiera"
+          del_url : "/api/v1.1/hiera/hist_hiera_v11"
         },
 
         // entities
-        { "prefix" : "/api/v1/entities/history_test",
+        { "prefix" : "/api/v1.1/entities/history_test_v11",
           "id_field" : "_id",
           "entries" : [
             { "name" : "entity_1",
@@ -175,7 +175,7 @@ describe('@API @V1API - History API', function() {
                             }
                             should.exist(res.body);
                             should.exist(res.body[idField]);
-                            should.exist(res.body._updated_at);
+                            should.exist(res.body._sis._updated_at);
                             items.push(res.body);
                             var item = res.body;
                             // ensure get matches
@@ -226,7 +226,7 @@ describe('@API @V1API - History API', function() {
 
             var createTest = function(idx) {
                 return function(done) {
-                    var utc = items[idx]._updated_at;
+                    var utc = items[idx]._sis._updated_at;
                     var path = [prefix, items[idx][idField], 'revision', utc];
                     var url = path.join("/");
                     ApiServer.get(url)
@@ -245,8 +245,8 @@ describe('@API @V1API - History API', function() {
 
             it("should retrieve the middle item by time", function(done) {
                 // calculate a time between the middle item and the next item
-                var time = (items[middleIdx + 1]._updated_at - items[middleIdx]._updated_at) / 2;
-                time += items[middleIdx]._updated_at;
+                var time = (items[middleIdx + 1]._sis._updated_at - items[middleIdx]._sis._updated_at) / 2;
+                time += items[middleIdx]._sis._updated_at;
                 var path = [prefix, items[0][idField], 'revision', time];
                 ApiServer.newRequest('get', path.join("/"))
                     .expect(200, function(err, res) {
@@ -263,7 +263,7 @@ describe('@API @V1API - History API', function() {
     describe("Test prevent commit tracking", function() {
         var schema = {
             name : "history_test_2",
-            owner : ["sistest"],
+            _sis : { owner : ["sistest"] },
             definition : {
                 name : "String",
                 number : "Number"
@@ -275,19 +275,19 @@ describe('@API @V1API - History API', function() {
             number : 1
         };
         before(function(done) {
-            ApiServer.del('/api/v1/schemas/history_test_2')
+            ApiServer.del('/api/v1.1/schemas/history_test_2')
                 .end(function(err, res) {
-                ApiServer.post("/api/v1/schemas")
+                ApiServer.post("/api/v1.1/schemas")
                     .send(schema)
                     .expect(201, function(err, res) {
                         should.not.exist(err);
-                        ApiServer.post("/api/v1/entities/history_test_2")
+                        ApiServer.post("/api/v1.1/entities/history_test_2")
                             .send(entity).expect(201, function(err, res) {
 
                             should.not.exist(err);
                             entity = res.body;
                             entity.number = 2;
-                            ApiServer.put("/api/v1/entities/history_test_2/" + entity._id)
+                            ApiServer.put("/api/v1.1/entities/history_test_2/" + entity._id)
                                 .send(entity).expect(200, done);
                     });
                 });
@@ -295,7 +295,7 @@ describe('@API @V1API - History API', function() {
         });
 
         it("Should not retrieve any commits", function(done) {
-            ApiServer.get("/api/v1/entities/history_test_2/" + entity._id + "/commits")
+            ApiServer.get("/api/v1.1/entities/history_test_2/" + entity._id + "/commits")
                 .expect(200, function(err, res) {
                     should.not.exist(err);
                     res.body.should.eql([]);
@@ -307,7 +307,7 @@ describe('@API @V1API - History API', function() {
     describe("Updating with the same content", function() {
         var schema = {
             name : "history_test_3",
-            owner : ["sistst"],
+            _sis : { owner : ["sistst"] },
             definition : {
                 name : "String"
             }
@@ -318,17 +318,17 @@ describe('@API @V1API - History API', function() {
         };
 
         before(function(done) {
-            ApiServer.del('/api/v1/schemas/history_test_3')
+            ApiServer.del('/api/v1.1/schemas/history_test_3')
                 .end(function(err, res) {
-                ApiServer.post("/api/v1/schemas")
+                ApiServer.post("/api/v1.1/schemas")
                     .send(schema)
                     .expect(201, function(err, res) {
                         should.not.exist(err);
-                        ApiServer.post("/api/v1/entities/history_test_3")
+                        ApiServer.post("/api/v1.1/entities/history_test_3")
                             .send(entity).expect(201, function(err, res) {
                             should.not.exist(err);
                             entity = res.body;
-                            ApiServer.put("/api/v1/entities/history_test_3/" + entity._id)
+                            ApiServer.put("/api/v1.1/entities/history_test_3/" + entity._id)
                                 .send(entity).expect(200, done);
                     });
                 });
@@ -336,7 +336,7 @@ describe('@API @V1API - History API', function() {
         });
 
         it("should only have one commit", function(done) {
-            ApiServer.get("/api/v1/entities/history_test_3/" + entity._id + "/commits")
+            ApiServer.get("/api/v1.1/entities/history_test_3/" + entity._id + "/commits")
                 .expect(200, function(err, res) {
                     should.not.exist(err);
                     res.body.length.should.eql(1);

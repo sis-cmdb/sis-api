@@ -721,6 +721,7 @@ Manager.prototype.applyPreSaveFields = function(obj) {
 };
 
 Manager.prototype._upgradeFromV1 = function(item) {
+    // unset keys
     var unsetObj = Object.keys(SIS.V1_TO_SIS_META)
         .reduce(function(ret, k) {
             ret[k] = "";

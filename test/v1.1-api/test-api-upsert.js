@@ -1,4 +1,4 @@
-describe('@API @V1API - Upsert', function() {
+describe('@API @V1.1API - Upsert', function() {
     "use strict";
 
     var should = require('should');
@@ -26,7 +26,7 @@ describe('@API @V1API - Upsert', function() {
         var schema = {
             name : "test_upsert_1",
             id_field : "name",
-            owner : ["sistest"],
+            _sis : { owner : ["sistest"] },
             definition : {
                 name : { type : "String", required : true, unique : true },
                 short_name : { type : "String", required : true, unique : true },
@@ -35,18 +35,18 @@ describe('@API @V1API - Upsert', function() {
         };
 
         before(function(done) {
-            ApiServer.del("/api/v1/schemas/test_upsert_1").end(done);
+            ApiServer.del("/api/v1.1/schemas/test_upsert_1").end(done);
         });
 
         it("Should insert the schema", function(done) {
-            ApiServer.put("/api/v1/schemas/test_upsert_1")
+            ApiServer.put("/api/v1.1/schemas/test_upsert_1")
                 .query({ upsert : true }).send(schema)
                 .expect(201, done);
         });
 
         it("Should update the schema", function(done) {
             schema.id_field = 'short_name';
-            ApiServer.put("/api/v1/schemas/test_upsert_1")
+            ApiServer.put("/api/v1.1/schemas/test_upsert_1")
                 .query({ upsert : true }).send(schema)
                 .expect(200, function(err, res) {
                     if (err) { return done(err); }
@@ -56,7 +56,7 @@ describe('@API @V1API - Upsert', function() {
         });
 
         it("Should not insert with mismatched IDs", function(done) {
-            ApiServer.put("/api/v1/schemas/test_upsert_bad")
+            ApiServer.put("/api/v1.1/schemas/test_upsert_bad")
                 .query({ upsert : true }).send(schema)
                 .expect(400, done);
         });
@@ -66,7 +66,7 @@ describe('@API @V1API - Upsert', function() {
     describe("Upsert entities", function() {
         var schema = {
             name : "test_upsert_2",
-            owner : ["sistest"],
+            _sis : { owner : ["sistest"] },
             definition : {
                 name : { type : "String", required : true, unique : true },
                 short_name : { type : "String", required : true, unique : true },
@@ -75,9 +75,9 @@ describe('@API @V1API - Upsert', function() {
         };
 
         before(function(done) {
-            ApiServer.del("/api/v1/schemas/test_upsert_2")
+            ApiServer.del("/api/v1.1/schemas/test_upsert_2")
             .end(function(err, res) {
-                ApiServer.post("/api/v1/schemas").send(schema)
+                ApiServer.post("/api/v1.1/schemas").send(schema)
                 .expect(201, done);
             });
         });
@@ -88,7 +88,7 @@ describe('@API @V1API - Upsert', function() {
                 short_name : "foobar_short",
                 other : "foobar"
             };
-            ApiServer.put("/api/v1/entities/test_upsert_2/foobar")
+            ApiServer.put("/api/v1.1/entities/test_upsert_2/foobar")
             .query({ upsert : true }).send(entity).expect(400, done);
         });
 
@@ -99,10 +99,10 @@ describe('@API @V1API - Upsert', function() {
                 short_name : "foobar_short",
                 other : "foobar"
             };
-            ApiServer.put("/api/v1/schemas/test_upsert_2").send(schema)
+            ApiServer.put("/api/v1.1/schemas/test_upsert_2").send(schema)
             .expect(200, function(err, res) {
                 should.not.exist(err);
-                ApiServer.put("/api/v1/entities/test_upsert_2/foobar")
+                ApiServer.put("/api/v1.1/entities/test_upsert_2/foobar")
                 .query({ upsert : true }).send(entity).expect(201, done);
             });
         });
@@ -113,7 +113,7 @@ describe('@API @V1API - Upsert', function() {
                 short_name : "foobar_short",
                 other : "foobar"
             };
-            ApiServer.put("/api/v1/entities/test_upsert_2/bar")
+            ApiServer.put("/api/v1.1/entities/test_upsert_2/bar")
             .query({ upsert : true }).send(entity).expect(400, done);
         });
 

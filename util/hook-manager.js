@@ -30,9 +30,6 @@ HookManager.prototype.validate = function(modelObj, toUpdate, options) {
     if(!modelObj.name) {
         return "Hook has no name.";
     }
-    if(!modelObj.owner) {
-        return "Hook has no owner.";
-    }
     if(!modelObj.entity_type) {
         return "Hook has no entity_type.";
     }

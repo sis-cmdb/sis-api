@@ -1,4 +1,4 @@
-describe('@API @V1API - Authorization API Entities', function() {
+describe('@API @V1.1API - Authorization API Entities', function() {
     "use strict";
 
     var should = require('should');
@@ -7,7 +7,7 @@ describe('@API @V1API - Authorization API Entities', function() {
     var SIS = require("../../util/constants");
     var config = require('../fixtures/config');
     var TestUtil = require('../fixtures/util');
-    var AuthFixture = require("../fixtures/authdata-v1");
+    var AuthFixture = require("../fixtures/authdata");
 
     var ApiServer = new TestUtil.TestServer();
 
@@ -95,7 +95,7 @@ describe('@API @V1API - Authorization API Entities', function() {
                 var testName = userName + " should be able to add entity " + entityName;
                 it(testName, function(done) {
                     var token = userToTokens[userName].name;
-                    ApiServer.post("/api/v1/entities/" + schemaName, token)
+                    ApiServer.post("/api/v1.1/entities/" + schemaName, token)
                         .send(entity)
                         .expect(201, function(err, res) {
                         // validate add worked
@@ -103,10 +103,10 @@ describe('@API @V1API - Authorization API Entities', function() {
                         res = res.body;
                         should.exist(res);
                         entity.str.should.eql(res.str);
-                        res[SIS.FIELD_CREATED_BY].should.eql(userName);
+                        res._sis[SIS.FIELD_CREATED_BY].should.eql(userName);
                         var entityId = res._id;
                         // delete
-                        ApiServer.del("/api/v1/entities/" + schemaName + "/" + entityId, token)
+                        ApiServer.del("/api/v1.1/entities/" + schemaName + "/" + entityId, token)
                             .expect(200, function(e, r) {
                             // delete
                             done(e);
@@ -120,7 +120,7 @@ describe('@API @V1API - Authorization API Entities', function() {
                 var testName = userName + " should NOT be able to add entity " + entityName;
                 it(testName, function(done) {
                     var token = userToTokens[userName].name;
-                    ApiServer.post("/api/v1/entities/" + schemaName, token)
+                    ApiServer.post("/api/v1.1/entities/" + schemaName, token)
                         .send(entity)
                         .expect(addTest.fail_code || 401, function(err, res) {
                         // should be done
@@ -171,33 +171,34 @@ describe('@API @V1API - Authorization API Entities', function() {
             updateTests.map(function(test) {
                 var passes = test.pass;
                 var failures = TestUtil.invert(userNames, passes);
-                var ownerStr = JSON.stringify(test[SIS.FIELD_OWNER]);
+                var ownerStr = JSON.stringify(test.owner);
                 passes.map(function(uname) {
                     var testName = uname + " can update " + entityName + " w/ owners " + ownerStr;
                     it(testName, function(done) {
                         // add the entity
-                        ApiServer.post("/api/v1/entities/" + schemaName, superToken)
+                        ApiServer.post("/api/v1.1/entities/" + schemaName, superToken)
                             .send(entity)
                             .expect(201, function(e1, r1) {
                             // validate that it was added it
                             should.not.exist(e1);
                             r1.should.have.property('body');
                             r1 = r1.body;
-                            r1.should.have.property('owner', entity.owner);
-                            r1.should.have.property(SIS.FIELD_CREATED_BY);
-                            var created_by = r1[SIS.FIELD_CREATED_BY];
+                            r1.should.have.property('_sis');
+                            r1._sis.should.have.property('owner', entity._sis.owner);
+                            r1._sis.should.have.property(SIS.FIELD_CREATED_BY);
+                            var created_by = r1._sis[SIS.FIELD_CREATED_BY];
                             var token = userToTokens[uname].name;
-                            r1[SIS.FIELD_OWNER] = test[SIS.FIELD_OWNER];
-                            ApiServer.put("/api/v1/entities/" + schemaName + "/" + r1._id, token)
+                            r1._sis[SIS.FIELD_OWNER] = test[SIS.FIELD_OWNER];
+                            ApiServer.put("/api/v1.1/entities/" + schemaName + "/" + r1._id, token)
                                 .send(r1)
                                 .expect(200, function(e2, r2) {
                                 // validate that it updated
                                 should.not.exist(e2);
                                 r2 = r2.body;
-                                r2[SIS.FIELD_CREATED_BY].should.eql(created_by);
-                                r2[SIS.FIELD_UPDATED_BY].should.eql(uname);
+                                r2._sis[SIS.FIELD_CREATED_BY].should.eql(created_by);
+                                r2._sis[SIS.FIELD_UPDATED_BY].should.eql(uname);
                                 // delete..
-                                ApiServer.del("/api/v1/entities/" + schemaName + "/" + r1._id, superToken)
+                                ApiServer.del("/api/v1.1/entities/" + schemaName + "/" + r1._id, superToken)
                                     .expect(200, done);
                             });
                         });
@@ -209,20 +210,20 @@ describe('@API @V1API - Authorization API Entities', function() {
                     var testName = uname + " cannot update " + schemaName + " w/ owners " + ownerStr;
                     it(testName, function(done) {
                         // add the entity
-                        ApiServer.post("/api/v1/entities/" + schemaName, superToken)
+                        ApiServer.post("/api/v1.1/entities/" + schemaName, superToken)
                             .send(entity)
                             .expect(201, function(e1, r1) {
                             // update it
                             should.not.exist(e1);
                             r1 = r1.body;
                             var token = userToTokens[uname].name;
-                            r1[SIS.FIELD_OWNER] = test[SIS.FIELD_OWNER];
-                            ApiServer.put("/api/v1/entities/" + schemaName + "/" + r1._id, token)
+                            r1._sis[SIS.FIELD_OWNER] = test[SIS.FIELD_OWNER];
+                            ApiServer.put("/api/v1.1/entities/" + schemaName + "/" + r1._id, token)
                                 .send(r1)
                                 .expect(failCode, function(e2, r2) {
                                 should.not.exist(e2);
                                 // delete..
-                                ApiServer.del("/api/v1/entities/" + schemaName + "/" + r1._id, superToken)
+                                ApiServer.del("/api/v1.1/entities/" + schemaName + "/" + r1._id, superToken)
                                     .expect(200, done);
                             });
                         });
@@ -235,8 +236,8 @@ describe('@API @V1API - Authorization API Entities', function() {
 
     describe("Open schemas", function() {
         var schema = {
+            _sis : { owner : ["nobody_should_be_a_member"] },
             name : "test_open_schema",
-            owner : ["nobody_should_be_a_member"],
             is_open : true,
             definition : {
                 name : "String"
@@ -277,7 +278,7 @@ describe('@API @V1API - Authorization API Entities', function() {
                 var entity = {
                     name : user
                 };
-                ApiServer.post("/api/v1/entities/" + schema.name, token)
+                ApiServer.post("/api/v1.1/entities/" + schema.name, token)
                 .send(entity).expect(201, function(err, res) {
                     should.not.exist(err);
                     res.body.name.should.eql(user);
@@ -295,7 +296,7 @@ describe('@API @V1API - Authorization API Entities', function() {
                 it(user + " should update entity for " + passUser, function(done) {
                     var token = userToTokens[user].name;
                     var toUpdate = userToEntity[passUser]._id;
-                    var url = "/api/v1/entities/" + schema.name + "/" + toUpdate;
+                    var url = "/api/v1.1/entities/" + schema.name + "/" + toUpdate;
                     ApiServer.put(url, token).send(entity).expect(200, done);
                 });
             });
@@ -303,7 +304,7 @@ describe('@API @V1API - Authorization API Entities', function() {
                 it(user + " should not update entity for " + failUser, function(done) {
                     var token = userToTokens[user].name;
                     var toUpdate = userToEntity[failUser]._id;
-                    var url = "/api/v1/entities/" + schema.name + "/" + toUpdate;
+                    var url = "/api/v1.1/entities/" + schema.name + "/" + toUpdate;
                     ApiServer.put(url, token).send(entity).expect(401, done);
                 });
             });
@@ -313,7 +314,7 @@ describe('@API @V1API - Authorization API Entities', function() {
         users.forEach(function(user) {
             it("should delete the entity for " + user, function(done) {
                 var token = userToTokens[user].name;
-                ApiServer.del("/api/v1/entities/" + schema.name + "/" + userToEntity[user]._id, token)
+                ApiServer.del("/api/v1.1/entities/" + schema.name + "/" + userToEntity[user]._id, token)
                 .expect(200, done);
             });
         });
@@ -324,22 +325,22 @@ describe('@API @V1API - Authorization API Entities', function() {
                 var token = userToTokens[user].name;
                 var u_schema = {
                     name : "test_open_schema_" + user,
-                    owner : ["nobody_should_be_a_member"],
+                    _sis : { owner : ["nobody_should_be_a_member"] },
                     is_open : true,
                     definition : {
                         name : "String"
                     }
                 };
-                ApiServer.del("/api/v1/schemas/" + u_schema.name, superToken)
+                ApiServer.del("/api/v1.1/schemas/" + u_schema.name, superToken)
                 .end(function() {
-                    ApiServer.post("/api/v1/schemas", token).send(u_schema)
+                    ApiServer.post("/api/v1.1/schemas", token).send(u_schema)
                     .expect(201, function(e, r) {
                         should.not.exist(e);
                         u_schema.definition.num = "Number";
-                        ApiServer.put("/api/v1/schemas/" + u_schema.name, token)
+                        ApiServer.put("/api/v1.1/schemas/" + u_schema.name, token)
                         .send(u_schema).expect(200, function(e , r) {
                             should.not.exist(e);
-                            ApiServer.del("/api/v1/schemas/" + u_schema.name, token)
+                            ApiServer.del("/api/v1.1/schemas/" + u_schema.name, token)
                             .expect(200, done);
                         });
                     });
@@ -352,7 +353,7 @@ describe('@API @V1API - Authorization API Entities', function() {
     describe("Public schemas", function() {
         var schema = {
             name : "test_public_schema",
-            owner : ["nobody_should_be_a_member"],
+            _sis : { owner : ["nobody_should_be_a_member"] },
             is_public : true,
             definition : {
                 name : "String"
@@ -393,7 +394,7 @@ describe('@API @V1API - Authorization API Entities', function() {
                 var entity = {
                     name : user
                 };
-                ApiServer.post("/api/v1/entities/" + schema.name, token)
+                ApiServer.post("/api/v1.1/entities/" + schema.name, token)
                 .send(entity).expect(201, function(err, res) {
                     should.not.exist(err);
                     res.body.name.should.eql(user);
@@ -411,7 +412,7 @@ describe('@API @V1API - Authorization API Entities', function() {
                 it(user + " should update entity for " + passUser, function(done) {
                     var token = userToTokens[user].name;
                     var toUpdate = userToEntity[passUser]._id;
-                    var url = "/api/v1/entities/" + schema.name + "/" + toUpdate;
+                    var url = "/api/v1.1/entities/" + schema.name + "/" + toUpdate;
                     ApiServer.put(url, token).send(entity).expect(200, done);
                 });
             });
@@ -419,7 +420,7 @@ describe('@API @V1API - Authorization API Entities', function() {
                 it(user + " should not update entity for " + failUser, function(done) {
                     var token = userToTokens[user].name;
                     var toUpdate = userToEntity[failUser]._id;
-                    var url = "/api/v1/entities/" + schema.name + "/" + toUpdate;
+                    var url = "/api/v1.1/entities/" + schema.name + "/" + toUpdate;
                     ApiServer.put(url, token).send(entity).expect(401, done);
                 });
             });
@@ -429,7 +430,7 @@ describe('@API @V1API - Authorization API Entities', function() {
         users.forEach(function(user) {
             it("should delete the entity for " + user, function(done) {
                 var token = userToTokens[user].name;
-                ApiServer.del("/api/v1/entities/" + schema.name + "/" + userToEntity[user]._id, token)
+                ApiServer.del("/api/v1.1/entities/" + schema.name + "/" + userToEntity[user]._id, token)
                 .expect(200, done);
             });
         });
@@ -440,20 +441,20 @@ describe('@API @V1API - Authorization API Entities', function() {
                 var token = userToTokens[user].name;
                 var u_schema = {
                     name : "test_public_schema_" + user,
-                    owner : ["nobody_should_be_a_member"],
+                    _sis : { owner : ["nobody_should_be_a_member"] },
                     is_public : true,
                     definition : {
                         name : "String"
                     }
                 };
-                ApiServer.post("/api/v1/schemas", token).send(u_schema)
+                ApiServer.post("/api/v1.1/schemas", token).send(u_schema)
                 .expect(401, function(e, r) {
                     should.not.exist(e);
                     schema.definition.num = "Number";
-                    ApiServer.put("/api/v1/schemas/" + schema.name, token)
+                    ApiServer.put("/api/v1.1/schemas/" + schema.name, token)
                     .send(schema).expect(401, function(e , r) {
                         should.not.exist(e);
-                        ApiServer.del("/api/v1/schemas/" + schema.name, token)
+                        ApiServer.del("/api/v1.1/schemas/" + schema.name, token)
                         .expect(401, done);
                     });
                 });

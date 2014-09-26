@@ -1,4 +1,4 @@
-describe('@API @V1API - Authorization API Schemas', function() {
+describe('@API @V1.1API - Authorization API Schemas', function() {
     "use strict";
 
     var should = require('should');
@@ -7,7 +7,7 @@ describe('@API @V1API - Authorization API Schemas', function() {
     var SIS = require("../../util/constants");
     var config = require('../fixtures/config');
     var TestUtil = require('../fixtures/util');
-    var AuthFixture = require("../fixtures/authdata-v1");
+    var AuthFixture = require("../fixtures/authdata");
 
     var ApiServer = new TestUtil.TestServer();
 
@@ -82,7 +82,7 @@ describe('@API @V1API - Authorization API Schemas', function() {
                 it(testName, function(done) {
                     var token = userToTokens[userName];
                     token = token.name;
-                    ApiServer.post("/api/v1/schemas", token)
+                    ApiServer.post("/api/v1.1/schemas", token)
                         .send(schema)
                         .expect(201, function(err, res) {
                         // validate
@@ -90,7 +90,7 @@ describe('@API @V1API - Authorization API Schemas', function() {
                         should.exist(res);
                         res.body.should.have.property(SIS.FIELD_NAME, schemaName);
                         // delete
-                        ApiServer.del("/api/v1/schemas/" + schemaName, token)
+                        ApiServer.del("/api/v1.1/schemas/" + schemaName, token)
                             .expect(200, function(e, r) {
                             should.not.exist(e);
                             done();
@@ -106,7 +106,7 @@ describe('@API @V1API - Authorization API Schemas', function() {
                     var token = userToTokens[userName];
                     userName.should.eql(token.username);
                     token = token.name;
-                    ApiServer.post("/api/v1/schemas", token)
+                    ApiServer.post("/api/v1.1/schemas", token)
                         .send(schema)
                         .expect(401, function(err, res) {
                             should.not.exist(err);
@@ -167,10 +167,10 @@ describe('@API @V1API - Authorization API Schemas', function() {
                     var testName = uname + " can update " + schemaName + " w/ owners " + ownerStr;
                     it(testName, function(done) {
                         // delete..
-                        ApiServer.del("/api/v1/schemas/" + schemaName, superToken)
+                        ApiServer.del("/api/v1.1/schemas/" + schemaName, superToken)
                         .end(function() {
                             // add the schema
-                            ApiServer.post("/api/v1/schemas", superToken)
+                            ApiServer.post("/api/v1.1/schemas", superToken)
                                 .send(schema)
                                 .expect(201, function(e1, r1) {
                                 // validate + update
@@ -178,8 +178,8 @@ describe('@API @V1API - Authorization API Schemas', function() {
                                 r1.should.have.property('body');
                                 r1 = r1.body;
                                 var token = userToTokens[uname].name;
-                                r1[SIS.FIELD_OWNER] = updateTest[SIS.FIELD_OWNER];
-                                ApiServer.put("/api/v1/schemas/" + schemaName, token)
+                                r1._sis[SIS.FIELD_OWNER] = updateTest[SIS.FIELD_OWNER];
+                                ApiServer.put("/api/v1.1/schemas/" + schemaName, token)
                                     .send(r1)
                                     .expect(200, done);
                             });
@@ -191,17 +191,17 @@ describe('@API @V1API - Authorization API Schemas', function() {
                     var testName = uname + " cannot update " + schemaName + " w/ owners " + ownerStr;
                     it(testName, function(done) {
                         // add the schema
-                        ApiServer.del("/api/v1/schemas/" + schemaName, superToken)
+                        ApiServer.del("/api/v1.1/schemas/" + schemaName, superToken)
                         .end(function() {
-                            ApiServer.post("/api/v1/schemas", superToken)
+                            ApiServer.post("/api/v1.1/schemas", superToken)
                                 .send(schema)
                                 .expect(201, function(e1, r1) {
                                 // update it
                                 should.not.exist(e1);
                                 r1 = r1.body;
                                 var token = userToTokens[uname].name;
-                                r1[SIS.FIELD_OWNER] = updateTest[SIS.FIELD_OWNER];
-                                ApiServer.put("/api/v1/schemas/" + schemaName, token)
+                                r1._sis[SIS.FIELD_OWNER] = updateTest[SIS.FIELD_OWNER];
+                                ApiServer.put("/api/v1.1/schemas/" + schemaName, token)
                                     .send(r1)
                                     .expect(401, done);
                             });
@@ -217,7 +217,7 @@ describe('@API @V1API - Authorization API Schemas', function() {
 
         var schema = {
             name : "test_very_open_schema",
-            owner : ["does_not_exist"],
+            _sis : { owner : ["does_not_exist"] },
             is_open : true,
             definition : {
                 name : "String"
@@ -236,27 +236,27 @@ describe('@API @V1API - Authorization API Schemas', function() {
 
         it("Should be created by admin1", function(done) {
             var token = userToTokens.admin1.name;
-            ApiServer.post("/api/v1/schemas", token)
+            ApiServer.post("/api/v1.1/schemas", token)
                 .send(schema).expect(201, done);
         });
 
         it("Should be updated by user4", function(done) {
             var token = userToTokens.user4.name;
             schema.definition.num = "Number";
-            ApiServer.put("/api/v1/schemas/" + schema.name, token)
+            ApiServer.put("/api/v1.1/schemas/" + schema.name, token)
                 .send(schema).expect(200, done);
         });
 
         it("Should not be updated by admin_2 changing is_open", function(done) {
             var token = userToTokens.admin2.name;
             schema.is_open = false;
-            ApiServer.put("/api/v1/schemas/" + schema.name, token)
+            ApiServer.put("/api/v1.1/schemas/" + schema.name, token)
                 .send(schema).expect(401, done);
         });
 
         it("Should be deleted by user2", function(done) {
             var token = userToTokens.user2.name;
-            ApiServer.del("/api/v1/schemas/" + schema.name, token)
+            ApiServer.del("/api/v1.1/schemas/" + schema.name, token)
                 .expect(200, done);
         });
     });
@@ -264,7 +264,7 @@ describe('@API @V1API - Authorization API Schemas', function() {
     describe("any_owner_can_modify schemas", function() {
         var schema = {
             name : "test_any_owner_schema",
-            owner : ["test_g1", "test_g2"],
+            _sis : { owner : ["test_g1", "test_g2"] },
             any_owner_can_modify : true,
             definition : {
                 name : "String"
@@ -277,7 +277,7 @@ describe('@API @V1API - Authorization API Schemas', function() {
             AuthFixture.deleteSchemas(ApiServer, [schema], false, function(err, res) {
                 if (err) { return done(err); }
                 ApiServer.authToken = null;
-                ApiServer.post("/api/v1/schemas", superToken)
+                ApiServer.post("/api/v1.1/schemas", superToken)
                     .send(schema).expect(201, done);
             });
         });
@@ -285,20 +285,20 @@ describe('@API @V1API - Authorization API Schemas', function() {
         it("Should be updated by admin1", function(done) {
             var token = userToTokens.admin1.name;
             schema.definition.num = "Number";
-            ApiServer.put("/api/v1/schemas/" + schema.name, token)
+            ApiServer.put("/api/v1.1/schemas/" + schema.name, token)
                 .send(schema).expect(200, done);
         });
 
         it("Should be updated by admin2", function(done) {
             var token = userToTokens.admin2.name;
             schema.definition.other_num = "Number";
-            ApiServer.put("/api/v1/schemas/" + schema.name, token)
+            ApiServer.put("/api/v1.1/schemas/" + schema.name, token)
                 .send(schema).expect(200, done);
         });
 
         it("Should be deleted by admin1_1", function(done) {
             var token = userToTokens.admin1_1.name;
-            ApiServer.del("/api/v1/schemas/" + schema.name, token)
+            ApiServer.del("/api/v1.1/schemas/" + schema.name, token)
                 .expect(200, done);
         });
     });
