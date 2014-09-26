@@ -327,17 +327,18 @@ Manager.prototype._update = function(id, obj, options, saveFunc) {
 
         // init the mongoose doc - must use .init per comment in mongoose
         // otherwise there are problems like _id mod errors from mongo
+        // reference the old raw document
         var old = found;
+        var converted = found;
         var isUpgradeFromV1 = false;
         if (!found[SIS.FIELD_SIS_META] ||
             found[SIS.FIELD_CREATED_AT]) {
             // v1 - need to convert to v1.1
-            found = SIS.UTIL_FROM_V1(found);
+            converted = SIS.UTIL_FROM_V1(found);
             isUpgradeFromV1 = true;
         }
-
         found = new this.model();
-        found.init(old, { });
+        found.init(converted, { });
         found.isNew = false;
 
         // need to save found's old state
@@ -352,14 +353,21 @@ Manager.prototype._update = function(id, obj, options, saveFunc) {
 
         // update metas
         // set meta fields
-        var currentMeta = found[SIS.FIELD_SIS_META] || { };
+        var currentMeta = oldV11[SIS.FIELD_SIS_META] || { };
         var updateMeta = obj[SIS.FIELD_SIS_META] || { };
 
         SIS.MUTABLE_META_FIELDS.forEach(function(k) {
             if (k in updateMeta) {
-                currentMeta[k] = updateMeta[k];
+                found[SIS.FIELD_SIS_META][k] = updateMeta[k];
             }
         });
+
+        if (isUpgradeFromV1) {
+            for (var k in found[SIS.FIELD_SIS_META]) {
+                var path = SIS.FIELD_SIS_META + "." + k;
+                found.markModified(path);
+            }
+        }
 
         return this._merge(found, obj).bind(this).then(function(merged) {
             return this.authorize(SIS.EVENT_UPDATE, oldV11, user, merged);
@@ -370,7 +378,9 @@ Manager.prototype._update = function(id, obj, options, saveFunc) {
         .then(function(updated) {
             if (isUpgradeFromV1) {
                 // need to unset the old SIS fields of the individual object
-                return this._unsetV1Fields(updated._id).then(function() {
+                return this._unsetV1Fields(updated._id).bind(this)
+                .then(function(updatedRaw) {
+                    updated = new this.model(updatedRaw);
                     return this.finishUpdate(oldV11, updated);
                 });
             } else {
@@ -390,8 +400,13 @@ Manager.prototype._unsetV1Fields = function(id) {
         ret[k] = "";
         return ret;
     }, { });
+    // also __v
+    pathsToUnset.__v = "";
     return this.model.updateAsync({ _id : id },{ $unset : pathsToUnset},
-                                  { safe : true, strict: false});
+                                  { safe : true, strict: false})
+    .bind(this).then(function() {
+        return this.model.findOneAsync({ _id : id });
+    });
 };
 
 Manager.prototype.finishUpdate = function(old, updated) {
