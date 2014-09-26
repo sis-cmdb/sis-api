@@ -144,14 +144,17 @@ describe('@API @V1API - History API', function() {
         ApiServer.stop(done);
     });
 
+    var suffix = "_" + Date.now();
     data.map(function(test) {
         // fix for repeats
-        var suffix = "_" + Date.now();
         if (test.del_url) {
             test.del_url += suffix;
             test.entries.forEach(function(ent) {
                 ent.name += suffix;
             });
+        } else {
+            // entities
+            test.prefix += suffix;
         }
 
         var prefix = test.prefix;

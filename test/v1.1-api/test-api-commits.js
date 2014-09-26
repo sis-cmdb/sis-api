@@ -134,7 +134,9 @@ describe('@API @V1.1API - History API', function() {
                 // delete
                 async.map(data, function(d, cb) {
                     if (!d.del_url) { return cb(null); }
-                    ApiServer.del(d.del_url).end(cb);
+                    ApiServer.del(d.del_url).end(function() {
+                        cb();
+                    });
                 }, done);
             });
         });
@@ -144,14 +146,17 @@ describe('@API @V1.1API - History API', function() {
         ApiServer.stop(done);
     });
 
+    var suffix = "_" + Date.now();
     data.map(function(test) {
         // fix for repeats
-        var suffix = "_" + Date.now();
         if (test.del_url) {
             test.del_url += suffix;
             test.entries.forEach(function(ent) {
                 ent.name += suffix;
             });
+        } else {
+            // entities
+            test.prefix += suffix;
         }
 
         var prefix = test.prefix;
