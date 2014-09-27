@@ -535,7 +535,8 @@ describe('@API @V1.1API - Entity API', function() {
             var NUM_QUERIES = 10;
             var tasks = [];
             for (var i = 0; i < NUM_QUERIES; ++i) {
-                tasks.push(createUpdateFunc(i));
+                // add 100 to ensure no repeats.
+                tasks.push(createUpdateFunc(i + 100));
             }
             async.parallel(tasks, function(err, res) {
                 should.not.exist(err);
