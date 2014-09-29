@@ -419,6 +419,19 @@ describe('@API @V1.1API - Entity References', function() {
             return dneObjId;
         };
 
+        var getLeaves = function(i, num, dne) {
+            var result = [];
+            for (var k = i; k < (i + num); ++k) {
+                if (dne) {
+                    result.push(getDneObjectId());
+                } else {
+                    var leaf = LEAVES[k % LEAVES.length];
+                    result.push(leaf);
+                }
+            }
+            return result;
+        };
+
         var ANC_URL = "/api/v1.1/entities/" + ancestor_schema.name;
 
         it("Should fail to create the ancestor via leaves", function(done) {
@@ -448,6 +461,69 @@ describe('@API @V1.1API - Entity References', function() {
             };
             ApiServer.post(ANC_URL).send(anc).expect(400, done);
         });
+
+
+        it("Should work with bulks", function(done) {
+            var items = [];
+            for (var i = 0; i < 100; ++i) {
+                var leaves = getLeaves(i, 4);
+                var item = {
+                    name : "bulk_anc_" + i,
+                    leaves : [leaves[0], leaves[1]],
+                    leaf_docs : [
+                        {
+                            doc_name : "doc_" + i,
+                            leaf : leaves[2]
+                        },
+                        {
+                            doc_name : "doc_" + (i + 1),
+                            leaf : leaves[3]
+                        }
+                    ]
+                };
+                items.push(item);
+            }
+
+            ApiServer.post(ANC_URL).send(items).expectAsync(200)
+            .then(function(res) {
+                var result = res.body;
+                should.exist(result.success);
+                result.success.length.should.eql(items.length);
+                done();
+            }).catch(done);
+        });
+
+        it("Should work with bulks", function(done) {
+            var items = [];
+            for (var i = 0; i < 100; ++i) {
+                var leaves = getLeaves(i, 4, (i % 2) === 0);
+                var item = {
+                    name : "bulk_anc_" + i,
+                    leaves : [leaves[0], leaves[1]],
+                    leaf_docs : [
+                        {
+                            doc_name : "doc_" + i,
+                            leaf : leaves[2]
+                        },
+                        {
+                            doc_name : "doc_" + (i + 1),
+                            leaf : leaves[3]
+                        }
+                    ]
+                };
+                items.push(item);
+            }
+
+            ApiServer.post(ANC_URL).send(items).expectAsync(200)
+            .then(function(res) {
+                var result = res.body;
+                should.exist(result.success);
+                result.success.length.should.eql(items.length / 2);
+                result.errors.length.should.eql(items.length / 2);
+                done();
+            }).catch(done);
+        });
+
 
     });
 

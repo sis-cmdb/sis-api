@@ -223,7 +223,8 @@ Manager.prototype.bulkAdd = function(items, options) {
     var transactionId = hat(64) + Date.now();
     var transactionCond = { };
     transactionCond[SIS.FIELD_SIS_META + "." + SIS.FIELD_TRANSACTION_ID + ".id"] = transactionId;
-    var prepPromises = items.map(function(item, idx) {
+    var authorized = [];
+    var authPromises = items.map(function(item, idx) {
         var err = this.validate(item, null, options);
         if (err) {
             err = SIS.ERR_BAD_REQ(err);
@@ -233,8 +234,22 @@ Manager.prototype.bulkAdd = function(items, options) {
         item = SIS.UTIL_FROM_V1(item);
         return this.authorize(SIS.EVENT_INSERT, item, user)
         .bind(this).then(this._addByFields(user, SIS.EVENT_INSERT))
-        .then(this._preSave)
-        .then(function(res) {
+        .then(function(item) {
+            authorized.push(item);
+            return memo;
+        }).catch(function(err) {
+            memo.errors.push({ err : err, value : item });
+            return memo;
+        });
+    }.bind(this));
+    var insertPromise = Promise.all(authPromises).bind(this)
+    .then(function() {
+        return this._preSaveBulk(authorized);
+    }).spread(function(items, errors) {
+        // concat in place
+        [].push.apply(memo.errors, errors);
+        // fill out the toAdd array
+        items.forEach(function(res, idx) {
             // convert to mongoose obj
             res = new this.model(res).toObject();
             // add the pre save
@@ -246,12 +261,9 @@ Manager.prototype.bulkAdd = function(items, options) {
                 idx : idx
             };
             toAdd.push(res);
-            return memo;
-        }).catch(function(err) {
-            memo.errors.push({ err : err, value : item });
-            return memo;
-        });
-    }.bind(this));
+        }.bind(this));
+        return memo;
+    });
     // helper for the insert
     var handleInsertFailed = function(inserted) {
         // some things failed..
@@ -285,7 +297,7 @@ Manager.prototype.bulkAdd = function(items, options) {
         });
     }.bind(this);
     // do the insert
-    return Promise.all(prepPromises).bind(this).then(function() {
+    return insertPromise.bind(this).then(function() {
         if ((allOrNone && memo.errors.length) || !toAdd.length) {
             // bail - nothing inserted yet or nothing to insert
             return memo;
@@ -746,6 +758,28 @@ Manager.prototype._upgradeFromV1 = function(item) {
         .then(function() {
             return item;
         });
+};
+
+// return a promise that returns
+// an a two element array
+// first elem is a success array
+// second elem is an error array where each
+// error has { err, value } fields
+Manager.prototype._preSaveBulk = function(objs) {
+    var errors = [];
+    var success = [];
+    var promises = objs.map(function(obj) {
+        return this._preSave(obj).then(function(obj) {
+            success.push(obj);
+            return obj;
+        }).catch(function(err) {
+            errors.push({ value : obj, err : err });
+            return obj;
+        });
+    }.bind(this));
+    return Promise.all(promises).then(function() {
+        return [success, errors];
+    });
 };
 
 // do one last bit of validation for subclasses
