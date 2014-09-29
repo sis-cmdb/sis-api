@@ -269,6 +269,149 @@ EntityManager.prototype.applyUpdate = function(result, entity) {
     return result;
 };
 
+EntityManager.prototype._getDocArrayReferencedObjectIds = function(ref, obj, idx, errors) {
+    var containerPaths = ref.containerSplits;
+    var currObj = obj;
+    var path = null;
+    for (var i = 0; i < containerPaths.length; ++i) {
+        path = containerPaths[i];
+        if (!(path in currObj)) {
+            // not there - fine.
+            return null;
+        }
+        currObj = currObj[path];
+    }
+    if (currObj && !(currObj instanceof Array)) {
+        // invalid
+        errors[idx] = {
+            err : SIS.ERR_BAD_REQ("Array expected at " + ref.path),
+            value : obj
+        };
+        return null;
+    }
+    if (!currObj || !currObj.length) {
+        // empty - ok..
+        return null;
+    }
+    // map to subref gets
+    var subRefErrs = { };
+    var subRefsObjIds = currObj.map(function(doc) {
+        return this._getReferenceObjectIds(ref.subRef, doc, -1, subRefErrs);
+    }.bind(this));
+    if (Object.keys(subRefErrs).length) {
+        errors[idx] = {
+            err : SIS.ERR_BAD_REQ("One ore more references could not be verified at " + ref.path),
+            value : obj
+        };
+        return null;
+    }
+    // subRefsObjIds is an array of array of objectIds
+    // it could also be null
+    var allObjIds = subRefsObjIds.reduce(function(ret, objIdArray) {
+        if (!objIdArray) { return ret; }
+        objIdArray.forEach(function(oid) {
+            ret[oid + ""] = true;
+        });
+        return ret;
+    }, { });
+    var distinctObjIds = Object.keys(allObjIds);
+    if (!distinctObjIds.length) {
+        return null;
+    }
+    return distinctObjIds;
+};
+
+EntityManager.prototype._getReferenceObjectIds = function(ref, obj, idx, errors) {
+    var currObj = obj;
+    var path = null;
+    if (ref.container == 'docarr') {
+        // in a doc array
+        return this._getDocArrayReferencedObjectIds(ref, obj, idx, errors);
+    }
+    var refPaths = ref.splits;
+    for (var i = 0; i < refPaths.length; ++i) {
+        path = refPaths[i];
+        if (!(path in currObj)) {
+            // no id @ path - it's ok
+            return null;
+        }
+        currObj = currObj[path];
+    }
+    if (!currObj) {
+        // no value @ path - it's ok
+        return null;
+    }
+    path = ref.path;
+    var schema = this.model.schema;
+    var refModelName = ref.ref;
+    var d = null;
+    if (ref.type == 'oid') {
+        if (typeof currObj === 'object' &&
+            currObj.constructor.name !== "ObjectID") {
+            if (SIS.FIELD_ID in currObj) {
+                currObj = currObj[SIS.FIELD_ID];
+            } else {
+                errors[idx] = {
+                    err : SIS.ERR_BAD_REQ("Reference Object has no _id"),
+                    value : obj
+                };
+                return null;
+            }
+        }
+        return [currObj + ''];
+    } else if (ref.type == 'arr') {
+        // array of oids
+        if (!(currObj instanceof Array)) {
+            currObj = [currObj];
+        }
+        currObj = currObj.filter(function(o) {
+            return o !== null;
+        });
+        var errored = false;
+        currObj.map(function(obj) {
+            if (typeof obj === 'object' &&
+                obj.constructor.name !== "ObjectID") {
+                if (SIS.FIELD_ID in obj) {
+                    return obj[SIS.FIELD_ID];
+                } else {
+                    errored = true;
+                }
+            }
+            return obj;
+        });
+        if (errored) {
+            errors[idx] = {
+                err : SIS.ERR_BAD_REQ("Reference Object has no _id"),
+                value : obj
+            };
+            return null;
+        }
+        // reduce to a set
+        var distinctItems = currObj.reduce(function(ret, id) {
+            // just to string it..
+            ret['' + id] = true;
+            return ret;
+        }, { });
+        distinctItems = Object.keys(distinctItems);
+        return distinctItems;
+    }
+};
+
+// returns an array of object ids
+EntityManager.prototype._addReferencesToState = function(ref, obj, idx,
+                                                         refToIdx, errors) {
+    var objIds = this._getReferenceObjectIds(ref, obj, idx, errors);
+    if (!objIds || !objIds.length) {
+        return;
+    }
+    objIds.forEach(function(oid) {
+        if (!refToIdx[oid]) {
+            refToIdx[oid] = { };
+        }
+        refToIdx[oid][idx] = true;
+    });
+};
+
 EntityManager.prototype.getEnsureDocArrayRef = function(ref, obj) {
     var containerPaths = ref.containerSplits;
     var currObj = obj;
@@ -423,8 +566,121 @@ EntityManager.prototype.ensureReferences = function(obj) {
     });
 };
 
+EntityManager.prototype._preSaveBulk = function(objs) {
+    var references = this.getReferences();
+    if (!references.length || !objs || !objs.length) {
+        return Promise.resolve([objs, []]);
+    }
+    // track all errors
+    var allErrors = { };
+    var objIdStatesByName = references.reduce(function(ret, ref) {
+        // get the objects we need to look for
+        var refToIdx = { };
+        var errors = { };
+        // these are not model objects
+        // so can just map straight up
+        objs.forEach(function(obj, idx) {
+            this._addReferencesToState(ref, obj, idx, refToIdx, errors);
+        }.bind(this));
+        for (var errIdx in errors) {
+            if (!allErrors[errIdx]) {
+                allErrors[errIdx] = errors[errIdx];
+            }
+        }
+        var refModelName = ref.ref;
+        if (!ret[refModelName]) {
+            ret[refModelName] = {
+                ref : refModelName,
+                refToIdx : refToIdx
+            };
+        } else {
+            // need to extend
+            var ext = ret[refModelName];
+            for (var oid in refToIdx) {
+                ext.refToIdx[oid] = ext.refToIdx[oid] || { };
+                for (var oidIdx in refToIdx[oid]) {
+                    ext.refToIdx[oid][oidIdx] = true;
+                }
+            }
+        }
+        return ret;
+    }.bind(this), { });
+
+    var markErrored = function(refToIdx, err) {
+        var objIds = Object.keys(refToIdx);
+        objIds.forEach(function(oid) {
+            var indeces = Object.keys(refToIdx[oid]);
+            indeces.forEach(function(idx) {
+                if (!allErrors[idx]) {
+                    allErrors[idx] = {
+                        err : err,
+                        value : objs[idx]
+                    };
+                }
+            });
+        });
+    };
+
+    var promises = Object.keys(objIdStatesByName).map(function(name) {
+        var state = objIdStatesByName[name];
+        var refModelName = state.ref;
+        var objIds = Object.keys(state.refToIdx);
+        if (!objIds.length) {
+            // nothing to do.
+            return Promise.resolve(true);
+        }
+        return this.sm.getEntityModelAsync(refModelName).then(function(model) {
+            if (!model) {
+                var err = SIS.ERR_BAD_REQ("No schema named " + refModelName);
+                // schema doesn't exist.  all of the items are bad
+                markErrored(state.refToIdx, err);
+                return Promise.resolve(false);
+            }
+            return model.findAsync({ '_id' : { "$in" : objIds }}, '_id', {lean : true}).then(function(r) {
+                if (!r || r.length != objIds.length) {
+                    // sigh.. figure out the ones that are missing
+                    r = r || [];
+                    // nuke the ones that were found
+                    r.forEach(function(obj) {
+                        var oid = obj._id;
+                        delete state.refToIdx[oid + ""];
+                    });
+                    var err = SIS.ERR_BAD_REQ("Reference does not exist.");
+                    markErrored(state.refToIdx, err);
+                    return true;
+                } else {
+                    return true;
+                }
+            }).catch(function(err) {
+                return Promise.reject(SIS.ERR_INTERNAL("Error verifying references"));
+            });
+        });
+    }.bind(this));
+
+    return Promise.all(promises).then(function() {
+        // at this point, all errors has all the errors.
+        var erroredIndeces = Object.keys(allErrors);
+        if (!erroredIndeces.length) {
+            // no errors!
+            return [objs, []];
+        }
+        var errorValues = erroredIndeces.map(function(eIdx) {
+            return allErrors[eIdx];
+        });
+        var success = objs.filter(function(o, idx) {
+            return !(idx in allErrors);
+        });
+        return [success, errorValues];
+    });
+};
+
 EntityManager.prototype._preSave = function(obj) {
-    return this.ensureReferences(obj);
+    return this._preSaveBulk([obj]).spread(function(success, errors) {
+        if (errors.length) {
+            return Promise.reject(errors[0].err);
+        }
+        return obj;
+    });
 };
 //////////
 

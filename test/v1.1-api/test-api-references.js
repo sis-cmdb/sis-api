@@ -363,7 +363,7 @@ describe('@API @V1.1API - Entity References', function() {
             }
         };
 
-        var numLeaves = 20;
+        var numLeaves = 200;
         var LEAVES = null;
         // create leaves 0 - numLeaves
         var createLeaves = function() {
@@ -493,9 +493,9 @@ describe('@API @V1.1API - Entity References', function() {
             }).catch(done);
         });
 
-        it("Should work with bulks", function(done) {
+        it("Should show errors with bulks", function(done) {
             var items = [];
-            for (var i = 0; i < 100; ++i) {
+            for (var i = 0; i < 1000; ++i) {
                 var leaves = getLeaves(i, 4, (i % 2) === 0);
                 var item = {
                     name : "bulk_anc_" + i,
@@ -523,8 +523,6 @@ describe('@API @V1.1API - Entity References', function() {
                 done();
             }).catch(done);
         });
-
-
     });
 
 });
