@@ -461,23 +461,144 @@ describe('@API @V1.1API - Entity References', function() {
             };
             ApiServer.post(ANC_URL).send(anc).expect(400, done);
         });
+    });
 
+    describe("Bulk operations", function() {
+
+        var mongoose = require('mongoose');
+        // need to test arrays of sub docs, arrays of object ids
+        // and arrays of object ids -> sub array field
+        var leaf_schema = {
+            _sis : { "owner" : ["entity_test"] },
+            "name" : "ref_leaf_schema",
+            "definition" : {
+                "name" : "String",
+                "num" : "Number"
+            }
+        };
+
+        var leaf_schema_2 = {
+            _sis : { "owner" : ["entity_test"] },
+            "name" : "ref_leaf_schema_2",
+            "definition" : {
+                "name" : "String",
+                "num" : "Number"
+            }
+        };
+
+        var ancestor_schema = {
+            _sis : { "owner" : ["entity_test"] },
+            name : "ref_ancestor_schema",
+            definition : {
+                name : "String",
+                num : "Number",
+                leaves : [
+                    { type : "ObjectId", ref : "ref_leaf_schema" }
+                ],
+                leaf_docs : [
+                    {
+                        doc_name : "String",
+                        leaf : { type : "ObjectId", ref : "ref_leaf_schema_2" }
+                    }
+                ]
+            }
+        };
+
+        var numLeaves = 200;
+        var LEAVES = null;
+        var LEAVES_2 = null;
+        // create leaves 0 - numLeaves
+        var createLeaves = function(schemaName) {
+            var totalLeaves = numLeaves;
+            var items = [];
+            for (var i = 0; i < totalLeaves; ++i) {
+                items.push({
+                    name : "leaf_" + i,
+                    num : i
+                });
+            }
+            var d = Promise.pending();
+            ApiServer.post("/api/v1.1/entities/" + schemaName)
+            .send(items).expect(200, function(err, res) {
+                if (err) { return d.reject(err); }
+                res.body.success.length.should.eql(totalLeaves);
+                var leaves = res.body.success.map(function(l) {
+                    return l._id;
+                });
+                d.resolve(leaves);
+            });
+            return d.promise;
+        };
+
+        before(function(done) {
+            // delete/create all the schemas
+            var promises = [leaf_schema, leaf_schema_2, ancestor_schema].map(function(schema) {
+                var d = Promise.pending();
+                var url = "/api/v1.1/schemas";
+                ApiServer.del(url + '/' + schema.name).end(function() {
+                    ApiServer.post(url).send(schema).expect(201, function(err, res) {
+                        if (err) { return d.reject(err); }
+                        d.resolve(res);
+                    });
+                });
+                return d.promise;
+            });
+            Promise.all(promises).then(function() {
+                return Promise.all([
+                    createLeaves(leaf_schema.name),
+                    createLeaves(leaf_schema_2.name)
+                ]).then(function(results) {
+                    LEAVES = results[0];
+                    LEAVES_2 = results[1];
+                    return results;
+                });
+            }).then(function() { done(); }).catch(done);
+        });
+
+        var getDneObjectId = function(coll) {
+            var dneObjId = mongoose.Types.ObjectId();
+            var hasObjId = function(id) {
+                return coll.filter(function(l) {
+                    return l._id == dneObjId;
+                }).length > 0;
+            };
+            while (hasObjId(dneObjId)) {
+                dneObjId = mongoose.Types.ObjectId();
+            }
+            return dneObjId;
+        };
+
+        var getLeaves = function(coll, i, num, dne) {
+            var result = [];
+            for (var k = i; k < (i + num); ++k) {
+                if (dne) {
+                    result.push(getDneObjectId(coll));
+                } else {
+                    var leaf = coll[k % coll.length];
+                    result.push(leaf);
+                }
+            }
+            return result;
+        };
+
+        var ANC_URL = "/api/v1.1/entities/" + ancestor_schema.name;
 
         it("Should work with bulks", function(done) {
             var items = [];
-            for (var i = 0; i < 100; ++i) {
-                var leaves = getLeaves(i, 4);
+            for (var i = 0; i < 1000; ++i) {
+                var leaves = getLeaves(LEAVES, i, 2);
+                var leaves_2 = getLeaves(LEAVES_2, i, 2);
                 var item = {
                     name : "bulk_anc_" + i,
                     leaves : [leaves[0], leaves[1]],
                     leaf_docs : [
                         {
                             doc_name : "doc_" + i,
-                            leaf : leaves[2]
+                            leaf : leaves_2[0]
                         },
                         {
                             doc_name : "doc_" + (i + 1),
-                            leaf : leaves[3]
+                            leaf : leaves_2[1]
                         }
                     ]
                 };
@@ -493,21 +614,22 @@ describe('@API @V1.1API - Entity References', function() {
             }).catch(done);
         });
 
-        it("Should show errors with bulks", function(done) {
+        it("Should return errors with bulks", function(done) {
             var items = [];
             for (var i = 0; i < 1000; ++i) {
-                var leaves = getLeaves(i, 4, (i % 2) === 0);
+                var leaves = getLeaves(LEAVES, i, 2, i % 2 === 0);
+                var leaves_2 = getLeaves(LEAVES_2, i, 2);
                 var item = {
                     name : "bulk_anc_" + i,
                     leaves : [leaves[0], leaves[1]],
                     leaf_docs : [
                         {
                             doc_name : "doc_" + i,
-                            leaf : leaves[2]
+                            leaf : leaves_2[0]
                         },
                         {
                             doc_name : "doc_" + (i + 1),
-                            leaf : leaves[3]
+                            leaf : leaves_2[1]
                         }
                     ]
                 };
@@ -523,6 +645,8 @@ describe('@API @V1.1API - Entity References', function() {
                 done();
             }).catch(done);
         });
+
+
     });
 
 });
