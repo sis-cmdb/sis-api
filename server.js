@@ -95,9 +95,6 @@ var startServer = function(config, callback) {
 
     mongoose.connect(nconf.get('db').url, opts, function(err) {
         if (err) {
-            if (callback) {
-                return callback(err);
-            }
             throw err;
         }
 

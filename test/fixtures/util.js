@@ -127,7 +127,11 @@ function TestServer() {
             return callback();
         }
         serverData.server.stopServer(serverData.http, function() {
-            serverData.mongoose.connection.close(callback);
+            serverData.mongoose.connection.close(function(err) {
+                if (err) { callback(err); }
+                serverData = null;
+                callback();
+            });
         });
     };
 

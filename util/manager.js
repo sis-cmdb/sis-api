@@ -340,19 +340,17 @@ Manager.prototype._update = function(id, obj, options, saveFunc) {
         // init the mongoose doc - must use .init per comment in mongoose
         // otherwise there are problems like _id mod errors from mongo
         // reference the old raw document
-        var old = found;
-        var converted = found;
-        var isUpgradeFromV1 = false;
         if (!found[SIS.FIELD_SIS_META] ||
             found[SIS.FIELD_CREATED_AT]) {
             // v1 - need to convert to v1.1
-            converted = SIS.UTIL_FROM_V1(found);
-            isUpgradeFromV1 = true;
+            return this._convertToV11(found);
+        } else {
+            return [found, null];
         }
-        found = new this.model();
+    }).spread(function(converted, old) {
+        var found = new this.model();
         found.init(converted, { });
         found.isNew = false;
-
         // need to save found's old state
         // HACK - see
         // https://github.com/LearnBoost/mongoose/pull/1981
@@ -374,52 +372,64 @@ Manager.prototype._update = function(id, obj, options, saveFunc) {
             }
         });
 
-        if (isUpgradeFromV1) {
-            for (var k in found[SIS.FIELD_SIS_META]) {
-                var path = SIS.FIELD_SIS_META + "." + k;
-                found.markModified(path);
-            }
-        }
-
         return this._merge(found, obj).bind(this).then(function(merged) {
             return this.authorize(SIS.EVENT_UPDATE, oldV11, user, merged);
         })
         .then(this._addByFields(user, SIS.EVENT_UPDATE))
         .then(this._preSave)
         .then(saveFunc)
-        .then(function(updated) {
-            if (isUpgradeFromV1) {
-                // need to unset the old SIS fields of the individual object
-                return this._unsetV1Fields(updated._id).bind(this)
-                .then(function(updatedRaw) {
-                    updated = new this.model(updatedRaw);
-                    return this.finishUpdate(oldV11, updated);
-                });
-            } else {
-                return this.finishUpdate(oldV11, updated);
-            }
-        })
+        // .then(function(updated) {
+        //     if (isUpgradeFromV1) {
+        //         // need to unset the old SIS fields of the individual object
+        //         return this._unsetV1Fields(updated._id).bind(this)
+        //         .then(function(updatedRaw) {
+        //             updated = new this.model(updatedRaw);
+        //             return this.finishUpdate(oldV11, updated);
+        //         });
+        //     } else {
+        //         return this.finishUpdate(oldV11, updated);
+        //     }
+        // })
         .then(function(updated) {
             // return
-            return Promise.resolve([oldV11, updated, isUpgradeFromV1 ? old : null]);
+            return Promise.resolve([oldV11, updated, old]);
         });
     });
 };
 
-Manager.prototype._unsetV1Fields = function(id) {
-    // need to tell mongo to unset
-    var pathsToUnset = Object.keys(SIS.V1_TO_SIS_META).reduce(function(ret, k) {
-        ret[k] = "";
-        return ret;
-    }, { });
-    // also __v
-    pathsToUnset.__v = "";
-    return this.model.updateAsync({ _id : id },{ $unset : pathsToUnset},
-                                  { safe : true, strict: false})
-    .bind(this).then(function() {
-        return this.model.findOneAsync({ _id : id });
+Manager.prototype._convertToV11 = function(found) {
+    var id = new this.model(found)._id;
+    var rename = { };
+    for (var k in SIS.V1_TO_SIS_META) {
+        rename[k] = SIS.FIELD_SIS_META + "." + SIS.V1_TO_SIS_META[k];
+    }
+    // also __v to v
+    rename.__v = '_v';
+    var op = { $rename : rename };
+    return this.model.updateAsync( { _id : id }, op).bind(this)
+    .then(function(numAffected) {
+        console.log(numAffected);
+        return this.model.findOneAsync({ _id : id })
+        .then(function(obj) {
+            return [obj, found];
+        });
     });
 };
+//
+// Manager.prototype._unsetV1Fields = function(id) {
+//     // need to tell mongo to unset
+//     var pathsToUnset = Object.keys(SIS.V1_TO_SIS_META).reduce(function(ret, k) {
+//         ret[k] = "";
+//         return ret;
+//     }, { });
+//     // also __v
+//     pathsToUnset.__v = "";
+//     return this.model.updateAsync({ _id : id },{ $unset : pathsToUnset},
+//                                   { safe : true, strict: false})
+//     .bind(this).then(function() {
+//         return this.model.findOneAsync({ _id : id });
+//     });
+// };
 
 Manager.prototype.finishUpdate = function(old, updated) {
     return Promise.resolve(updated);
