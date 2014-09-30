@@ -168,7 +168,11 @@ module.exports = function(grunt) {
       var done = this.async();
       var infoPromises = webInstances.map(function(host) {
           var url = 'https://' + host.ip + '/api/v1.1/info';
-          return requestAsync(url).spread(function(res, body) {
+          var opts = {
+              uri : url,
+              json : true
+          };
+          return requestAsync(opts).spread(function(res, body) {
               return body.version;
           });
       });

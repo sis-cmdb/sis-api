@@ -381,18 +381,6 @@ Manager.prototype._update = function(id, obj, options, saveFunc) {
         .then(function(updated) {
             return this.finishUpdate(oldV11, updated);
         })
-        // .then(function(updated) {
-        //     if (isUpgradeFromV1) {
-        //         // need to unset the old SIS fields of the individual object
-        //         return this._unsetV1Fields(updated._id).bind(this)
-        //         .then(function(updatedRaw) {
-        //             updated = new this.model(updatedRaw);
-        //             return this.finishUpdate(oldV11, updated);
-        //         });
-        //     } else {
-        //         return this.finishUpdate(oldV11, updated);
-        //     }
-        // })
         .then(function(updated) {
             // return
             return Promise.resolve([oldV11, updated, old]);
