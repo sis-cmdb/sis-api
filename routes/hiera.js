@@ -24,6 +24,9 @@ require('util').inherits(HieraController, ApiController);
 HieraController.prototype.convertToResponseObject = function(req, obj) {
     if (req.method == "GET" && req.params.id &&
         !req.params.isCommitApi) {
+        // dirty hack to inform the caller that no more
+        // conversions are necessary.
+        req.params.doneConverting = true;
         return obj.hieradata;
     }
     return obj;

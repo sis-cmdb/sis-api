@@ -156,4 +156,32 @@ describe('Convert from v1 to v1.1', function() {
             }).nodeify(done);
         });
     });
+
+    describe("Update schemas from v1 to v1.1", function(done) {
+        var schemaObj = {
+                            "_updated_at" : 1407387816231,
+                            "definition" : {
+                                "owner" : [  "String" ],
+                                "model" : "String",
+                                "serial_number" : "String",
+                                "groups" : [  "String" ],
+                                "hostname" : "String",
+                                "ip" : { "type" : "String", "required" : true, "unique" : true },
+                                "vendor" : "String"
+                            },
+                            "name" : "netops_host",
+                            "_created_by" : "agavrik",
+                            "_updated_by" : "agavrik",
+                            "_id" : "53d0f8b9a5c8377e72b9239d",
+                            "_created_at" : 1406204089580,
+                            "_references" : [ ],
+                            "id_field" : "ip",
+                             "is_open" : false,
+                             "track_history" : true,
+                             "locked_fields" : [ ],
+                             "owner" : [  "edgeops" ],
+                             "sis_locked" : true,
+                             "__v" : 0
+                        };
+    });
 });

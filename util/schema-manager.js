@@ -142,7 +142,7 @@ SchemaManager.prototype.validate = function(modelObj, toUpdate, options) {
                 return "ID Field must be required and unique.";
             }
         }
-        var mongooseSchema = new this.mongoose.Schema(modelObj.definition, { collection : "__test__", autoIndex: false });
+        var mongooseSchema = new this.mongoose.Schema(modelObj.definition, { collection : "__test__", autoIndex: false, versionKey : SIS.FIELD_VERS });
         mongooseSchema.eachPath(function(path, schemaType) {
             if (schemaType.instance == "String" &&
                 schemaType.options && schemaType.options.match) {
@@ -454,7 +454,7 @@ SchemaManager.prototype.getEntityModelAsync = function(name) {
 // Bootstrap mongoose by setting up entity models
 SchemaManager.prototype.bootstrapEntitySchemas = function(callback) {
     var self = this;
-    this.model.find({}, function(err, schemas) {
+    this.model.find({}, null, { lean : true }, function(err, schemas) {
         if (err) { return callback(err); }
         for (var i = 0; i < schemas.length; ++i) {
             if (!self.getEntityModel(schemas[i])) {
@@ -513,10 +513,16 @@ SchemaManager.prototype.getEntityModel = function(sisSchema, isInternal) {
     if (!sisSchema || !sisSchema.name || !sisSchema.definition) {
         return null;
     }
+    if (sisSchema[SIS.FIELD_CREATED_AT] ||
+        !sisSchema[SIS.FIELD_SIS_META]) {
+        // convert it
+        sisSchema = SIS.UTIL_FROM_V1(sisSchema);
+    }
     var name = sisSchema.name;
-    var schemaTime = sisSchema[SIS.FIELD_UPDATED_AT] || Date.now();
+    var sisMeta = sisSchema[SIS.FIELD_SIS_META] || {};
+    var schemaTime = sisMeta[SIS.FIELD_UPDATED_AT] || Date.now();
     if (name in this.mongoose.models) {
-        if (this.entitySchemaToUpdateTime[name] == schemaTime) {
+        if (this.entitySchemaToUpdateTime[name] === schemaTime) {
             return this.mongoose.models[name];
         } else {
             // invalidate
@@ -590,7 +596,7 @@ SchemaManager.prototype._isPartialAdmin = function(obj, user) {
 };
 
 SchemaManager.prototype._preSave = function(obj) {
-    var mongooseSchema = new this.mongoose.Schema(obj.definition, { collection : "__test__", autoIndex: false });
+    var mongooseSchema = new this.mongoose.Schema(obj.definition, { collection : "__test__", autoIndex: false, versionKey : SIS.FIELD_VERS });
     var refs = SIS.UTIL_GET_OID_PATHS(mongooseSchema).map(function(ref) {
         return ref.ref;
     });

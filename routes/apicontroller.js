@@ -437,33 +437,39 @@ ApiController.prototype._convertToResponseObject = function(req, obj) {
     if (req.params.isBulk) {
         // change the success array
         obj.success = obj.success.map(function(o) {
-            if (isV1) {
-                o = SIS.UTIL_TO_V1(o);
-            } else {
-                o = SIS.UTIL_FROM_V1(o);
-            }
             o = self.convertToResponseObject(req, o);
+            if (!req.params.doneConverting) {
+                if (isV1) {
+                    o = SIS.UTIL_TO_V1(o);
+                } else {
+                    o = SIS.UTIL_FROM_V1(o);
+                }
+            }
             return o;
         });
         return obj;
     }
     if (obj instanceof Array) {
         obj = obj.map(function(o) {
-            if (isV1) {
-                o = SIS.UTIL_TO_V1(o);
-            } else {
-                o = SIS.UTIL_FROM_V1(o);
-            }
             o = self.convertToResponseObject(req, o);
+            if (!req.params.doneConverting) {
+                if (isV1) {
+                    o = SIS.UTIL_TO_V1(o);
+                } else {
+                    o = SIS.UTIL_FROM_V1(o);
+                }
+            }
             return o;
         });
     } else {
-        if (isV1) {
-            obj = SIS.UTIL_TO_V1(obj);
-        } else {
-            obj = SIS.UTIL_FROM_V1(obj);
-        }
         obj = self.convertToResponseObject(req, obj);
+        if (!req.params.doneConverting) {
+            if (isV1) {
+                obj = SIS.UTIL_TO_V1(obj);
+            } else {
+                obj = SIS.UTIL_FROM_V1(obj);
+            }
+        }
     }
     return obj;
 };

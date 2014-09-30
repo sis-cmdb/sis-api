@@ -1,6 +1,8 @@
 module.exports = function(grunt) {
 
   require('load-grunt-tasks')(grunt);
+  var Promise = require('bluebird');
+  var requestAsync = Promise.promisify(require('request'));
 
   var distFiles = ['routes/*.js', 'tools/*.js', 'util/*.js', 'util/types/*.js', 'server.js'];
 
@@ -151,26 +153,67 @@ module.exports = function(grunt) {
     return webInstances;
   };
 
+  grunt.registerTask('verifySameApi', 'Verify API info', function() {
+      var inventory = grunt.option("ansible-inventory");
+      if (!inventory || !grunt.file.exists(inventory)) {
+          return grunt.fail.fatal("inventory does not exist - set ansible-inventory");
+      }
+      var webInstances = getWebInstancesFromInventory(inventory);
+      // verify the info for all of them are the same (at least API version)
+      // and then test only one
+      if (!webInstances.length) {
+          return grunt.fail.fatal("no web instances found"); 
+      }
+      process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+      var done = this.async();
+      var infoPromises = webInstances.map(function(host) {
+          var url = 'https://' + host.ip + '/api/v1.1/info';
+          return requestAsync(url).spread(function(res, body) {
+              return body.version;
+          });
+      });
+      Promise.all(infoPromises).then(function(versions) {
+          // ensure all are the same
+          var version = versions[0];
+          if (!version) {
+              grunt.fail.fatal("No version found.");
+          }
+          var same = versions.every(function(v) {
+              return v === version;
+          });
+          if (!same) {
+              grunt.fail.fatal("Versions mismatch " + JSON.stringify(versions));
+          }
+          done();
+      }).catch(function(err) {
+          grunt.fail.fatal(err);
+      });
+  });
+
   grunt.registerTask('apitest', 'Run remote api tests', function() {
     var inventory = grunt.option("ansible-inventory");
     if (!inventory || !grunt.file.exists(inventory)) {
         return grunt.fail.fatal("inventory does not exist - set ansible-inventory");
     }
     var webInstances = getWebInstancesFromInventory(inventory);
-    // update the configs
-    for (var i = 0; i < webInstances.length; ++i) {
-        var host = webInstances[i];
-        var host_fixed = host.host.replace(/\./g, '_');
-        grunt.config.set('env.' + host_fixed, {
-            SIS_REMOTE_USERNAME : 'sistest',
-            SIS_REMOTE_PASSWORD : 'sistest',
-            SIS_REMOTE_URL : 'https://' + host.ip,
-            JUNIT_REPORT_PATH : 'report_apitest_' + host_fixed + '.xml',
-            NODE_TLS_REJECT_UNAUTHORIZED : "0"
-        });
-        grunt.task.run('env:' + host_fixed);
-        grunt.task.run('mochaTest:remote');
+    // verify the info for all of them are the same (at least API version)
+    // and then test only one
+    if (!webInstances.length) {
+        return grunt.fail.fatal("no web instances found"); 
     }
+    // run the test against ONE host
+    var host = webInstances[0];
+    var host_fixed = host.host.replace(/\./g, '_');
+    grunt.config.set('env.' + host_fixed, {
+        SIS_REMOTE_USERNAME : 'sistest',
+        SIS_REMOTE_PASSWORD : 'sistest',
+        SIS_REMOTE_URL : 'https://' + host.ip,
+        JUNIT_REPORT_PATH : 'report_apitest_' + host_fixed + '.xml',
+        NODE_TLS_REJECT_UNAUTHORIZED : "0"
+    });
+    grunt.task.run('env:' + host_fixed);
+    grunt.task.run('mochaTest:remote');
+    grunt.task.run('verifySameApi');
   });
 
   grunt.registerTask('repltest', 'Run replication tests', function() {

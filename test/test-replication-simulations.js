@@ -26,7 +26,7 @@ describe('Replication Simulation', function() {
   describe('schema update replicated', function() {
     var schema = {
         name : "repl_sim_schema",
-        owner : ["sistest"],
+        _sis : { owner : ["sistest"] },
         definition : {
             name : "String",
             number : "Number"
@@ -40,7 +40,7 @@ describe('Replication Simulation', function() {
 
     before(function(done) {
         schemaManager.objectRemoved(schema).then(function() {
-            ApiServer.post("/api/v1/schemas").send(schema)
+            ApiServer.post("/api/v1.1/schemas").send(schema)
                 .expect(201, function(err, res) {
                 if (err) { return done(err); }
                 schema = res.body;
@@ -48,7 +48,7 @@ describe('Replication Simulation', function() {
                     .send(entity).expect(201, function(err, res) {
                     if (err) { return done(err); }
                     // simulate a schema update
-                    schema._updated_at += 1000;
+                    schema._sis._updated_at += 1000;
                     delete schema._id;
                     schema.definition.bool = { type : "Boolean", default : true };
                     schemaManager.model.update({ name : schema.name}, schema, done);

@@ -28,14 +28,14 @@ require('util').inherits(EntityController, ApiController);
 EntityController.prototype.getManager = function(req) {
     // Get the latest
     var name = this.getType(req);
-    var self = this;
     return this.sm.getById(name, { lean : true }).then(function(schema) {
-        var model = self.sm.getEntityModel(schema);
-        var manager = createEntityManager(model, schema, self.opts);
+        var model = this.sm.getEntityModel(schema);
+        var manager = createEntityManager(model, schema, this.opts);
         req.sisManager = manager;
-        self.useLean = !model.schema._sis_defaultpaths.length;
+        this.useLean = false;
+        this.sisSchema = schema;
         return manager;
-    });
+    }.bind(this));
 };
 
 EntityController.prototype.convertToResponseObject = function(req, obj) {
