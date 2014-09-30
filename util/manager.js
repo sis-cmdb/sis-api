@@ -398,18 +398,19 @@ Manager.prototype._update = function(id, obj, options, saveFunc) {
 };
 
 Manager.prototype._convertToV11 = function(found) {
-    var id = new this.model(found)._id;
+    var id = found._id;
     var rename = { };
     for (var k in SIS.V1_TO_SIS_META) {
         rename[k] = SIS.FIELD_SIS_META + "." + SIS.V1_TO_SIS_META[k];
     }
     // also __v to v
     rename.__v = '_v';
+    var query = { _id : id };
     var op = { $rename : rename };
-    return this.model.updateAsync( { _id : id }, op).bind(this)
+    var collection = Promise.promisifyAll(this.model.collection);
+    return collection.updateAsync(query, op).bind(this)
     .then(function(numAffected) {
-        console.log(numAffected);
-        return this.model.findOneAsync({ _id : id })
+        return collection.findOneAsync(query)
         .then(function(obj) {
             return [obj, found];
         });

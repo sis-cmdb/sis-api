@@ -267,8 +267,50 @@ describe('Convert from v1 to v1.1', function() {
             });
         });
 
+        it("Should update the schema again", function(done) {
+            var update = {
+                "definition" : {
+                    "owner" : [  "String" ],
+                    "model" : "String",
+                    "serial_number" : "String",
+                    "groups" : [  "String" ],
+                    "hostname" : "String",
+                    "ip" : { "type" : "String", "required" : true, "unique" : true },
+                    "vendor" : "String",
+                    "new_field" : "String",
+                    "another_field" : "String"
+                },
+                "name" : "netops_host",
+                "owner" : ['edgeops']
+            };
+            ApiServer.put("/api/v1/schemas/" + update.name)
+                .send(update).expect(200, function(err, res) {
+                if (err) {
+                    console.log(res.body);
+                    return done(err);
+                }
+                var updated = res.body;
+                should.exist(updated.definition);
+                should.exist(updated.definition.new_field);
+                should.exist(updated.definition.another_field);
+                done();
+            });
+        });
+
         it("Should update an entity", function(done) {
             entity.new_field = "test.";
+            var id = entity._id;
+            ApiServer.put("/api/v1/entities/" + schemaObj.name + '/' + id)
+            .send(entity).expectAsync(200).then(function(res) {
+                var updated = res.body;
+                should.exist(updated.new_field);
+                updated.new_field.should.eql(entity.new_field);
+                return updated;
+            }).nodeify(done);
+        });
+
+        it("Should upate the entity again.", function(done) {
+            entity.new_field = "again";
             var id = entity._id;
             ApiServer.put("/api/v1/entities/" + schemaObj.name + '/' + id)
             .send(entity).expectAsync(200).then(function(res) {
