@@ -378,6 +378,9 @@ Manager.prototype._update = function(id, obj, options, saveFunc) {
         .then(this._addByFields(user, SIS.EVENT_UPDATE))
         .then(this._preSave)
         .then(saveFunc)
+        .then(function(updated) {
+            return this.finishUpdate(oldV11, updated);
+        })
         // .then(function(updated) {
         //     if (isUpgradeFromV1) {
         //         // need to unset the old SIS fields of the individual object
