@@ -367,6 +367,7 @@ SchemaManager.prototype.applyUpdate = function(currentSchema, updatedSchema) {
     setIfPresent(SIS.FIELD_IS_OPEN);
     setIfPresent(SIS.FIELD_IS_PUBLIC);
     setIfPresent(SIS.FIELD_ANY_ADMIN_MOD);
+    setIfPresent(SIS.FIELD_TRACK_HISTORY);
 
     currentSchema.definition = newDef;
 
