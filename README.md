@@ -1,68 +1,127 @@
 Table of Contents
 =================
 
-TODO - introduce SIS
+- [Description](#description)
+- [Building and Testing](#building-and-testing)
+- [Configuration](#configuration)
+    - [Authentication Backends](#authentication-backends)
+        -[Default Backend](#default-backend-configuration)
+        -[Active Directory over LDAP](#active-directory-over-ldap)
+- [REST API Documentation](#rest-api-documentation)
 
-# API Examples using resty
+# Description
 
-The following example utilizes [resty](https://github.com/micha/resty), a convenient wrapper around curl.  All sample files are in the [samples](./samples) directory.
+The Service Information System (SIS) is a CMDB alternative designed with
+collaboration and customizability in mind.  Access to all data is strictly via
+the familiar principles of REST over HTTP.  
 
-```bash
-# initialize resty
-. resty
-resty http://sis.endpoint.com/api/v1 -H "Content-Type: application/json" -H "Accept: application/json"
+The SIS API allows you to interact with SIS data using anything that can issue an HTTP
+request and parse JSON.  The API allows clients to do a variety of operations including:
 
-# assuming we're in the samples directory...
+- CRUD object definitions.  SIS refers to these as `schemas` and map to concepts
+like DB Tables or object classes.
+- CRUD instances of objects of a `schema`.  These are referred to as `entities` in SIS.
+- Register for notifications when any SIS object is created, modified, or deleted.  
+In SIS terms, these are called `hooks`.
+- Retrieve the state of a SIS object at a particular moment in time.
+- Control access to objects and ensure the right users can manage them.
+- Access the API from any website using a browser that supports [CORS](http://en.wikipedia.org/wiki/Cross-origin_resource_sharing).
 
-# create a hook that listens for schema inserts - modify this to point to your server if you actually want to receive them.
+More details can be found in the (API Documentation)[./docs/index.md]
 
-POST /hooks < hook_schema.json
+# Requirements
 
-# create a hook that listens for inserts on the sample entity
+The following are required to build and run SIS:
 
-POST /hooks < hook_sample.json
+- [node](nodejs.org) 0.10.x.
+- [mongodb](https://www.mongodb.org/) 2.4+.
 
-# retrieve all the hooks
+# Building and Testing
 
-GET /hooks
+[Grunt](http://gruntjs.com/) is used to build SIS.  [Mocha](http://visionmedia.github.io/mocha/) is used for testing.
 
-# create the sample schema
+Ensure grunt and mocha are installed via: `npm install -g mocha grunt-cli`
 
-POST /schemas < schema_sample.json
+From the root directory, run `npm install`.
 
-# create a sample entity
+The default grunt task will run jshint and unit tests.  A local instance of mongodb must be running on port 27017.
 
-POST /entities/sample < entity_sample.json
+# Configuration
 
-# creating it again will fail the unique number test
+The configuration is exported in the `config.js` module.  A sample config.js looks like:
 
-POST /entities/sample < entity_sample.json
+```javascript
+module.exports = {
+    // database specific configuration
+    db: {
+        // a mongo db connection string
+        url : "mongodb://localhost/sis"
+    },
+    // server specific config
+    server : {
+        // the tcp port to listen on
+        port : 3000
+    },
+    // application specific settings
+    app : {
+        // whether Role Based Access Control is enabled.  Defaults to true
+        auth : true
+        // authentication backend config.  See below
+        // defaults to a sis backend.
+        auth_config : {
+            // specific info per backend
+        },
+        // whether the app only serves read requests (GET).  Defaults to false
+        readonly : false
+    }
+}
+```
 
-# Create more stuff if you want and then retrieve them.
+## Authentication Backends
 
-GET /entities/sample
+### Default Backend
 
-# Delete the sample schema
+The default backend authenticates a user against a password stored with the user object.  Password hashes are stored in SIS if this backend is used.  Configure using:
 
-DELETE /schemas/sample
+```javascript
+auth_config : {
+    "type" : "sis"
+}
+```
 
-# Note that the sample type is now unknown
+### Active Directory over LDAP
 
-GET /entities/sample
+The LDAP authentication backend authenticates users belonging to a particular user domain via Active Directory.  When a user successfully authenticates for the first time, the backend creates an empty User object with no privileges.
 
-# Add some hiera data
+Configure the backend using:
 
-POST /hiera < hiera_common.json
-
-# note the full object returned.. but get the hiera data for common
-# returns just the data portion
-
-GET /hiera/common
-
-# Cleanup
-
-DELETE /hooks/schema_hook_name
-DELETE /hooks/sample_hook_name
-DELETE /hiera/common
+```javascript
+auth_config : {
+    "type" : "ldap",
+    "url" : "<url of the LDAP endpoint>",
+    "user_domain" : "<the user domain to authenticate against>",
+    "email_domain" : "<the domain to append as the email address for the user>",
+    "client_opts" " {
+        "option_1" : "option_1_value",
+        // etc.  These are options used when creating the [ldapjs client](http://ldapjs.org/client.html)
+    }
+}
 
 ```
+
+As an example, with the following config:
+
+```javascript
+auth_config : {
+    "type" : "ldap",
+    "url" : "ldap://10.1.1.1",
+    "user_domain" : "ad.corp.com",
+    "email_domain" : "company.com"
+}
+```
+
+An authentication request for `user1` will attempt to authenticate `user1@ad.corp.com` and create the user `user1` with email `user1@company.com` if successful and does not already exist.
+
+# REST API Documentation
+
+Detailed documentation can be found in the [docs](./docs/index.md) folder.
