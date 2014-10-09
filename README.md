@@ -7,6 +7,7 @@ Table of Contents
     - [Authentication Backends](#authentication-backends)
         -[Default Backend](#default-backend-configuration)
         -[Active Directory over LDAP](#active-directory-over-ldap)
+- [LICENSE](#license)
 - [REST API Documentation](#rest-api-documentation)
 
 # Description
