@@ -41,9 +41,11 @@ The following are required to build and run SIS:
 [Grunt](http://gruntjs.com/) is used to build SIS.  [Mocha](http://visionmedia.github.io/mocha/) is used for testing.
 
 1. Ensure a local mongodb instance is running on port 27017.
+    - `mongod --dbpath=/data --port 27017` will launch a mongo server listening on 27017 and writing data to `/data`
 2. Ensure grunt is installed via: `npm install -g grunt-cli`
 3. From the root directory, run `npm install`.
-4. Run `grunt`
+4. Run `grunt` to build a distribution and run unit tests.
+5. The main file is `server.js`.  Simply run `node server.js` to start the server.
 
 # Configuration
 
@@ -120,6 +122,10 @@ auth_config : {
 ```
 
 An authentication request for `user1` will attempt to authenticate `user1@ad.corp.com` and create the user `user1` with email `user1@company.com` if successful and does not already exist.
+
+# LICENSE
+
+This software is licensed under the BSD 3-Clause license.  Please refer to the [LICENSE](./LICENSE) for more information.
 
 # REST API Documentation
 
