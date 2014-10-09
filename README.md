@@ -40,11 +40,10 @@ The following are required to build and run SIS:
 
 [Grunt](http://gruntjs.com/) is used to build SIS.  [Mocha](http://visionmedia.github.io/mocha/) is used for testing.
 
-Ensure grunt and mocha are installed via: `npm install -g mocha grunt-cli`
-
-From the root directory, run `npm install`.
-
-The default grunt task will run jshint and unit tests.  A local instance of mongodb must be running on port 27017.
+1. Ensure a local mongodb instance is running on port 27017.
+2. Ensure grunt is installed via: `npm install -g grunt-cli`
+3. From the root directory, run `npm install`.
+4. Run `grunt`
 
 # Configuration
 
