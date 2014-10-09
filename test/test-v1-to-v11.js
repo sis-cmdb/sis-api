@@ -170,35 +170,35 @@ describe('Convert from v1 to v1.1', function() {
                 "ip" : { "type" : "String", "required" : true, "unique" : true },
                 "vendor" : "String"
             },
-            "name" : "netops_host",
-            "_created_by" : "agavrik",
-            "_updated_by" : "agavrik",
+            "name" : "v1_test_host",
+            "_created_by" : "test_user",
+            "_updated_by" : "test_user",
             "_created_at" : 1406204089580,
             "_references" : [ ],
             "id_field" : "ip",
              "is_open" : false,
              "track_history" : true,
              "locked_fields" : [ ],
-             "owner" : [  "edgeops" ],
+             "owner" : [  "test_owner" ],
              "sis_locked" : true,
              "__v" : 0
         };
         var entity = {
             "_updated_at" : 1406204109121,
-            "vendor" : "cisco",
-            "ip" : "172.26.1.3",
-            "hostname" : "r2.core-fo.brn1",
-            "serial_number" : "smg1245n9hg",
-            "model" : "ws-c6509-e (s72033_rp series)",
-            "_created_by" : "agavrik",
-            "_updated_by" : "agavrik",
+            "vendor" : "my_vendor",
+            "ip" : "1.1.1.1",
+            "hostname" : "foo.local",
+            "serial_number" : "someserialnum",
+            "model" : "somemodel",
+            "_created_by" : "test_user",
+            "_updated_by" : "test_user",
             "sis_locked" : false,
             "_created_at" : 1406204109120,
             "groups" : [
-                "core-net"
+                "my_groups"
             ],
             "owner" : [
-                "edgeops"
+                "test_owner"
             ],
             "__v" : 0
         };
@@ -248,8 +248,8 @@ describe('Convert from v1 to v1.1', function() {
                     "vendor" : "String",
                     "new_field" : "String"
                 },
-                "name" : "netops_host",
-                "owner" : ['edgeops']
+                "name" : "v1_test_host",
+                "owner" : ['test_owner']
             };
             ApiServer.put("/api/v1/schemas/" + update.name)
                 .send(update).expect(200, function(err, res) {
@@ -277,8 +277,8 @@ describe('Convert from v1 to v1.1', function() {
                     "new_field" : "String",
                     "another_field" : "String"
                 },
-                "name" : "netops_host",
-                "owner" : ['edgeops']
+                "name" : "v1_test_host",
+                "owner" : ['test_owner']
             };
             ApiServer.put("/api/v1/schemas/" + update.name)
                 .send(update).expect(200, function(err, res) {

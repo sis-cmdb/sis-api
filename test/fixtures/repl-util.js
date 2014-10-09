@@ -45,7 +45,7 @@ var createHooks = function(schemas) {
             result.push({
                 name : 'seedtest_hook_s' + idx + '_h' + i,
                 target : {
-                    url : 'http://sishook.test.vrsn.com/',
+                    url : 'http://sishook.somedomain.com/',
                     action : 'POST'
                 },
                 events : ['update'],
