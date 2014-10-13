@@ -45,7 +45,7 @@
     "node": ">= 0.10.20"
   },
   "scripts": {
-    "test": "grunt mochaTest",
+    "test": "grunt",
     "start": "node server.js"
   }
 }
