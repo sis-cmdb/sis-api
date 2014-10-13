@@ -1,0 +1,10 @@
+language: node_js
+services:
+  - mongodb
+env: SIS_RUN_LONG_TESTS=true
+before_install:
+  - npm install -g grunt-cli
+  # per http://docs.travis-ci.com/user/database-setup/#MongoDB
+  - sleep 15
+node_js:
+  - "0.10"
