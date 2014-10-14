@@ -10,6 +10,8 @@ Table of Contents
 - [LICENSE](#license)
 - [REST API Documentation](#rest-api-documentation)
 
+[![Build Status](https://travis-ci.org/sis-cmdb/sis-api.svg?branch=develop)](https://travis-ci.org/sis-cmdb/sis-api)
+
 # Description
 
 The Service Information System (SIS) is a CMDB alternative designed with
