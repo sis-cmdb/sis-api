@@ -18,6 +18,6 @@ module.exports.setup = function(app, config) {
     }
 
     app.get("/api/:version(" + SIS.SUPPORTED_VERSIONS.join("|") + ")/info", function(req, res) {
-        res.status(200).send(build);
+        res.status(200).json(build);
     });
 };
