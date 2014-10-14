@@ -33,7 +33,6 @@ function ApiController(opts) {
     if (opts[SIS.OPT_FIRE_HOOKS]) {
         this.hm = require('../util/hook-manager')(this.sm);
     }
-    this.useLean = true;
 }
 
 // overrides
@@ -41,6 +40,7 @@ function ApiController(opts) {
 // Subclasses can assign a manager to the 'manager' property.
 ApiController.prototype.getManager = function(req) {
     if (this.manager) {
+        req.useLean = true;
         return Promise.resolve(this.manager);
     } else {
         return Promise.reject(SIS.ERR_INTERNAL("Error fetching object"));
@@ -175,7 +175,7 @@ ApiController.prototype.getAll = function(req, res) {
         if (!c || c < options.offset) {
             return Promise.resolve([]);
         }
-        options.lean = this.useLean;
+        options.lean = req.useLean;
         if (this.parsePopulate(req)) {
             return mgr.getPopulateFields(this.sm).then(function(populateFields) {
                 if (populateFields) {
@@ -195,7 +195,7 @@ ApiController.prototype.get = function(req, res) {
     this.applyDefaults(req);
     var id = req.params.id;
     var p = this.getManager(req).bind(this).then(function(mgr) {
-        var options = { lean : this.useLean };
+        var options = { lean : req.useLean };
         if (this.parsePopulate(req)) {
             return mgr.getPopulateFields(this.sm).then(function(populateFields) {
                 if (populateFields) {

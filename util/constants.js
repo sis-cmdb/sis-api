@@ -423,5 +423,21 @@ module.exports = {
             query.$and = andDoc;
         }
         return query;
+    },
+
+    UTIL_SET_DEFAULT_ARRAY : function(obj, path) {
+        var paths = path.split('.');
+        var last = paths.pop();
+        while(paths.length) {
+            var p = paths.shift();
+            obj = obj[p];
+            if (!obj) {
+                // early exit
+                return;
+            }
+        }
+        if (!obj[last]) {
+            obj[last] = [];
+        }
     }
 };

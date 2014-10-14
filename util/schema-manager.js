@@ -537,14 +537,14 @@ SchemaManager.prototype.getEntityModel = function(sisSchema, isInternal) {
         var pathsWithDefaultVal = [];
         var pathsWithArray = [];
         schema.eachPath(function(pathName, schemaType) {
-            if (pathName.indexOf(SIS.FIELD_SIS_META) === 0) {
+            if (pathName.indexOf(SIS.FIELD_SIS_META) === 0 ||
+                pathName === '_id') {
                 return;
-            }
-            if (schemaType.default()) {
-                pathsWithDefaultVal.push(pathName);
             }
             if (schemaType.constructor.name.indexOf('Array') != -1) {
                 pathsWithArray.push(pathName);
+            } else if (schemaType.default()) {
+                pathsWithDefaultVal.push(pathName);
             }
         });
 

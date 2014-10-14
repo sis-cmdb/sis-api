@@ -32,26 +32,32 @@ EntityController.prototype.getManager = function(req) {
         var model = this.sm.getEntityModel(schema);
         var manager = createEntityManager(model, schema, this.opts);
         req.sisManager = manager;
-        this.useLean = false;
-        this.sisSchema = schema;
+        req.useLean = model.schema._sis_defaultpaths.length === 0;
         return manager;
     }.bind(this));
 };
 
 EntityController.prototype.convertToResponseObject = function(req, obj) {
-    if (req.query.removeEmpty &&
-        req.sisManager.model.schema._sis_arraypaths.length) {
-        var paths = req.sisManager.model.schema._sis_arraypaths;
+    if (!req.sisManager) {
+        return obj;
+    }
+    var arrayPaths = req.sisManager.model.schema._sis_arraypaths;
+    if (req.query.removeEmpty && arrayPaths.length) {
         if (!obj.toObject) {
             obj = new req.sisManager.model(obj);
         }
-        paths.forEach(function(p) {
+        arrayPaths.forEach(function(p) {
             var arr = obj.get(p);
             if (arr && arr.length === 0) {
                 obj.set(p, undefined);
             }
         });
         obj = obj.toObject();
+    } else if (req.useLean && arrayPaths.length) {
+        // need to ensure the array is set to [] if it's null
+        req.sisManager.model.schema._sis_arraypaths.forEach(function(path) {
+            SIS.UTIL_SET_DEFAULT_ARRAY(obj, path);
+        });
     }
     return obj;
 };
