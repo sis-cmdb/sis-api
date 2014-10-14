@@ -18,6 +18,7 @@ function EntityController(config) {
     SIS.UTIL_MERGE_SHALLOW(opts, config);
     this.opts = opts;
     ApiController.call(this, this.opts);
+    this.managerCache = { };
 }
 
 // inherit
@@ -29,12 +30,28 @@ EntityController.prototype.getManager = function(req) {
     // Get the latest
     var name = this.getType(req);
     return this.sm.getById(name, { lean : true }).then(function(schema) {
-        var model = this.sm.getEntityModel(schema);
-        var manager = createEntityManager(model, schema, this.opts);
+        var manager = this._createManager(schema);
         req.sisManager = manager;
-        req.useLean = model.schema._sis_defaultpaths.length === 0;
+        req.useLean = manager.model.schema._sis_defaultpaths.length === 0;
         return manager;
     }.bind(this));
+};
+
+EntityController.prototype._createManager = function(schema) {
+    var name = schema.name;
+    var schemaTs = schema[SIS.FIELD_SIS_META] ? schema[SIS.FIELD_SIS_META][SIS.FIELD_UPDATED_AT]
+                                              : schema[SIS.FIELD_UPDATED_AT];
+    var cached = this.managerCache[name];
+    if (cached && cached.ts === schemaTs) {
+        return cached.manager;
+    }
+    var model = this.sm.getEntityModel(schema);
+    cached = {
+        ts : schemaTs,
+        manager : createEntityManager(model, schema, this.opts)
+    };
+    this.managerCache[name] = cached;
+    return cached.manager;
 };
 
 EntityController.prototype.convertToResponseObject = function(req, obj) {
