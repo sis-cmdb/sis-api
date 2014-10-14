@@ -7,6 +7,9 @@ Table of Contents
     - [Authentication Backends](#authentication-backends)
         -[Default Backend](#default-backend-configuration)
         -[Active Directory over LDAP](#active-directory-over-ldap)
+- [Tools](#tools)
+    - [Creating Users](#creating-users)
+    - [Deleting Users](#deleting-users)
 - [LICENSE](#license)
 - [REST API Documentation](#rest-api-documentation)
 
@@ -16,7 +19,7 @@ Table of Contents
 
 The Service Information System (SIS) is a CMDB alternative designed with
 collaboration and customizability in mind.  Access to all data is strictly via
-the familiar principles of REST over HTTP.  
+the familiar principles of REST over HTTP.
 
 The SIS API allows you to interact with SIS data using anything that can issue an HTTP
 request and parse JSON.  The API allows clients to do a variety of operations including:
@@ -24,7 +27,7 @@ request and parse JSON.  The API allows clients to do a variety of operations in
 - CRUD object definitions.  SIS refers to these as `schemas` and map to concepts
 like DB Tables or object classes.
 - CRUD instances of objects of a `schema`.  These are referred to as `entities` in SIS.
-- Register for notifications when any SIS object is created, modified, or deleted.  
+- Register for notifications when any SIS object is created, modified, or deleted.
 In SIS terms, these are called `hooks`.
 - Retrieve the state of a SIS object at a particular moment in time.
 - Control access to objects and ensure the right users can manage them.
@@ -125,6 +128,37 @@ auth_config : {
 ```
 
 An authentication request for `user1` will attempt to authenticate `user1@ad.corp.com` and create the user `user1` with email `user1@company.com` if successful and does not already exist.
+
+# Tools
+
+This section documents some tools provided in the source.
+
+## Creating Users
+
+After SIS is up and running, creating an initial super user is the next logical step.  The initial user must be created via command line as there are no users who are permitted to use the REST API.  To create a super user, create a json file that looks like the following:
+
+```javascript
+{
+    "name" : "a_super_user",
+    "pw" : "super_user_pw",
+    "email" : "super@user.com",
+    "super_user" : true
+}
+```
+
+Then run `node tools/useradmin.js update /path/to/json/file`
+
+## Deleting Users
+
+Similar to creating a user, create a JSON file with the following contents
+
+```javascript
+{
+    "name" : "user_to_delete"
+}
+```
+
+Then run `node tools/useradmin.js delete /path/to/json/file`
 
 # LICENSE
 
