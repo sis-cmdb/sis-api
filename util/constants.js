@@ -148,7 +148,7 @@ module.exports = {
     DEFAULT_OPT_USE_AUTH : true,
 
 
-    MAX_RESULTS : 200,
+    MAX_RESULTS : 1000,
 
     // headers
     HEADER_TOTAL_COUNT : "x-total-count",
