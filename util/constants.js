@@ -339,7 +339,7 @@ module.exports = {
     SIS_META_TO_V1 : SIS_META_TO_V1,
 
     UTIL_FROM_V1 : function(obj) {
-        if (obj[FIELD_SIS_META] && obj[FIELD_SIS_META][FIELD_SIS_VERSION]) {
+        if (obj[FIELD_SIS_META]) {
             // done
             return obj;
         }
