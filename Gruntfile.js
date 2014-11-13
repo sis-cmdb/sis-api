@@ -10,8 +10,12 @@ module.exports = function(grunt) {
     pkg: grunt.file.readJSON('package.json'),
     env : {
       dist : {
+        SIS_DISABLE_LOGGING : 'true',
         SIS_RUN_LONG_TESTS : 'true',
         JUNIT_REPORT_PATH : grunt.option('report_path') || '_reports/report.xml'
+      },
+      build : {
+        SIS_DISABLE_LOGGING : 'true'
       }
     },
     copy: {
@@ -258,6 +262,7 @@ module.exports = function(grunt) {
   ]);
 
   grunt.registerTask('build', [
+    'env:build',
     'jshint',
     'buildjson',
     'localtest',

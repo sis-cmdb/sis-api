@@ -10,6 +10,11 @@ function toResponseTime(time) {
 // heavily borrowed from https://github.com/villadora/express-bunyan-logger/blob/master/index.js
 // but trimmed down
 module.exports.errorLogger = function() {
+    if (process.env.SIS_DISABLE_LOGGING === 'true') {
+        return function(err, req, res, next) {
+            next(err);
+        };
+    }
     var opts = {
         name : "SIS",
         serializers : {
