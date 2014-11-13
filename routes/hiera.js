@@ -2,7 +2,7 @@
 
 var ApiController = require("./apicontroller");
 var SIS = require("../util/constants");
-var Promise = require("bluebird");
+var BPromise = require("bluebird");
 
 /////////////////////////////////
 // Hiera controller

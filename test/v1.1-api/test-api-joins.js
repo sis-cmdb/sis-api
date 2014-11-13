@@ -2,7 +2,7 @@ describe('@API @V1.1API - Entity Join API', function() {
     "use strict";
 
     var should = require('should');
-    var Promise = require('bluebird');
+    var BPromise = require('bluebird');
 
     var SIS = require("../../util/constants");
     var config = require('../fixtures/config');
@@ -76,11 +76,11 @@ describe('@API @V1.1API - Entity Join API', function() {
 
         before(function(done) {
             // setup the schemas
-            Promise.map(schemas, addSchema).then(function(res) {
+            BPromise.map(schemas, addSchema).then(function(res) {
                 // join_ent_2_2 will have ref_1 = join_ent_1_2 and ref_0 = join_ent_0_2
                 var createEntities = function(i) {
                     if (i >= entities.length) {
-                        return Promise.resolve("success");
+                        return BPromise.resolve("success");
                     }
                     var entities2Add = entities[i];
                     if (i > 0) {
@@ -96,7 +96,7 @@ describe('@API @V1.1API - Entity Join API', function() {
                         }
                     }
 
-                    return Promise.map(entities2Add, function(entity) {
+                    return BPromise.map(entities2Add, function(entity) {
                         return ApiServer.post("/api/v1.1/entities/join_schema_" + i)
                             .set("Content-Type", "application/json")
                             .query("populate=false")
@@ -115,7 +115,7 @@ describe('@API @V1.1API - Entity Join API', function() {
 
         after(function(done) {
             var names = schemas.map(function(s) { return s.name; });
-            Promise.map(names, deleteSchema).nodeify(done);
+            BPromise.map(names, deleteSchema).nodeify(done);
         });
 
         it("should fetch join_ent_1_2", function(done) {
@@ -273,7 +273,7 @@ describe('@API @V1.1API - Entity Join API', function() {
                     num : i
                 });
             }
-            var d = Promise.pending();
+            var d = BPromise.pending();
             ApiServer.post("/api/v1.1/entities/" + leaf_schema.name)
             .send(items).expect(200, function(err, res) {
                 if (err) { return d.reject(err); }
@@ -304,7 +304,7 @@ describe('@API @V1.1API - Entity Join API', function() {
                     leaf : leaf._id
                 });
             });
-            var d = Promise.pending();
+            var d = BPromise.pending();
             ApiServer.post("/api/v1.1/entities/" + ancestor_schema.name)
             .send(items).expect(200, function(err, res) {
                 if (err) { return d.reject(err); }
@@ -335,7 +335,7 @@ describe('@API @V1.1API - Entity Join API', function() {
                     anc : anc._id
                 });
             });
-            var d = Promise.pending();
+            var d = BPromise.pending();
             ApiServer.post("/api/v1.1/entities/" + top_schema.name)
             .send(items).expect(200, function(err, res) {
                 if (err) { return d.reject(err); }
@@ -355,7 +355,7 @@ describe('@API @V1.1API - Entity Join API', function() {
         before(function(done) {
             // delete/create all the schemas
             var promises = [leaf_schema, ancestor_schema, top_schema].map(function(schema) {
-                var d = Promise.pending();
+                var d = BPromise.pending();
                 var url = "/api/v1.1/schemas";
                 ApiServer.del(url + '/' + schema.name).end(function() {
                     ApiServer.post(url).send(schema).expect(201, function(err, res) {
@@ -365,7 +365,7 @@ describe('@API @V1.1API - Entity Join API', function() {
                 });
                 return d.promise;
             });
-            Promise.all(promises).then(function() {
+            BPromise.all(promises).then(function() {
                 return createObjects();
             }).then(function() { done(); }).catch(done);
         });

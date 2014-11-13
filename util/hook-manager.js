@@ -10,7 +10,7 @@ var request = require('request');
 
 var SIS = require('./constants');
 var Manager = require("./manager");
-var Promise = require("bluebird");
+var BPromise = require("bluebird");
 
 /////////////////////////////////
 // Hook Manager
@@ -96,7 +96,7 @@ var dispatchHook = function(hook, entity, event) {
     } else {
         options.json = data;
     }
-    var d = Promise.pending();
+    var d = BPromise.pending();
     sendRequest(options, hook.retry_count || 0, hook.retry_delay || 1, d);
     return d.promise;
 };
@@ -120,7 +120,7 @@ HookManager.prototype.dispatchHooks = function(entity, entity_type, event, callb
             var promises = hooks.map(function(hook) {
                 return dispatchHook(hook, entity, event);
             });
-            Promise.all(promises).then(function(res) {
+            BPromise.all(promises).then(function(res) {
                 callback(null, res);
             }).catch(callback);
         }

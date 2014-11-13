@@ -1,7 +1,7 @@
 
 'use strict';
 
-var Promise = require("bluebird");
+var BPromise = require("bluebird");
 var SIS = require('./constants');
 var jsondiffpatch = require("jsondiffpatch");
 var hat = require('hat');
@@ -47,7 +47,7 @@ Manager.prototype.applyUpdate = function(doc, updateObj) {
 // Returns a promise with the object removed.
 Manager.prototype.objectRemoved = function(obj) {
     // default just returns a fullfilled promise
-    return Promise.resolve(obj);
+    return BPromise.resolve(obj);
 };
 
 Manager.prototype._getDefaultOptions = function(options) {
@@ -64,20 +64,20 @@ Manager.prototype.getSingleByCondition = function(condition, name, options) {
     return this.model.findOneAsync(condition, null, options)
     .bind(this).then(function(result) {
         if (!result) {
-            return Promise.reject(SIS.ERR_NOT_FOUND(this.type, name));
+            return BPromise.reject(SIS.ERR_NOT_FOUND(this.type, name));
         }
-        return Promise.resolve(result);
+        return BPromise.resolve(result);
     })
     .catch(function(err) {
         if (err instanceof Array) {
-            return Promise.reject(err);
+            return BPromise.reject(err);
         }
         if (err.name == "CastError") {
             err = SIS.ERR_NOT_FOUND(this.type, name);
         } else {
             err = SIS.ERR_INTERNAL(err);
         }
-        return Promise.reject(err);
+        return BPromise.reject(err);
     });
 };
 
@@ -105,7 +105,7 @@ Manager.prototype.count = function(condition, callback) {
 Manager.prototype.getPopulateFields = function(schemaManager) {
     var schemaNameToPaths = this._getPopulateFields();
     if (!schemaNameToPaths) {
-        return Promise.resolve(null);
+        return BPromise.resolve(null);
     }
     // ensure the schemas exist
     var schemasToLoad = Object.keys(schemaNameToPaths)
@@ -115,7 +115,7 @@ Manager.prototype.getPopulateFields = function(schemaManager) {
 
     if (!schemasToLoad.length) {
         var fields = this._getFieldsFromPopulateObject(schemaNameToPaths);
-        return Promise.resolve(fields);
+        return BPromise.resolve(fields);
     } else {
         var self = this;
         // need to try loading up some schemas
@@ -128,7 +128,7 @@ Manager.prototype.getPopulateFields = function(schemaManager) {
                 return schemaName;
             });
         });
-        return Promise.all(loadPromises).then(function() {
+        return BPromise.all(loadPromises).then(function() {
             var loadedSchemas = Object.keys(schemaNameToPaths);
             if (!loadedSchemas.length) {
                 return null;
@@ -174,24 +174,24 @@ Manager.prototype._commonAuth = function(evt, doc, user, mergedDoc) {
 Manager.prototype.authorize = function(evt, doc, user, mergedDoc) {
     var commonErr = this._commonAuth(evt, doc, user, mergedDoc);
     if (commonErr) {
-        return Promise.reject(commonErr);
+        return BPromise.reject(commonErr);
     }
     // get the permissions on the doc being added/updated/deleted
     var permission = this.getPermissionsForObject(doc, user);
     if (permission != SIS.PERMISSION_ADMIN &&
         permission != SIS.PERMISSION_USER_ALL_GROUPS) {
-        return Promise.reject(SIS.ERR_BAD_CREDS("Insufficient permissions."));
+        return BPromise.reject(SIS.ERR_BAD_CREDS("Insufficient permissions."));
     }
     if (evt != SIS.EVENT_UPDATE) {
         // insert / delete
-        return Promise.resolve(doc);
+        return BPromise.resolve(doc);
     } else {
         var updatedPerms = this.getPermissionsForObject(mergedDoc, user);
         if (updatedPerms != SIS.PERMISSION_ADMIN &&
             updatedPerms != SIS.PERMISSION_USER_ALL_GROUPS) {
-            return Promise.reject(SIS.ERR_BAD_CREDS("Insufficient permissions."));
+            return BPromise.reject(SIS.ERR_BAD_CREDS("Insufficient permissions."));
         }
-        return Promise.resolve(mergedDoc);
+        return BPromise.resolve(mergedDoc);
     }
 };
 
@@ -202,7 +202,7 @@ Manager.prototype.add = function(obj, options) {
     var user = options.user;
     var err = this.validate(obj, null, options);
     if (err) {
-        return Promise.reject(SIS.ERR_BAD_REQ(err));
+        return BPromise.reject(SIS.ERR_BAD_REQ(err));
     }
     obj = SIS.UTIL_FROM_V1(obj);
     var p = this.authorize(SIS.EVENT_INSERT, obj, user).bind(this)
@@ -229,7 +229,7 @@ Manager.prototype.bulkAdd = function(items, options) {
         if (err) {
             err = SIS.ERR_BAD_REQ(err);
             memo.errors.push({ err : err, value : item });
-            return Promise.resolve(memo);
+            return BPromise.resolve(memo);
         }
         item = SIS.UTIL_FROM_V1(item);
         return this.authorize(SIS.EVENT_INSERT, item, user)
@@ -242,7 +242,7 @@ Manager.prototype.bulkAdd = function(items, options) {
             return memo;
         });
     }.bind(this));
-    var insertPromise = Promise.all(authPromises).bind(this)
+    var insertPromise = BPromise.all(authPromises).bind(this)
     .then(function() {
         return this._preSaveBulk(authorized);
     }).spread(function(items, errors) {
@@ -303,7 +303,7 @@ Manager.prototype.bulkAdd = function(items, options) {
             return memo;
         }
         // do the insert
-        var insert = Promise.promisify(this.model.collection.insert, this.model.collection);
+        var insert = BPromise.promisify(this.model.collection.insert, this.model.collection);
         return insert(toAdd).bind(this).then(function(inserted) {
             if (inserted.length === toAdd.length) {
                 // g2g - everything we wanted to add was added
@@ -326,7 +326,7 @@ Manager.prototype._update = function(id, obj, options, saveFunc) {
         // validate
         var err = this.validate(obj, found, options);
         if (err) {
-            return Promise.reject(SIS.ERR_BAD_REQ(err));
+            return BPromise.reject(SIS.ERR_BAD_REQ(err));
         }
         // this check should still work for entities since idField is _id and
         // it is removed from the object in the validate method.
@@ -334,7 +334,7 @@ Manager.prototype._update = function(id, obj, options, saveFunc) {
         // getting lucky because of subclass behavior
         if (this.idField in obj && found[this.idField] != obj[this.idField]) {
             err = SIS.ERR_BAD_REQ(this.idField + " cannot be changed.");
-            return Promise.reject(err);
+            return BPromise.reject(err);
         }
 
         // init the mongoose doc - must use .init per comment in mongoose
@@ -383,7 +383,7 @@ Manager.prototype._update = function(id, obj, options, saveFunc) {
         })
         .then(function(updated) {
             // return
-            return Promise.resolve([oldV11, updated, old]);
+            return BPromise.resolve([oldV11, updated, old]);
         });
     });
 };
@@ -398,7 +398,7 @@ Manager.prototype._convertToV11 = function(found) {
     rename.__v = '_v';
     var query = { _id : id };
     var op = { $rename : rename };
-    var collection = Promise.promisifyAll(this.model.collection);
+    var collection = BPromise.promisifyAll(this.model.collection);
     return collection.updateAsync(query, op).bind(this)
     .then(function(numAffected) {
         return collection.findOneAsync(query)
@@ -424,12 +424,12 @@ Manager.prototype._convertToV11 = function(found) {
 // };
 
 Manager.prototype.finishUpdate = function(old, updated) {
-    return Promise.resolve(updated);
+    return BPromise.resolve(updated);
 };
 
 Manager.prototype._getCasSave = function(obj, cas) {
     return function(doc) {
-        var validate = Promise.promisify(doc.validate, doc);
+        var validate = BPromise.promisify(doc.validate, doc);
         return validate().bind(this).then(function() {
             // set the ID on the id field
             cas[this.idField] = doc[this.idField];
@@ -441,7 +441,7 @@ Manager.prototype._getCasSave = function(obj, cas) {
             .then(function(doc) {
                 if (!doc) {
                     // cas update failed
-                    return Promise.reject(SIS.ERR_BAD_REQ("CAS update failed."));
+                    return BPromise.reject(SIS.ERR_BAD_REQ("CAS update failed."));
                 }
                 return doc;
             });
@@ -461,7 +461,7 @@ Manager.prototype.upsert = function(id, obj, options) {
     }).catch(function(err) {
         // add it
         if (!this.canInsertWithId(id, obj)) {
-            return Promise.reject(SIS.ERR_BAD_REQ("Cannot insert object with specified ID"));
+            return BPromise.reject(SIS.ERR_BAD_REQ("Cannot insert object with specified ID"));
         }
         return this.add(obj, options);
     });
@@ -515,7 +515,7 @@ Manager.prototype.bulkDelete = function(condition, options) {
             });
         }.bind(this));
         // inner promise chain
-        return Promise.all(authPromises).bind(this).then(function() {
+        return BPromise.all(authPromises).bind(this).then(function() {
             if (!toDelete.length) {
                 memo.success = toDelete;
                 return memo;
@@ -548,11 +548,11 @@ Manager.prototype.bulkDelete = function(condition, options) {
                 }).catch(function(err) {
                     // ok.. totally hosed here.
                     // error out
-                    return Promise.reject(SIS.ERR_INTERNAL(err));
+                    return BPromise.reject(SIS.ERR_INTERNAL(err));
                 });
             }).catch(function(err) {
                 // removeAsync failed
-                return Promise.reject(SIS.ERR_INTERNAL(err));
+                return BPromise.reject(SIS.ERR_INTERNAL(err));
             });
         }).then(function() {
             if (!memo.success.length) {
@@ -574,7 +574,7 @@ Manager.prototype.bulkDelete = function(condition, options) {
                     return false;
                 });
             }.bind(this));
-            return Promise.all(triggers).then(function(){
+            return BPromise.all(triggers).then(function(){
                 memo.success = newSuccess;
                 return memo;
             });
@@ -742,7 +742,7 @@ Manager.prototype._getFieldsFromPopulateObject = function(refToPaths) {
 // returns a promise function that accepts a document from
 // find and applies the update
 Manager.prototype._merge = function(doc, update) {
-    return Promise.resolve(this.applyUpdate(doc, update));
+    return BPromise.resolve(this.applyUpdate(doc, update));
 };
 
 Manager.prototype.applyPreSaveFields = function(obj) {
@@ -779,21 +779,21 @@ Manager.prototype._preSaveBulk = function(objs) {
             return obj;
         });
     }.bind(this));
-    return Promise.all(promises).then(function() {
+    return BPromise.all(promises).then(function() {
         return [success, errors];
     });
 };
 
 // do one last bit of validation for subclasses
 Manager.prototype._preSave = function(obj) {
-    return Promise.resolve(obj);
+    return BPromise.resolve(obj);
 };
 
 // Save the object and return a promise that is fulfilled
 // with the saved document
 Manager.prototype._save = function(obj) {
     if (!obj) {
-        return Promise.reject(SIS.ERR_BAD_REQ("invalid data"));
+        return BPromise.reject(SIS.ERR_BAD_REQ("invalid data"));
     }
     var m = obj;
     if (!(obj instanceof this.model)) {
@@ -803,7 +803,7 @@ Manager.prototype._save = function(obj) {
             return d.reject(SIS.ERR_BAD_REQ(ex));
         }
     }
-    var d = Promise.pending();
+    var d = BPromise.pending();
     this.applyPreSaveFields(m);
     m.save(this._getModCallback(d));
     return d.promise;
@@ -814,14 +814,14 @@ Manager.prototype._save = function(obj) {
 Manager.prototype._addByFields = function(user, event) {
     return function(doc) {
         if (!doc) {
-            return Promise.resolve(doc);
+            return BPromise.resolve(doc);
         }
         var docMeta = doc[SIS.FIELD_SIS_META];
         if (event == SIS.EVENT_INSERT) {
             docMeta[SIS.FIELD_CREATED_AT] = Date.now();
         }
         if (!user) {
-            return Promise.resolve(doc);
+            return BPromise.resolve(doc);
         }
 
         if (event == SIS.EVENT_UPDATE) {
@@ -830,7 +830,7 @@ Manager.prototype._addByFields = function(user, event) {
             docMeta[SIS.FIELD_CREATED_BY] = user[SIS.FIELD_NAME];
             docMeta[SIS.FIELD_UPDATED_BY] = user[SIS.FIELD_NAME];
         }
-        return Promise.resolve(doc);
+        return BPromise.resolve(doc);
     };
 };
 

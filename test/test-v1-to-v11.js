@@ -2,7 +2,7 @@ describe('Convert from v1 to v1.1', function() {
     "use strict";
 
     var should = require('should');
-    var Promise = require('bluebird');
+    var BPromise = require('bluebird');
 
     var SIS = require("../util/constants");
     var config = require('./fixtures/config');
@@ -86,7 +86,7 @@ describe('Convert from v1 to v1.1', function() {
                     // add a manual entry that looks like v1
                     // insert raw document
                     var model = mongoose.models[schema.name];
-                    var collection = Promise.promisifyAll(model.collection);
+                    var collection = BPromise.promisifyAll(model.collection);
                     return collection.insertAsync(item);
                 }).nodeify(done);
 
@@ -94,11 +94,11 @@ describe('Convert from v1 to v1.1', function() {
 
             it("Should convert the RAW object to v1.1", function(done) {
                 var model = mongoose.models[schema.name];
-                var collection = Promise.promisifyAll(model.collection);
+                var collection = BPromise.promisifyAll(model.collection);
                 collection.findOneAsync({})
                 .then(function(found) {
                     if (!found) {
-                        return Promise.reject("No item in collection.");
+                        return BPromise.reject("No item in collection.");
                     }
                     // found it
                     // ensure it has the raw fields
@@ -152,7 +152,7 @@ describe('Convert from v1 to v1.1', function() {
                         }
                     }
                     updated.str.should.eql("Updated");
-                    return Promise.resolve("Success");
+                    return BPromise.resolve("Success");
                 }).nodeify(done);
             });
         });
@@ -209,8 +209,8 @@ describe('Convert from v1 to v1.1', function() {
         before(function(done) {
             ApiServer.start(config, function(err, serverData) {
                 var mongoose = serverData.mongoose;
-                var schemasColl = Promise.promisifyAll(mongoose.connection.collection('sis_schemas'));
-                var entityColl = Promise.promisifyAll(mongoose.connection.collection(schemaObj.name));
+                var schemasColl = BPromise.promisifyAll(mongoose.connection.collection('sis_schemas'));
+                var entityColl = BPromise.promisifyAll(mongoose.connection.collection(schemaObj.name));
                 var p1 = schemasColl.insertAsync(schemaObj);
                 var p2 = entityColl.insertAsync(entity).then(function() {
                     return entityColl.findOneAsync({ ip : entity.ip }).then(function(ob) {
@@ -218,7 +218,7 @@ describe('Convert from v1 to v1.1', function() {
                         return entity;
                     });
                 });
-                Promise.all([p1, p2]).nodeify(function(err, res) {
+                BPromise.all([p1, p2]).nodeify(function(err, res) {
                     if (err) { return done(err); }
                     ApiServer.stop(done);
                 });

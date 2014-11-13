@@ -1,8 +1,8 @@
 module.exports = function(grunt) {
 
   require('load-grunt-tasks')(grunt);
-  var Promise = require('bluebird');
-  var requestAsync = Promise.promisify(require('request'));
+  var BPromise = require('bluebird');
+  var requestAsync = BPromise.promisify(require('request'));
 
   var distFiles = ['routes/*.js', 'tools/*.js', 'util/*.js', 'util/types/*.js', 'server.js'];
 
@@ -176,7 +176,7 @@ module.exports = function(grunt) {
               return body.version;
           });
       });
-      Promise.all(infoPromises).then(function(versions) {
+      BPromise.all(infoPromises).then(function(versions) {
           // ensure all are the same
           var version = versions[0];
           if (!version) {

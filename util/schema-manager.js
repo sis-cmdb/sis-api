@@ -9,7 +9,7 @@
 
 var SIS = require("./constants");
 var Manager = require("./manager");
-var Promise = require("bluebird");
+var BPromise = require("bluebird");
 var jsondiffpatch = require("jsondiffpatch");
 
 var toRegex = function(str) {
@@ -234,7 +234,7 @@ SchemaManager.prototype.finishUpdate = function(oldSchema, updatedSchema) {
     if (!defChanged) {
         // definition didn't change so we don't need to delete any models
         // or anything
-        return Promise.resolve(updatedSchema);
+        return BPromise.resolve(updatedSchema);
     }
 
     // see if any paths changed that require index changes
@@ -256,9 +256,9 @@ SchemaManager.prototype.finishUpdate = function(oldSchema, updatedSchema) {
     this._invalidateSchema(name);
 
     var currentMongooseModel = self.getEntityModel(updatedSchema);
-    var collection = Promise.promisifyAll(currentMongooseModel.collection);
+    var collection = BPromise.promisifyAll(currentMongooseModel.collection);
 
-    var resultPromise = Promise.resolve(updatedSchema);
+    var resultPromise = BPromise.resolve(updatedSchema);
     if (pathsWithIndecesToRemove.length) {
         // build up the index objects to remove
         var toRemove = [];
@@ -279,7 +279,7 @@ SchemaManager.prototype.finishUpdate = function(oldSchema, updatedSchema) {
                         return r;
                     });
                 });
-                return Promise.all(promises);
+                return BPromise.all(promises);
             });
         }
     }
@@ -320,7 +320,7 @@ SchemaManager.prototype.finishUpdate = function(oldSchema, updatedSchema) {
                     return r;
                 });
             });
-            return Promise.all(promises).then(function() {
+            return BPromise.all(promises).then(function() {
                 return currSchema;
             });
         } else {
@@ -381,24 +381,24 @@ SchemaManager.prototype.applyUpdate = function(currentSchema, updatedSchema) {
     if (!defChanged) {
         // definition didn't change so we don't need to delete any models
         // or anything
-        return Promise.resolve(currentSchema);
+        return BPromise.resolve(currentSchema);
     }
 
     // find all paths that need to be unset/deleted
     var pathsToDelete = diff[1].map(function(p) { return p[0]; });
     if (!pathsToDelete.length) {
-        return Promise.resolve(currentSchema);
+        return BPromise.resolve(currentSchema);
     }
 
     var lockedFields = currentSchema[SIS.FIELD_LOCKED_FIELDS] || [];
     for (var i = 0; i < pathsToDelete.length; ++i) {
         var path = pathsToDelete[i];
         if (lockedFields.indexOf(path) != -1) {
-            return Promise.reject(SIS.ERR_BAD_REQ("Cannot remove field " + path));
+            return BPromise.reject(SIS.ERR_BAD_REQ("Cannot remove field " + path));
         }
     }
 
-    return Promise.resolve(currentSchema);
+    return BPromise.resolve(currentSchema);
 };
 
 SchemaManager.prototype.objectRemoved = function(schema) {
@@ -413,7 +413,7 @@ SchemaManager.prototype.objectRemoved = function(schema) {
     // exposed by very quick tests that create a collection
     // requiring an index and then drop it shortly after.
     // TODO: needs verification / less hackiness
-    var d = Promise.pending();
+    var d = BPromise.pending();
     model.collection.dropIndexes(function(err, reply) {
         model.collection.drop(function(err, reply) {
             // mongoose throws an error if the collection isn't found..
@@ -440,15 +440,15 @@ SchemaManager.prototype.getEntityModelAsync = function(name) {
     .then(function(schema) {
         var model = this.getEntityModel(schema);
         if (!model) {
-            return Promise.reject(SIS.ERR_BAD_REQ("Invalid schema found with name " + name));
+            return BPromise.reject(SIS.ERR_BAD_REQ("Invalid schema found with name " + name));
         } else {
             return model;
         }
     }).catch(function(err) {
         if (err instanceof Array) {
-            return Promise.reject(err);
+            return BPromise.reject(err);
         }
-        return Promise.reject(SIS.ERR_BAD_REQ("Schema not found with name " + name));
+        return BPromise.reject(SIS.ERR_BAD_REQ("Schema not found with name " + name));
     });
 };
 
@@ -501,7 +501,7 @@ SchemaManager.prototype.getById = function(id, options) {
     return Manager.prototype.getById.call(this, id, options).bind(this)
         .catch(function(err) {
             this._invalidateSchema(id);
-            return Promise.reject(err);
+            return BPromise.reject(err);
         });
 };
 
@@ -565,7 +565,7 @@ SchemaManager.prototype.getEntityModel = function(sisSchema, isInternal) {
         this.entitySchemaToUpdateTime[name] = schemaTime;
         this.mongoose.models[name] = result;
         // promisify the mongoose model
-        Promise.promisifyAll(result);
+        BPromise.promisifyAll(result);
         return result;
     } catch (ex) {
         console.log(ex);
@@ -602,32 +602,32 @@ SchemaManager.prototype._preSave = function(obj) {
         return ref.ref;
     });
     obj[SIS.FIELD_SIS_META][SIS.FIELD_REFERENCES] = refs;
-    return Promise.resolve(obj);
+    return BPromise.resolve(obj);
 };
 
 SchemaManager.prototype.authorize = function(evt, doc, user, mergedDoc) {
     var commonErr = this._commonAuth(evt, doc, user, mergedDoc);
     if (commonErr) {
-        return Promise.reject(commonErr);
+        return BPromise.reject(commonErr);
     }
     // get the permissions on the doc being added/updated/deleted
     var permission = this.getPermissionsForObject(doc, user);
     var canOperateOnDoc = permission == SIS.PERMISSION_ADMIN ||
         (doc[SIS.FIELD_ANY_ADMIN_MOD] && this._isPartialAdmin(doc, user));
     if (!canOperateOnDoc) {
-        return Promise.reject(SIS.ERR_BAD_CREDS("Insufficient permissions."));
+        return BPromise.reject(SIS.ERR_BAD_CREDS("Insufficient permissions."));
     } else if (evt != SIS.EVENT_UPDATE) {
         // insert / delete and user is an admin
-        return Promise.resolve(doc);
+        return BPromise.resolve(doc);
     }
 
     permission = this.getPermissionsForObject(mergedDoc, user);
     canOperateOnDoc = permission == SIS.PERMISSION_ADMIN ||
         (mergedDoc[SIS.FIELD_ANY_ADMIN_MOD] && this._isPartialAdmin(mergedDoc, user));
     if (!canOperateOnDoc) {
-        return Promise.reject(SIS.ERR_BAD_CREDS("Insufficient permissions."));
+        return BPromise.reject(SIS.ERR_BAD_CREDS("Insufficient permissions."));
     }
-    return Promise.resolve(mergedDoc);
+    return BPromise.resolve(mergedDoc);
 };
 
 // export

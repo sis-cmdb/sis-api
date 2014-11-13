@@ -3,7 +3,7 @@
 var ApiController = require("./apicontroller");
 var SIS = require("../util/constants");
 var passport = require("passport");
-var Promise = require("bluebird");
+var BPromise = require("bluebird");
 
 /////////////////////////////////
 // User controller

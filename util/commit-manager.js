@@ -6,7 +6,7 @@
 
 var jsondiff = require('jsondiffpatch');
 var SIS = require('./constants');
-var Promise = require("bluebird");
+var BPromise = require("bluebird");
 
 var docToPojo = function(doc) {
     if (typeof doc.toObject === 'function') {
@@ -34,7 +34,7 @@ function CommitManager(schemaManager) {
 
     this.recordHistoryBulk = function(items, user, action, type) {
         if (action != 'insert' && action != 'delete') {
-            return Promise.reject(SIS.ERR_INTERNAL("Only insert and delete supported"));
+            return BPromise.reject(SIS.ERR_INTERNAL("Only insert and delete supported"));
         }
         var idField = this.idField;
         var ts = Date.now();
@@ -61,7 +61,7 @@ function CommitManager(schemaManager) {
             return new self.model(commit).toObject();
         });
         // do a bulk insert directly
-        var insert = Promise.promisify(self.model.collection.insert, self.model.collection);
+        var insert = BPromise.promisify(self.model.collection.insert, self.model.collection);
         return insert(commits).then(function() {
             return items;
         });
@@ -144,7 +144,7 @@ function CommitManager(schemaManager) {
         var sort = { date_modified : -1 };
         var commits = [];
         // result promise
-        var d = Promise.pending();
+        var d = BPromise.pending();
         // find the first commit
         var query = self.model.findOne(condition).select(fields).sort(sort);
         query.exec(function(err, first) {

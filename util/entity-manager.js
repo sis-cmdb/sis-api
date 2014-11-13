@@ -4,7 +4,7 @@
 'use strict';
 
 var Manager = require("./manager");
-var Promise = require("bluebird");
+var BPromise = require("bluebird");
 var SIS = require("./constants");
 
 //////////
@@ -193,7 +193,7 @@ EntityManager.prototype.authorize = function(evt, doc, user, mergedDoc) {
     // authorize against entity subset or schema
     var ownerSubset = this._getOwnerSubset(user, this.schema);
     if (!ownerSubset.length) {
-        return Promise.reject(SIS.ERR_BAD_CREDS("Insufficient privileges to operate on entities in this schema."));
+        return BPromise.reject(SIS.ERR_BAD_CREDS("Insufficient privileges to operate on entities in this schema."));
     }
     var docMeta = doc[SIS.FIELD_SIS_META];
     if (!docMeta[SIS.FIELD_OWNER] || !docMeta[SIS.FIELD_OWNER].length) {
@@ -415,7 +415,7 @@ EntityManager.prototype._addReferencesToState = function(ref, obj, idx,
 EntityManager.prototype._preSaveBulk = function(objs) {
     var references = this.getReferences();
     if (!references.length || !objs || !objs.length) {
-        return Promise.resolve([objs, []]);
+        return BPromise.resolve([objs, []]);
     }
     // track all errors
     var allErrors = { };
@@ -473,14 +473,14 @@ EntityManager.prototype._preSaveBulk = function(objs) {
         var objIds = Object.keys(state.refToIdx);
         if (!objIds.length) {
             // nothing to do.
-            return Promise.resolve(true);
+            return BPromise.resolve(true);
         }
         return this.sm.getEntityModelAsync(refModelName).then(function(model) {
             if (!model) {
                 var err = SIS.ERR_BAD_REQ("No schema named " + refModelName);
                 // schema doesn't exist.  all of the items are bad
                 markErrored(state.refToIdx, err);
-                return Promise.resolve(false);
+                return BPromise.resolve(false);
             }
             return model.findAsync({ '_id' : { "$in" : objIds }}, '_id', {lean : true}).then(function(r) {
                 if (!r || r.length != objIds.length) {
@@ -498,12 +498,12 @@ EntityManager.prototype._preSaveBulk = function(objs) {
                     return true;
                 }
             }).catch(function(err) {
-                return Promise.reject(SIS.ERR_INTERNAL("Error verifying references"));
+                return BPromise.reject(SIS.ERR_INTERNAL("Error verifying references"));
             });
         });
     }.bind(this));
 
-    return Promise.all(promises).then(function() {
+    return BPromise.all(promises).then(function() {
         // at this point, all errors has all the errors.
         var erroredIndeces = Object.keys(allErrors);
         if (!erroredIndeces.length) {
@@ -523,7 +523,7 @@ EntityManager.prototype._preSaveBulk = function(objs) {
 EntityManager.prototype._preSave = function(obj) {
     return this._preSaveBulk([obj]).spread(function(success, errors) {
         if (errors.length) {
-            return Promise.reject(errors[0].err);
+            return BPromise.reject(errors[0].err);
         }
         return obj;
     });

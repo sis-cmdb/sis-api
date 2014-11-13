@@ -1,7 +1,7 @@
 'use strict';
 
 var SIS = require("../util/constants");
-var Promise = require("bluebird");
+var BPromise = require("bluebird");
 var passport = require("passport");
 var webUtil = require("./webutil");
 
@@ -41,9 +41,9 @@ function ApiController(opts) {
 ApiController.prototype.getManager = function(req) {
     if (this.manager) {
         req.useLean = true;
-        return Promise.resolve(this.manager);
+        return BPromise.resolve(this.manager);
     } else {
-        return Promise.reject(SIS.ERR_INTERNAL("Error fetching object"));
+        return BPromise.reject(SIS.ERR_INTERNAL("Error fetching object"));
     }
 };
 
@@ -173,7 +173,7 @@ ApiController.prototype.getAll = function(req, res) {
         c = c || 0;
         res.setHeader(SIS.HEADER_TOTAL_COUNT, c);
         if (!c || c < options.offset) {
-            return Promise.resolve([]);
+            return BPromise.resolve([]);
         }
         options.lean = req.useLean;
         if (this.parsePopulate(req)) {
@@ -326,7 +326,7 @@ ApiController.prototype.attach = function(app, prefix) {
 // The type specifies which kind of authentication to use
 // and should have already been registered with passport
 ApiController.prototype.authenticate = function(req, res, type) {
-    var d = Promise.pending();
+    var d = BPromise.pending();
     var self = this;
     passport.authenticate(type, {session : false}, function(err, user) {
         if (err) {
@@ -531,10 +531,10 @@ ApiController.prototype._saveSingleCommit = function(req, result) {
             old = result;
             break;
         default:
-            return Promise.reject(SIS.ERR_INTERNAL("invalid commit being saved"));
+            return BPromise.reject(SIS.ERR_INTERNAL("invalid commit being saved"));
     }
     // save it
-    var d = Promise.pending();
+    var d = BPromise.pending();
     var type = this.getType(req);
     this.commitManager.recordHistory(old, now, req.user, type, function(e, h) {
         // doesn't matter for now.
@@ -552,7 +552,7 @@ ApiController.prototype._saveBulkCommits = function(req, items) {
         case SIS.METHOD_DELETE:
             break;
         default:
-            return Promise.reject(SIS.ERR_INTERNAL("invalid bulk commits being saved"));
+            return BPromise.reject(SIS.ERR_INTERNAL("invalid bulk commits being saved"));
     }
     // save it
     var action = SIS.METHODS_TO_EVENT[req.method];
@@ -569,7 +569,7 @@ ApiController.prototype._saveCommit = function(req) {
     // but returns the initial object passed to it
     return function(result) {
         if (!this.shouldSaveCommit(req)) {
-            return Promise.resolve(result);
+            return BPromise.resolve(result);
         }
 
         if (req.params.isBulk) {
@@ -582,7 +582,7 @@ ApiController.prototype._saveCommit = function(req) {
                     return result;
                 });
             } else {
-                return Promise.resolve(result);
+                return BPromise.resolve(result);
             }
         } else {
             return this._saveSingleCommit(req, result);

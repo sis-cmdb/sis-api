@@ -2,7 +2,7 @@ describe('@API @V1.1API - Upsert', function() {
     "use strict";
 
     var should = require('should');
-    var Promise = require('bluebird');
+    var BPromise = require('bluebird');
 
     var SIS = require("../../util/constants");
     var config = require('../fixtures/config');

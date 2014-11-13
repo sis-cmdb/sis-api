@@ -2,7 +2,8 @@
 var express = require('express');
 var mongoose = require('mongoose');
 var bodyParser = require('body-parser');
-var Promise = require("bluebird");
+var BPromise = require("bluebird");
+var loggingMiddleware = require('./util/logger');
 
 var SIS = require("./util/constants");
 
@@ -33,17 +34,8 @@ var allowCrossDomain = function(req,res,next) {
     next();
 };
 
-var defaultConfig = {
-    app : {
-        auth : true,
-        auth_config : {
-            type : 'sis'
-        }
-    }
-};
-
 if (process.env.SIS_DEBUG) {
-    Promise.longStackTraces();
+    BPromise.longStackTraces();
 }
 
 var startServer = function(config, callback) {
@@ -57,6 +49,8 @@ var startServer = function(config, callback) {
     nconf.defaults(config);
 
     var app = express();
+
+    app.use(loggingMiddleware.logger());
 
     //app.use(webUtil.json());
     app.use(bodyParser.json({
@@ -112,6 +106,7 @@ var startServer = function(config, callback) {
             });
 
             // setup error handler
+            app.use(loggingMiddleware.errorLogger());
             app.use(function(err, req, res, next) {
                 var errObj = SIS.ERR_INTERNAL("Unexpected error : " + err);
                 res.status(errObj[0]).send(errObj[1]);

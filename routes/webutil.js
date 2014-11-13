@@ -3,7 +3,7 @@
 var passport = require('passport');
 var BasicStrategy = require('passport-http').BasicStrategy;
 var SIS = require("../util/constants");
-var Promise = require("bluebird");
+var BPromise = require("bluebird");
 var util = require("util");
 
 // authorization using user and pass via the user manager
@@ -63,7 +63,7 @@ var _verifySisToken = function(token, done) {
             var timeLeft = expires.getTime() - Date.now();
             if (timeLeft <= 0) {
                 // no good
-                return Promise.reject(SIS.ERR_BAD_CREDS("Token has expired."));
+                return BPromise.reject(SIS.ERR_BAD_CREDS("Token has expired."));
             }
         }
         return userManager.getById(t[SIS.FIELD_USERNAME], {lean : true});
@@ -156,7 +156,7 @@ var getObjectIds = function(schemaRef, condition, remainingPath,
     var optRef = schemaRef.ref;
     if (!optRef) {
         // just return an empty array
-        return Promise.resolve([]);
+        return BPromise.resolve([]);
     }
     return sm.getEntityModelAsync(optRef).then(function(sisModel){
         // need to check if the remainingPath is another reference
@@ -172,7 +172,7 @@ var getObjectIds = function(schemaRef, condition, remainingPath,
             if (!references.length) {
                 // no object ids referenced by this nested model, so the
                 // path is invalid.. bail
-                return Promise.resolve([]);
+                return BPromise.resolve([]);
             } else {
                 // find out which reference matches the remainingPath
                 var found = false;
@@ -198,7 +198,7 @@ var getObjectIds = function(schemaRef, condition, remainingPath,
                         return getObjectIds(references[i], condition, nestedRemain,
                                             sm, sisModel).then(function(ids) {
                             if (!ids || !ids.length) {
-                                return Promise.resolve([]);
+                                return BPromise.resolve([]);
                             }
                             var findCond = ids.length == 1 ? getFindCond(ref, ids[0]) : getFindCond(ref, { "$in" : ids});
                             return sisModel.findAsync(findCond, '_id', {lean : true}).then(mapIds);
@@ -206,16 +206,16 @@ var getObjectIds = function(schemaRef, condition, remainingPath,
                     }
                 } else {
                     // path is invalid.  just return empty
-                    return Promise.resolve([]);
+                    return BPromise.resolve([]);
                 }
             }
         }
     })
     .catch(function(err) {
         if (err instanceof Array) {
-            return Promise.reject(err);
+            return BPromise.reject(err);
         }
-        return Promise.reject(SIS.ERR_INTERNAL(err));
+        return BPromise.reject(SIS.ERR_INTERNAL(err));
     });
 };
 
@@ -257,11 +257,11 @@ module.exports.flattenCondition = function(condition, schemaManager, mgr) {
     var references = mgr.getReferences();
     if (!condition || typeof condition !== 'object' ||
         !references || !references.length) {
-        return Promise.resolve([condition, mgr]);
+        return BPromise.resolve([condition, mgr]);
     }
     var keys = Object.keys(condition);
     if (!keys.length) {
-        return Promise.resolve([condition, mgr]);
+        return BPromise.resolve([condition, mgr]);
     }
     var paths = references.map(function(ref) {
         return ref;
@@ -276,7 +276,7 @@ module.exports.flattenCondition = function(condition, schemaManager, mgr) {
         var key = keys[k];
         if (key[key.length - 1] == '.') {
             // invalid query - just let it flow.
-            return Promise.resolve([condition, mgr]);
+            return BPromise.resolve([condition, mgr]);
         }
         // compare with the references - probably a better way to do
         // this ;)
@@ -305,7 +305,7 @@ module.exports.flattenCondition = function(condition, schemaManager, mgr) {
             return getObjectIds(schemaPath, cond, remainingPath,
                                 schemaManager, mgr.model);
         });
-        return Promise.all(promises).then(function(results) {
+        return BPromise.all(promises).then(function(results) {
             var refConds = {};
             for (var i = 0; i < results.length; ++i) {
                 var key = fieldKeys[i];
@@ -321,9 +321,9 @@ module.exports.flattenCondition = function(condition, schemaManager, mgr) {
                     flattened[k] = v;
                 }
             }
-            return Promise.resolve([flattened, mgr]);
+            return BPromise.resolve([flattened, mgr]);
         });
     } else {
-        return Promise.resolve([condition, mgr]);
+        return BPromise.resolve([condition, mgr]);
     }
 };

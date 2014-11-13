@@ -3,7 +3,7 @@ describe('@API @V1API - Entity References', function() {
 
     var should = require('should');
     var async = require('async');
-    var Promise = require('bluebird');
+    var BPromise = require('bluebird');
 
     var SIS = require("../../util/constants");
     var config = require('../fixtures/config');
@@ -375,7 +375,7 @@ describe('@API @V1API - Entity References', function() {
                     num : i
                 });
             }
-            var d = Promise.pending();
+            var d = BPromise.pending();
             ApiServer.post("/api/v1/entities/" + leaf_schema.name)
             .send(items).expect(200, function(err, res) {
                 if (err) { return d.reject(err); }
@@ -391,7 +391,7 @@ describe('@API @V1API - Entity References', function() {
         before(function(done) {
             // delete/create all the schemas
             var promises = [leaf_schema, ancestor_schema].map(function(schema) {
-                var d = Promise.pending();
+                var d = BPromise.pending();
                 var url = "/api/v1/schemas";
                 ApiServer.del(url + '/' + schema.name).end(function() {
                     ApiServer.post(url).send(schema).expect(201, function(err, res) {
@@ -401,7 +401,7 @@ describe('@API @V1API - Entity References', function() {
                 });
                 return d.promise;
             });
-            Promise.all(promises).then(function() {
+            BPromise.all(promises).then(function() {
                 return createLeaves();
             }).then(function() { done(); }).catch(done);
         });
