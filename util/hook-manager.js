@@ -6,7 +6,7 @@
 var http = require('http');
 // simplified http req
 var request = require('request');
-
+var nconf = require('nconf');
 
 var SIS = require('./constants');
 var Manager = require("./manager");
@@ -19,6 +19,10 @@ function HookManager(sm, opts) {
     opts = opts || {};
     opts[SIS.OPT_USE_AUTH] = sm.authEnabled;
     Manager.call(this, model, opts);
+    var hookRequestDefaults = nconf.get('hooks:settings');
+    if (hookRequestDefaults) {
+        request = request.defaults(hookRequestDefaults);
+    }
 }
 
 require('util').inherits(HookManager, Manager);
