@@ -75,7 +75,7 @@ var sendRequest = function(options, retry_count, delay, d) {
     });
 };
 
-var dispatchHook = function(hook, entity, event) {
+var dispatchHook = function(hook, entity, event, isBulk) {
     if (typeof entity.toObject === 'function') {
         entity = entity.toObject();
     }
@@ -83,7 +83,8 @@ var dispatchHook = function(hook, entity, event) {
         'hook' : hook.name,
         'entity_type' : hook.entity_type,
         'event' : event,
-        'data' : entity
+        'data' : entity,
+        'is_bulk' : isBulk || false
     };
     if (event == SIS.EVENT_UPDATE) {
         // array of two
@@ -106,7 +107,7 @@ var dispatchHook = function(hook, entity, event) {
 };
 
 // hook dispatching methods
-HookManager.prototype.dispatchHooks = function(entity, entity_type, event, callback) {
+HookManager.prototype.dispatchHooks = function(entity, entity_type, event, isBulk, callback) {
     if (!callback) {
         callback = function(err) {
             if (err) {
@@ -122,7 +123,7 @@ HookManager.prototype.dispatchHooks = function(entity, entity_type, event, callb
             callback(SIS.ERR_NOT_FOUND(err), null);
         } else {
             var promises = hooks.map(function(hook) {
-                return dispatchHook(hook, entity, event);
+                return dispatchHook(hook, entity, event, isBulk);
             });
             BPromise.all(promises).then(function(res) {
                 callback(null, res);

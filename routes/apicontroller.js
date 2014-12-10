@@ -496,14 +496,11 @@ ApiController.prototype._getSendCallback = function(req, res, code) {
         var hookType = self.getType(req);
         var hookEvt = SIS.METHODS_TO_EVENT[req.method];
         if (self.hm && req.method in SIS.METHODS_TO_EVENT) {
-            if (!req.isBulk) {
-                self.hm.dispatchHooks(orig, hookType, hookEvt);
-            } else {
-                var success = orig.success;
-                success.forEach(function(item) {
-                    self.hm.dispatchHooks(item, hookType, hookEvt);
-                });
+            var toSend = orig;
+            if (req.params.isBulk) {
+                toSend = orig.success;
             }
+            self.hm.dispatchHooks(toSend, hookType, hookEvt, req.params.isBulk);
         }
     };
 };
