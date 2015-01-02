@@ -79,6 +79,7 @@ module.exports = {
     FIELD_ID_FIELD : "id_field",
     FIELD_ANY_ADMIN_MOD : "any_owner_can_modify",
     FIELD_IS_PUBLIC : "is_public",
+    FIELD_ENTITY_COUNT : 'entity_count',
 
     // meta fields
     // container

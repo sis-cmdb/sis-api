@@ -504,4 +504,96 @@ describe('@API @V1.1API - Schema API', function() {
             });
         });
     });
+
+    describe("with counts API", function() {
+        var schema = {
+          "name":"test_counts_schema",
+          _sis : { "owner" : ["test"] },
+          "definition": {
+            "num":   "Number"
+          }
+        };
+        var NUM_ENTITIES = 50;
+
+        var schemaDoc = null;
+
+        function addEntities(done) {
+            // add 100 entities
+            var entities = [];
+            for (var i = 0; i < NUM_ENTITIES; ++i) {
+                entities.push({
+                    num : i
+                });
+            }
+            ApiServer.post('/api/v1.1/entities/' + schema.name)
+            .send(entities).expect(200, function(err, res) {
+                if (err) { return done(err); }
+                should.exist(res.body.success);
+                should.exist(res.body.errors);
+                res.body.success.should.be.instanceof(Array);
+                res.body.success.length.should.eql(NUM_ENTITIES);
+                res.body.errors.should.be.instanceof(Array);
+                res.body.errors.length.should.eql(0);
+                done();
+            });
+        }
+
+        // create the schema and add entities
+        before(function(done) {
+            ApiServer.del('/api/v1.1/schemas/' + schema.name)
+                .end(function() {
+                ApiServer.post('/api/v1.1/schemas').send(schema)
+                .expect(201, function(err, result) {
+                    if (err) return done(err);
+                    schemaDoc = result.body;
+                    addEntities(done);
+                });
+            });
+        });
+        after(function(done) {
+            ApiServer.del('/api/v1.1/schemas/' + schema.name).expect(200, done);
+        });
+        // tests
+        it("should not return total_counts by default", function(done) {
+            ApiServer.get("/api/v1.1/schemas").expect(200, function(err, res) {
+                should.not.exist(err);
+                res.body.should.be.instanceof(Array);
+                res.body.forEach(function(s) {
+                    s.should.not.have.property('entity_count');
+                });
+                done();
+            });
+        });
+        it("should not return total_counts by default (id)", function(done) {
+            ApiServer.get("/api/v1.1/schemas/" + schema.name).expect(200, function(err, res) {
+                should.not.exist(err);
+                res.body.should.not.have.property('entity_count');
+                done();
+            });
+        });
+        it("should fetch entity_count on schema list", function(done) {
+            ApiServer.get("/api/v1.1/schemas").query({ with_counts : true })
+            .expect(200, function(err, res) {
+                should.not.exist(err);
+                res.body.should.be.instanceof(Array);
+                res.body.forEach(function(s) {
+                    s.should.have.property('entity_count');
+                    s.entity_count.should.be.instanceof(Number);
+                    if (s.name === schema.name) {
+                        s.entity_count.should.eql(NUM_ENTITIES);
+                    }
+                });
+                done();
+            });
+        });
+        it("should fetch entity_count via ID", function(done) {
+            ApiServer.get("/api/v1.1/schemas/" + schema.name).query({with_counts : true})
+            .expect(200, function(err, res) {
+                should.not.exist(err);
+                res.body.should.have.property('entity_count');
+                res.body.entity_count.should.eql(NUM_ENTITIES);
+                done();
+            });
+        });
+    });
 });

@@ -159,7 +159,9 @@ ApiController.prototype.parsePopulate = function(req) {
 ApiController.prototype.getAll = function(req, res) {
     this.applyDefaults(req);
     var rq = this.parseQuery(req);
-    var options = { skip : rq.offset, limit: rq.limit};
+    var options = this._getReqOptions(req);
+    options.skip = rq.offset;
+    options.limit = rq.limit;
     if (rq.sort) {
         options.sort = rq.sort;
     }
@@ -195,7 +197,8 @@ ApiController.prototype.get = function(req, res) {
     this.applyDefaults(req);
     var id = req.params.id;
     var p = this.getManager(req).bind(this).then(function(mgr) {
-        var options = { lean : req.useLean };
+        var options = this._getReqOptions(req);
+        options.lean = req.useLean;
         if (this.parsePopulate(req)) {
             return mgr.getPopulateFields(this.sm).then(function(populateFields) {
                 if (populateFields) {
@@ -606,7 +609,10 @@ ApiController.prototype._finish = function(req, res, p, code) {
 ApiController.prototype._getReqOptions = function(req) {
     return {
         user : req.user,
-        version : req.params.version
+        version : req.params.version,
+        log : req.log,
+        params : req.params,
+        query : req.query
     };
 };
 

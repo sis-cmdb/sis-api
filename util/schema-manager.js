@@ -497,13 +497,48 @@ SchemaManager.prototype._getMongooseSchema = function(sisSchema, isInternal) {
     return this.mongoose.Schema(definition, { collection : sisSchema.name, versionKey : SIS.FIELD_VERS });
 };
 
+function withCounts(options) {
+    return options && options.query &&
+           options.query.with_counts === 'true';
+}
+
 // wrap this so we can handle the error case
 SchemaManager.prototype.getById = function(id, options) {
-    return Manager.prototype.getById.call(this, id, options).bind(this)
-        .catch(function(err) {
-            this._invalidateSchema(id);
-            return BPromise.reject(err);
+    return Manager.prototype.getById.call(this, id, options)
+    .bind(this).then(function(schema) {
+        // check for with_counts
+        if (!withCounts(options)) {
+            // early exit
+            return schema;
+        }
+        // get the number of items in the schema
+        var entityModel = this.getEntityModel(schema);
+        return entityModel.countAsync({}).then(function(count) {
+            schema[SIS.FIELD_ENTITY_COUNT] = count;
+            return schema;
         });
+    }).catch(function(err) {
+        this._invalidateSchema(id);
+        return BPromise.reject(err);
+    });
+};
+
+// handle the with_counts in get all also
+SchemaManager.prototype.getAll = function(condition, options, fields) {
+    var p = Manager.prototype.getAll.call(this, condition, options, fields);
+    return p.bind(this).then(function(schemas) {
+        if (!withCounts(options)) {
+            return schemas;
+        }
+        var self = this;
+        return BPromise.map(schemas, function(schema) {
+            var entityModel = self.getEntityModel(schema);
+            return entityModel.countAsync({}).then(function(count) {
+                schema[SIS.FIELD_ENTITY_COUNT] = count;
+                return schema;
+            });
+        });
+    });
 };
 
 // get a mongoose model back based on the sis schema
