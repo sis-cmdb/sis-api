@@ -10,11 +10,12 @@ var crypto = require("crypto");
 var hat = require('hat');
 
 /////////////////////////////////
-// Tokens
-function TokenManager(sm) {
+// Token manager for a particular user
+function TokenManager(sm, username) {
     var opts = {};
     Manager.call(this, sm.getSisModel(SIS.SCHEMA_TOKENS), opts);
     this.sm = sm;
+    this.username = username;
     this.authEnabled = this.sm.authEnabled;
 }
 
@@ -23,7 +24,7 @@ require('util').inherits(TokenManager, Manager);
 // override add to use createToken
 TokenManager.prototype.add = function(obj, options) {
     var user = options ? options.user : null;
-    var err = this.validate(obj, false, user);
+    var err = this.validate(obj, false, options);
     if (err) {
         err = SIS.ERR_BAD_REQ(err);
         return BPromise.reject(err);
@@ -33,11 +34,36 @@ TokenManager.prototype.add = function(obj, options) {
     return p;
 };
 
+// raw fetch of a token - used for verifying a SIS token
+TokenManager.prototype.getTokenByName = function(token) {
+    return Manager.prototype.getById.call(this, token, { lean : true }).bind(this);
+};
+
+TokenManager.prototype.getAll = function(condition, options, fields) {
+    condition = condition || { };
+    condition[SIS.FIELD_USERNAME] = this.username;
+    return Manager.prototype.getAll.call(this, condition, options, fields);
+};
+
+TokenManager.prototype.getById = function(id, options) {
+    return Manager.prototype.getById.call(this, id, options)
+    .bind(this).then(function(token) {
+        // ensure the token matches the requested username
+        if (token[SIS.FIELD_USERNAME] !== this.username) {
+            return BPromise.reject(SIS.ERR_NOT_FOUND('Token for ' + this.username, id));
+        }
+        return token;
+    });
+};
+
 TokenManager.prototype.validate = function(obj, toUpdate, options) {
-    var user = options ? (options.user || { }) : { };
-    if (!obj[SIS.FIELD_USERNAME]) {
-        obj[SIS.FIELD_USERNAME] = user[SIS.FIELD_NAME];
+    if (!this.username) {
+        return "Token manager assigned to invalid user.";
     }
+    if (obj[SIS.FIELD_USERNAME] && obj[SIS.FIELD_USERNAME] !== this.username) {
+        return "Token must belong to " + this.username;
+    }
+    obj[SIS.FIELD_USERNAME] = this.username;
     return null;
 };
 
@@ -123,6 +149,6 @@ TokenManager.prototype.canInsertWithId = function(id, obj) {
 
 /////////////////////////////////
 
-module.exports = function(sm) {
-    return new TokenManager(sm);
+module.exports = function(sm, username) {
+    return new TokenManager(sm, username);
 };

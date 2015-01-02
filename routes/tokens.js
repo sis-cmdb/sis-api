@@ -14,12 +14,15 @@ function TokenController(config) {
     opts[SIS.OPT_TYPE] = SIS.SCHEMA_TOKENS;
     SIS.UTIL_MERGE_SHALLOW(opts, config);
     ApiController.call(this, opts);
-    this.manager = this.sm.auth[SIS.SCHEMA_TOKENS];
     this.userManager = this.sm.auth[SIS.SCHEMA_USERS];
 }
 
 // inherit
 require('util').inherits(TokenController, ApiController);
+
+TokenController.prototype.getManager = function(req) {
+    return BPromise.resolve(this.sm.getTokenManagerForUser(req.params.uid));
+};
 
 // Append the query parameter to be that of the user
 TokenController.prototype.applyDefaults = function(req) {
@@ -82,7 +85,7 @@ TokenController.prototype.wrapApi = function() {
                 // getting the tokens
                 var p = self.authenticate(req, res, SIS.SCHEMA_TOKENS);
                 return p.then(function(auth) {
-                    if (self.manager.canAdministerTokensOf(req.user, user)) {
+                    if (self.sm.tokenFetcher.canAdministerTokensOf(req.user, user)) {
                         func.call(self, req, res);
                     } else {
                         return self.sendError(res, SIS.ERR_BAD_CREDS("Cannot read tokens for user."));

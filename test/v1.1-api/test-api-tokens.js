@@ -137,6 +137,19 @@ describe('@API @V1.1API - Authorization API Tokens', function() {
                 });
             });
         });
+
+        // some sanity tests
+        // ensure that a user's token can't be accessed at the wrong path
+        it("superman token should not show up under superman2", function(done) {
+            var reqToken = userToTokens.superman[0].name;
+            var tokenToReq = userToTokens.superman2[0].name;
+            var url = '/api/v1.1/users/superman/tokens/' + tokenToReq;
+            ApiServer.get(url, reqToken).expect(404, function(err, res) {
+                should.not.exist(err);
+                done();
+            });
+        });
+
     });
 
     describe("delete tokens", function() {

@@ -19,7 +19,7 @@ function UserManager(sm) {
 require('util').inherits(UserManager, Manager);
 
 UserManager.prototype.createTempToken = function(user) {
-    var tm = this.sm.auth[SIS.SCHEMA_TOKENS];
+    var tm = this.sm.getTokenManagerForUser(user[SIS.FIELD_NAME]);
     var token = {
         username : user[SIS.FIELD_NAME],
         expires : Date.now() + SIS.AUTH_EXPIRATION_TIME
@@ -163,7 +163,7 @@ UserManager.prototype.authorize = function(evt, doc, user, mergedDoc) {
 
 UserManager.prototype.objectRemoved = function(user) {
     // remove all tokens where username = user[name];
-    var tokenManager = this.sm.auth[SIS.SCHEMA_TOKENS];
+    var tokenManager = this.sm.getTokenManagerForUser(user[SIS.FIELD_NAME]);
     var d = BPromise.pending();
     tokenManager.model.remove({username : user[SIS.FIELD_NAME]}, function(err) {
         if (err) {

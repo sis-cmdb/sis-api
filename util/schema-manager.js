@@ -89,8 +89,9 @@ function SchemaManager(mongoose, opts) {
     if (this.authEnabled) {
         var auth = {};
         auth[SIS.SCHEMA_USERS] = require("./user-manager")(this);
-        auth[SIS.SCHEMA_TOKENS] = require("./token-manager")(this);
         this.auth = auth;
+        // a token manager that is not associated with a user name
+        this.tokenFetcher = require("./token-manager")(this, null);
     }
     patchMongoose(mongoose);
 }
@@ -628,6 +629,14 @@ SchemaManager.prototype.authorize = function(evt, doc, user, mergedDoc) {
         return BPromise.reject(SIS.ERR_BAD_CREDS("Insufficient permissions."));
     }
     return BPromise.resolve(mergedDoc);
+};
+
+// get a token manager for the particular user
+SchemaManager.prototype.getTokenManagerForUser = function(username) {
+    if (!this.authEnabled) {
+        return null;
+    }
+    return require("./token-manager")(this, username);
 };
 
 // export

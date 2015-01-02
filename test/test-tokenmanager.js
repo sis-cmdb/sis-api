@@ -31,7 +31,7 @@ describe('Token Manager', function() {
                 var userManager = schemaManager.auth[SIS.SCHEMA_USERS];
                 var superUser = users.superman;
                 var admin = users.admin1;
-                var tokenManager = schemaManager.auth[SIS.SCHEMA_TOKENS];
+                var tokenManager = schemaManager.tokenFetcher;
                 tokenManager.model.ensureIndexes(function(e) {
                     if (e) { return done(e); }
                     userManager.add(admin, { user : superUser }).nodeify(done);
@@ -49,8 +49,8 @@ describe('Token Manager', function() {
                 console.log("Testing temp token expiration - please wait");
                 this.timeout(240000);
                 var userManager = schemaManager.auth[SIS.SCHEMA_USERS];
-                var tokenManager = schemaManager.auth[SIS.SCHEMA_TOKENS];
                 var user = users.admin1;
+                var tokenManager = schemaManager.getTokenManagerForUser(user.name);
                 userManager.createTempToken(user).nodeify(function(e, token) {
                     should.not.exist(e);
                     should.exist(token);
@@ -150,7 +150,6 @@ describe('Token Manager', function() {
         before(function(done) {
             async.parallel(superTests.map(function(test) {
                 var userManager = schemaManager.auth[SIS.SCHEMA_USERS];
-                var tokenManager = schemaManager.auth[SIS.SCHEMA_TOKENS];
                 var u1 = users[test[0]];
                 var u2 = users[test[1]];
                 return function(cb) {
@@ -172,7 +171,7 @@ describe('Token Manager', function() {
             }
             var testName = util.format("%s %s create token for %s", usr, (pass ? "can" : "cannot"), usr2);
             it(testName, function(done) {
-                var tokenManager = schemaManager.auth[SIS.SCHEMA_TOKENS];
+                var tokenManager = schemaManager.getTokenManagerForUser(u2[SIS.FIELD_NAME]);
                 var token = {
                     username : u2[SIS.FIELD_NAME],
                     desc : "token added by " + u1[SIS.FIELD_NAME]
@@ -197,13 +196,13 @@ describe('Token Manager', function() {
         superTests.map(function(test) {
             it("Should delete user and all tokens for " + test[1], function(done) {
                 var userManager = schemaManager.auth[SIS.SCHEMA_USERS];
-                var tokenManager = schemaManager.auth[SIS.SCHEMA_TOKENS];
                 var u1 = users[test[0]];
                 var u2 = users[test[1]];
                 userManager.delete(u2[SIS.FIELD_NAME], { user : u1 }).nodeify(function(e, u) {
                     should.not.exist(e);
                     should.exist(u);
-                    tokenManager.getAll({username : u[SIS.FIELD_NAME]}, null, null)
+                    var tokenManager = schemaManager.getTokenManagerForUser(u[SIS.FIELD_NAME]);
+                    tokenManager.getAll({ }, null, null)
                     .done(function(res) {
                         res.length.should.eql(0);
                         done();

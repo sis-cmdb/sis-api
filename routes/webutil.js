@@ -54,9 +54,8 @@ var getLdapVerificationFunc = function(sm, auth_config) {
 
 // authorization using sis_tokens
 var _verifySisToken = function(token, done) {
-    var tokenManager = this.auth[SIS.SCHEMA_TOKENS];
     var userManager = this.auth[SIS.SCHEMA_USERS];
-    var p = tokenManager.getById(token, {lean : true}).then(function(t) {
+    var p = this.tokenFetcher.getTokenByName(token).then(function(t) {
         // check if the token has expired
         if (t[SIS.FIELD_EXPIRES]) {
             var expires = t[SIS.FIELD_EXPIRES];
