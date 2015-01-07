@@ -52,13 +52,13 @@ All commits also have an _id field used for retrieval purposes.
 
 ## Retrieving the commits of an object
 
-All individual objects in SIS have a getter by id.  For instance, a hook is retrieved via: `/api/v1/hooks/:hook_name`.  To get the commits on an object, simply append `/commits` to the path.
+All individual objects in SIS have a getter by id.  For instance, a hook is retrieved via: `/api/v1.1/hooks/:hook_name`.  To get the commits on an object, simply append `/commits` to the path.
 
 The commits API follows the same pagination rules and filtering abilities of all list retrieval APIs.
 
-As an example, to retrieve a list of commits on a hook with name "my_hook", issue a GET request against `/api/v1/hooks/my_hook/commits`.
+As an example, to retrieve a list of commits on a hook with name "my_hook", issue a GET request against `/api/v1.1/hooks/my_hook/commits`.
 
-To retrieve a list of commits on an entity of type 'my_type' with `_id` 1234, issue a GET request against `/api/v1/entities/my_type/1234/commits`.
+To retrieve a list of commits on an entity of type 'my_type' with `_id` 1234, issue a GET request against `/api/v1.1/entities/my_type/1234/commits`.
 
 ## Retrieving an individual commit of an object
 
@@ -68,7 +68,7 @@ To retrieve an individual commit, append the `_id` of the commit object to the c
 
 To retrieve an object's state at a particular time, append `/revisions/:utc_timestamp` to the getter path of that object.  This returns the object at that time.  Note that the timestamp is in millis.
 
-For example, to retrieve the `my_hook` object at 11/11/11 @ 11:11:11 (utc timestamp 1321009871000), issue the request `/api/v1/hooks/my_hook/revisions/1321009871000`
+For example, to retrieve the `my_hook` object at 11/11/11 @ 11:11:11 (utc timestamp 1321009871000), issue the request `/api/v1.1/hooks/my_hook/revisions/1321009871000`
 
 Timestamps in the future will return the current object.  Timestamps in the past return 404.
 

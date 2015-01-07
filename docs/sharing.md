@@ -25,7 +25,7 @@ Consider the following schemas and entities:
 ```javascript
 // schemas w/ definitions
 
-// /api/v1/schemas/common_objects
+// /api/v1.1/schemas/common_objects
 {
     name : "common_objects"
     owner : ["common"],
@@ -36,7 +36,7 @@ Consider the following schemas and entities:
     }
 }
 
-// /api/v1/schemas/extended_objects
+// /api/v1.1/schemas/extended_objects
 {
     name : "extended_objects",
     owner : ["extended"],
@@ -55,7 +55,7 @@ Consider the following schemas and entities:
 // entities
 
 // common_object with id "common_1"
-// /api/v1/entities/common_objects/common_1
+// /api/v1.1/entities/common_objects/common_1
 {
     _id : "common_1",
     field_1 : "some common string",
@@ -63,7 +63,7 @@ Consider the following schemas and entities:
 }
 
 // an extended_object that references common_1
-// /api/v1/entities/extended_objects/extended_1
+// /api/v1.1/entities/extended_objects/extended_1
 {
     _id : "extended_1",
     // common object expanded - populated on GET requests
@@ -78,7 +78,7 @@ Consider the following schemas and entities:
 }
 
 // another extended object that references common_1
-// /api/v1/entities/extended_objects/extended_2
+// /api/v1.1/entities/extended_objects/extended_2
 {
     _id : "extended_2",
     // common object expanded - populated on GET requests
@@ -109,7 +109,7 @@ Consider the following:
 
 ```javascript
 // shared_objects schema
-// /api/v1/schemas/shared_objects
+// /api/v1.1/schemas/shared_objects
 {
     name : "shared_objects"
     owner : ["group1", "group2"],
@@ -123,7 +123,7 @@ Consider the following:
 // entities
 // shared_object with id "shared_1" that can only be edited by
 // users of group "group1"
-// /api/v1/entities/shared_objects/shared_1
+// /api/v1.1/entities/shared_objects/shared_1
 {
     _id : "shared_1",
     owner : ["group1"],
@@ -133,7 +133,7 @@ Consider the following:
 
 // shared_object with id "shared_2" that can only be edited by
 // users of group "group2"
-// /api/v1/entities/shared_objects/shared_2
+// /api/v1.1/entities/shared_objects/shared_2
 {
     _id : "shared_2",
     owner : ["group2"],
@@ -156,7 +156,7 @@ Consider the following:
 
 ```javascript
 // schemas
-// /api/v1/schemas/schema_1
+// /api/v1.1/schemas/schema_1
 {
     name : "schema_1",
     owner : ["schema1_owners"],
@@ -167,7 +167,7 @@ Consider the following:
     }
 }
 
-// /api/v1/schemas/schema_2
+// /api/v1.1/schemas/schema_2
 {
     name : "schema_2",
     owner : ["schema2_owners"],

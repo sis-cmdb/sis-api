@@ -121,8 +121,8 @@ has insufficient rights for modifying the user.
 
 ### Retrieving users
 
-* `GET /api/v1/users`
-* `GET /api/v1/users/:name`
+* `GET /api/v1.1/users`
+* `GET /api/v1.1/users/:name`
 
 If no name is specified in the path, returns a list of user objects.
 
@@ -130,7 +130,7 @@ The name must contain only lowercase ascii characters, digits, or underscores.
 
 ### Creating a new user
 
-* `POST /api/v1/users`
+* `POST /api/v1.1/users`
 
 The request body must be a valid user object.  This method will error if a user with the same name exists.
 
@@ -138,7 +138,7 @@ The response is the user object along with two additional fields assigned by mon
 
 ### Updating a user
 
-* `PUT /api/v1/users/:name`
+* `PUT /api/v1.1/users/:name`
 
 The request body must be a valid user object.  The name in the user object must match the name in the path parameter.
 This implies that user names cannot be changed.
@@ -147,7 +147,7 @@ The response is the updated user object.
 
 ### Deleting a user
 
-* `DELETE /api/v1/users/:name`
+* `DELETE /api/v1.1/users/:name`
 
 Removes the user with the specified name along with all tokens associated with the user.
 
@@ -211,8 +211,8 @@ require the `x-auth-token` to be present.
 
 ### Retrieving tokens
 
-* `GET /api/v1/users/:uname/tokens`
-* `GET /api/v1/users/:uname/tokens/:name`
+* `GET /api/v1.1/users/:uname/tokens`
+* `GET /api/v1.1/users/:uname/tokens/:name`
 
 Retrieve the tokens of a particular user.  This method returns tokens of the user
 identified by `uname`.  These methods will return an unauthorized status code
@@ -227,14 +227,14 @@ containing the username and password the token is requested for.  See the
 [Basic Auth](http://tools.ietf.org/html/rfc1945#section-10.2) spec for more
 information.
 
-* `POST /api/v1/users/auth_token`
+* `POST /api/v1.1/users/auth_token`
 
 The request body must be empty.  The result is a token with the expires field
 set to the number of milliseconds until the token expires.
 
 ### Creating a new persistent token
 
-* `POST /api/v1/users/:uname/tokens`
+* `POST /api/v1.1/users/:uname/tokens`
 
 The request body must be a valid JSON object.  It can be an empty JSON object.
 It is recommended that the object contain the `desc` field for organizational
@@ -245,12 +245,12 @@ field has no effect.
 
 ### Updating a token
 
-* `PUT /api/v1/users/:uname/tokens/:name`
+* `PUT /api/v1.1/users/:uname/tokens/:name`
 
 The same rules apply as the POST method.  The token name cannot be changed.
 
 ### Deleting a token
 
-* `DELETE /api/v1/users/:name`
+* `DELETE /api/v1.1/users/:name`
 
 Removes the user with the specified name along with all tokens associated with the user.

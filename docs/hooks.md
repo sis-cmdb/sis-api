@@ -134,12 +134,12 @@ In the case of PUT and POST, the payload is sent in the request body.  When a GE
 
 ## Retrieving hooks
 
-* `GET /api/v1/hooks` - returns a list of hook objects
-* `GET /api/v1/hooks/:name` - returns a hook with the specified name
+* `GET /api/v1.1/hooks` - returns a list of hook objects
+* `GET /api/v1.1/hooks/:name` - returns a hook with the specified name
 
 ## Creating a new hook
 
-* `POST /api/v1/hooks`
+* `POST /api/v1.1/hooks`
 
 The request body must be a valid hook object.  This method will error if a hook with the same name exists.
 
@@ -153,7 +153,7 @@ Error cases:
 
 ## Updating a hook
 
-* `PUT /api/v1/hooks/:name`
+* `PUT /api/v1.1/hooks/:name`
 
 The request body must be a valid hook object.  The name in the hook object must match the name in the path parameter.  This implies that hook names cannot be changed.
 
@@ -168,7 +168,7 @@ Error cases:
 
 ## Deleting a hook
 
-* `DELETE /api/v1/hooks/:name`
+* `DELETE /api/v1.1/hooks/:name`
 
 Removes the hook with the specified name.
 

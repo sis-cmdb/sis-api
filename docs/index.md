@@ -31,7 +31,7 @@ request and parse JSON.  The API allows clients to do a variety of operations in
 - CRUD object definitions.  SIS refers to these as `schemas` and map to concepts
 like DB Tables or object classes.
 - CRUD instances of objects of a `schema`.  These are referred to as `entities` in SIS.
-- Register for notifications when any SIS object is created, modified, or deleted.  
+- Register for notifications when any SIS object is created, modified, or deleted.
 In SIS terms, these are called `hooks`.
 - Retrieve the state of a SIS object at a particular moment in time.
 - Control access to objects and ensure the right users can manage them.
@@ -203,11 +203,12 @@ the object is converted to V1.1.  All of this should be transparent to V1 client
 
 All SIS resources expose an HTTP base endpoint.  The endpoint paths are versioned.
 For instance, the base endpoint for the version 1 schemas API is `/api/v1/schemas`.  In version 1.1,
-the base endpoint is `/api/v1.1/schemas`.
+the base endpoint is `/api/v1.1/schemas`.  **The /api/v1/ endpoints are deprecated and will be removed in a
+future release.  Please use /api/v1.1/ for new applications.**
 
 The following HTTP methods are common to all endpoints:
 
-* GET <endpoint> - retrieve a list (page) of resources.  
+* GET <endpoint> - retrieve a list (page) of resources.
 See [List retrieval options](#list-retrieval-options) for options.
 * GET <endpoint>/<resource id> - retrieve a single resource by id.
 * POST <endpoint> - create a new resource, or multiple resources via [bulk insert](#bulk-insert).
@@ -233,7 +234,7 @@ All lists retrieved are actually pages.  The following query parameters are used
 * limit - the number of items to fetch.  200 by default.  At most 200 items can be retrieved in a single call.
 * offset - the number of items to skip before fetching.  0 based.
 
-For instance, `GET /api/v1/schemas?limit=3&offset=4` retrieves the schemas at positions 3, 4, and 5.
+For instance, `GET /api/v1.1/schemas?limit=3&offset=4` retrieves the schemas at positions 3, 4, and 5.
 
 ### Field selection
 
@@ -241,18 +242,18 @@ Field selection is done by passing a comma separated list of field names in the 
 
 For instance:
 
-`GET /api/v1/schemas?fields=name,definition.name` returns a list of schemas where the objects only contain the name, _id, and the `name` field of the `definition`.  If `name` is not specified in the schema definition, the other two fields are still returned.
+`GET /api/v1.1/schemas?fields=name,definition.name` returns a list of schemas where the objects only contain the name, _id, and the `name` field of the `definition`.  If `name` is not specified in the schema definition, the other two fields are still returned.
 
 Note that `_id` is always returned.
 
 ### Sorting
 
-To sort objects by a particular field, pass in the field name via the `sort` query parameter.  
+To sort objects by a particular field, pass in the field name via the `sort` query parameter.
 
 For instance:
 
-- `GET /api/v1/schemas?sort=name` returns schemas sorted by name in ascending order.  
-- `GET /api/v1/schemas?sort=-name` returns schemas sorted by name in descending order.
+- `GET /api/v1.1/schemas?sort=name` returns schemas sorted by name in ascending order.
+- `GET /api/v1.1/schemas?sort=-name` returns schemas sorted by name in descending order.
 
 ### Search
 
@@ -261,7 +262,7 @@ The object looks like a [MongoDB query document](http://docs.mongodb.org/manual/
 
 For instance:
 
-`/api/v1/schemas?q={"owner":"SIS"}` returns a list of schemas where "SIS" is an owner.
+`/api/v1.1/schemas?q={"owner":"SIS"}` returns a list of schemas where "SIS" is an owner.
 
 #### Joins
 
@@ -291,7 +292,7 @@ For instance, consider the following schema definitions (only name and definitio
 
 Then the following request returns a list of `entity_2` objects that reference an `entity_1` object with a `some_number` field greater than 10:
 
-`GET /api/v1/entities/entity_2?q={"entity_1.some_number" : { "$gt" : 10 }}`
+`GET /api/v1.1/entities/entity_2?q={"entity_1.some_number" : { "$gt" : 10 }}`
 
 ## Bulk Operations
 
@@ -322,7 +323,7 @@ POST endpoints that support bulk insert also accept an array of objects instead 
 
 An optional `all_or_none` URL query parameter can be added to the request and has a boolean value.  When `true`, any errors will prevent any inserts from occurring and the success array will return empty.
 
-As an example, to insert 3 items in the `sample` schema defined in [Schema Objects](./schemas.md#schema-objects), issue `POST /api/v1/entities/sample` with the body
+As an example, to insert 3 items in the `sample` schema defined in [Schema Objects](./schemas.md#schema-objects), issue `POST /api/v1.1/entities/sample` with the body
 
 ```javascript
 [
@@ -372,15 +373,15 @@ A query must be present, otherwise a 400 is returned.  Any errors that occur to 
 
 For instance, to delete all entities in the `sample` schema where the `numberField` is less than 20, issue the following request:
 
-`DELETE /api/v1/entities/sample?q={"numberField" : {"$lt" : 20}}`
+`DELETE /api/v1.1/entities/sample?q={"numberField" : {"$lt" : 20}}`
 
 ## CAS Support
 
-CAS updates are supported on single object update calls only (i.e. `PUT /api/v1/schemas/my_schema` or `PUT /api/v1/entities/my_schema/the_object_id`).  CAS updates ensure that an update is applied atomically only if the object meets certain criteria.
+CAS updates are supported on single object update calls only (i.e. `PUT /api/v1.1/schemas/my_schema` or `PUT /api/v1.1/entities/my_schema/the_object_id`).  CAS updates ensure that an update is applied atomically only if the object meets certain criteria.
 
 To issue a CAS update operation, add the `cas` query parameter with the value being a query object representing the conditions the object must meet.
 
-For instance, consider the following `sample` object that exists in SIS and can be retrieved via `GET /api/v1/entities/sample/some_object_id`:
+For instance, consider the following `sample` object that exists in SIS and can be retrieved via `GET /api/v1.1/entities/sample/some_object_id`:
 
 ```javascript
 {
@@ -398,7 +399,7 @@ For instance, consider the following `sample` object that exists in SIS and can 
 
 To update the object and set `numberField` to 101 only if `numberField` is 100, issue the following request:
 
-`PUT /api/v1/entities/sample/some_object_id?cas={"numberField":100}` with the following body:
+`PUT /api/v1.1/entities/sample/some_object_id?cas={"numberField":100}` with the following body:
 
 ```javascript
 {
@@ -421,7 +422,7 @@ The [entities]('./entities.md') API supports upsert only if the schema has `id_f
 
 The following request upserts a schema with name "upserted_schema":
 
-`PUT /api/v1/schemas/upserted_schema?upsert=true` with the body containing the schema JSON.
+`PUT /api/v1.1/schemas/upserted_schema?upsert=true` with the body containing the schema JSON.
 
 # Data Sharing and Organization
 

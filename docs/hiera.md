@@ -49,8 +49,8 @@ The `hieradata` object can be anything provided the values are JSON friendly.
 
 ## Retrieving Hiera data
 
-* `GET /api/v1/hiera` - returns a list of hiera entries
-* `GET /api/v1/hiera/:name` - returns only the `hieradata` portion of the hiera entry with the name specified.
+* `GET /api/v1.1/hiera` - returns a list of hiera entries
+* `GET /api/v1.1/hiera/:name` - returns only the `hieradata` portion of the hiera entry with the name specified.
 
 This matches what hiera-http expects and is modeled based on the information in this [blog post](http://www.craigdunn.org/2012/11/puppet-data-from-couchdb-using-hiera-http/).
 
@@ -58,7 +58,7 @@ This matches what hiera-http expects and is modeled based on the information in 
 
 ## Adding a new hiera entry
 
-* `POST /api/v1/hiera`
+* `POST /api/v1.1/hiera`
 
 The request body must be a valid hiera object as defined above.  This method will error if an entry with the same name exists.
 
@@ -71,7 +71,7 @@ Error cases:
 
 ## Updating a hiera entry
 
-* `PUT /api/v1/hiera/:name`
+* `PUT /api/v1.1/hiera/:name`
 
 The request body must be a valid entry object.  The `name` in the object must match the `name` in the path parameter.
 Partial updates are supported.
@@ -87,7 +87,7 @@ Error cases:
 
 ## Deleting a hiera entry
 
-* `DELETE /api/v1/hiera/:name`
+* `DELETE /api/v1.1/hiera/:name`
 
 Deletes the heira entry with the specified `name` or errors.
 

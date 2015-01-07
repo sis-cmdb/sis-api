@@ -15,9 +15,9 @@ Table of Contents
 # Entity API
 
 The Entity API allows clients to manage the entities that adhere to a particular [schema](./schemas.md).
-The base endpoint is `/api/v1/entities/<schema_name>` where `<schema_name>` is the the name of the schema.
+The base endpoint is `/api/v1.1/entities/<schema_name>` where `<schema_name>` is the the name of the schema.
 
-For instance, to manage entities that belong to a schema named `sample`, the base endpoint is at `/api/v1/entities/sample`.
+For instance, to manage entities that belong to a schema named `sample`, the base endpoint is at `/api/v1.1/entities/sample`.
 
 ## Entity objects
 
@@ -66,20 +66,20 @@ The `owner` field of an entity must be a subset of the `owner` field of the sche
 
 ## Retrieving Entities of a particular schema
 
-* `GET /api/v1/entities/<schema_name>` - returns a list of entities belonging to `<schema_name>`.
-* `GET /api/v1/entities/<schema_name>/<id>` - returns an entity with the specified id belonging to `<schema_name>`.
+* `GET /api/v1.1/entities/<schema_name>` - returns a list of entities belonging to `<schema_name>`.
+* `GET /api/v1.1/entities/<schema_name>/<id>` - returns an entity with the specified id belonging to `<schema_name>`.
 
 Path parameters:
 - `schema_name` the `name` of the schema
 - `id` the `_id` field of the entity.
 
-For example, to retrieve a list of entities belonging to a schema with name `sample`, a client would issue a GET request against `/api/v1/entities/sample`.
+For example, to retrieve a list of entities belonging to a schema with name `sample`, a client would issue a GET request against `/api/v1.1/entities/sample`.
 
 
 
 ## Creating a new entity
 
-* `POST /api/v1/entities/:schema_name`
+* `POST /api/v1.1/entities/:schema_name`
 
 The request body must be a valid entity object that adheres to the schema definition of of the schema with name `schema_name`.  This method will error if the schema does not exist or the object is malformed.
 
@@ -94,7 +94,7 @@ Error cases:
 
 ## Updating an entity
 
-* `PUT /api/v1/entities/:schema_name/:id`
+* `PUT /api/v1.1/entities/:schema_name/:id`
 
 The request body must be a valid entity object that adheres to the schema definition of of the schema with name `schema_name`.  The `_id` in the entity object must match the id in the path parameter.
 Partial updates are supported.
@@ -110,7 +110,7 @@ Error cases:
 
 ## Deleting an entity
 
-* `DELETE /api/v1/entities/:schema_name/:id`
+* `DELETE /api/v1.1/entities/:schema_name/:id`
 
 Removes the entity belonging to the schema with name `schema_name` that has the `_id` specified by the `id` path parameter.  This method fails if `sis_locked` is set to true.
 
@@ -130,7 +130,7 @@ The Entity API provides some additional query parameters that affect the way obj
 
 By default, array fields are always included in a response, even if empty.  In some applications, this may not be desirable behavior.
 
-Consider the following object in SIS that is accessible via `GET /api/v1/entities/myschema/obj_id`:
+Consider the following object in SIS that is accessible via `GET /api/v1.1/entities/myschema/obj_id`:
 
 ```javascript
 {
@@ -147,7 +147,7 @@ Consider the following object in SIS that is accessible via `GET /api/v1/entitie
 }
 ```
 
-Issuing `GET /api/v1/entities/myschema/obj_id?removeEmpty=true` yields the following result:
+Issuing `GET /api/v1.1/entities/myschema/obj_id?removeEmpty=true` yields the following result:
 
 ```javascript
 {

@@ -12,7 +12,7 @@ Table of Contents
 
 # Schema API
 
-The Schema API is used to manage the schemas of all user defined entities in the system.  The base endpoint is `/api/v1/schemas`.
+The Schema API is used to manage the schemas of all user defined entities in the system.  The base endpoint is `/api/v1.1/schemas`.
 
 ## Schema Definitions
 
@@ -139,12 +139,16 @@ SIS reserves all schema names that begin with "sis_".
 
 ## Retrieving schemas
 
-* `GET /api/v1/schemas` - returns a list of schema objects
-* `GET /api/v1/schemas/<name>` - returns a schema object where the `name` field is `<name>`.
+* `GET /api/v1.1/schemas` - returns a list of schema objects
+* `GET /api/v1.1/schemas/<name>` - returns a schema object where the `name` field is `<name>`.
+
+An optional `with_counts=true` query parameter can be specified.  In the GET requests.  If specified,
+the returned object will include a field called `entity_counts` which is a number indicating how many
+entities are in the schema.
 
 ## Creating a new schema
 
-* `POST /api/v1/schemas`
+* `POST /api/v1.1/schemas`
 
 The request body must be a valid schema object.
 
@@ -160,7 +164,7 @@ Error cases:
 
 ## Updating a schema
 
-* `PUT /api/v1/schemas/<name>`
+* `PUT /api/v1.1/schemas/<name>`
 
 The request body must be a valid schema object.  Partial updates are not supported.  Schema names cannot be changed.
 
@@ -174,7 +178,7 @@ Error cases:
 
 ## Deleting a schema
 
-* `DELETE /api/v1/schemas/<name>`
+* `DELETE /api/v1.1/schemas/<name>`
 
 Removes the schema with the specified name along with all entities adhering to it.
 
