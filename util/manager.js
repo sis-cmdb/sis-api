@@ -248,21 +248,34 @@ Manager.prototype.bulkAdd = function(items, options) {
     }).spread(function(items, errors) {
         // concat in place
         [].push.apply(memo.errors, errors);
-        // fill out the toAdd array
-        items.forEach(function(res, idx) {
+        // fill out the toAdd array and validate model
+        var modelValidatePromises = items.map(function(res, idx) {
             // convert to mongoose obj
-            res = new this.model(res).toObject();
-            // add the pre save
-            this.applyPreSaveFields(res);
-            // add the transaction field in case
-            // we need to nuke them later
-            res[SIS.FIELD_SIS_META][SIS.FIELD_TRANSACTION_ID] = {
-                id : transactionId,
-                idx : idx
-            };
-            toAdd.push(res);
+            var d = BPromise.pending();
+            res = new this.model(res);
+            res.validate(function(err) {
+                res = res.toObject();
+                if (err) {
+                    err = SIS.ERR_BAD_REQ(err);
+                    memo.errors.push({ err : err, value : res });
+                } else {
+                    // add the pre save
+                    this.applyPreSaveFields(res);
+                    // add the transaction field in case
+                    // we need to nuke them later
+                    res[SIS.FIELD_SIS_META][SIS.FIELD_TRANSACTION_ID] = {
+                        id : transactionId,
+                        idx : idx
+                    };
+                    toAdd.push(res);
+                }
+                d.resolve(memo);
+            }.bind(this));
+            return d.promise;
         }.bind(this));
-        return memo;
+        return BPromise.all(modelValidatePromises).then(function() {
+            return memo;
+        });
     });
     // helper for the insert
     var handleInsertFailed = function(inserted) {
