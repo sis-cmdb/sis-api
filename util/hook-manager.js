@@ -19,7 +19,7 @@ function HookManager(sm, opts) {
     opts = opts || {};
     opts[SIS.OPT_USE_AUTH] = sm.authEnabled;
     Manager.call(this, model, opts);
-    var hookRequestDefaults = nconf.get('hooks:settings');
+    var hookRequestDefaults = nconf.get('hooks:request_defaults');
     if (hookRequestDefaults) {
         request = request.defaults(hookRequestDefaults);
     }
