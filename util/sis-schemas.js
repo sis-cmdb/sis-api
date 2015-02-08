@@ -116,6 +116,16 @@ module.exports.schemas = [
             expires : { type : "Date", expires : 0 },
             username : { type: "String", required : true }
         }
+    },
+    // sis_scripts
+    {
+        name : SIS.SCHEMA_SCRIPTS,
+        definition : {
+            // the script name
+            name : { type : "String", required : true,  unique : true, match :  /^[a-z0-9_\-]+$/ },
+            script_type : { type: "String", required : true, enum : ["application/javascript"] },
+            script : { type: "String", code : true }
+        }
     }
 
 ];

@@ -17,7 +17,9 @@ var routes = [
     'hooks',
     'users',
     'tokens',
-    'info'
+    'info',
+    'scripts',
+    'endpoints'
 ];
 
 var allowCrossDomain = function(req,res,next) {
@@ -27,7 +29,7 @@ var allowCrossDomain = function(req,res,next) {
     res.set('Access-Control-Allow-Headers', 'Content-Type,X-Requested-With,x-auth-token,Authorization');
     res.set('Access-Control-Expose-Headers', "x-total-count");
     // TODO: remove this hardcoded ish
-    if (req.path == "/api/v1/users/auth_token" && req.method == "POST") {
+    if (req.path == "/api/v1.1/users/auth_token" && req.method == "POST") {
         res.set('Access-Control-Allow-Credentials', true);
         res.set("WWW-Authenticate", 'Basic realm="Users"');
     }

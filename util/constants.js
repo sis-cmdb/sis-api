@@ -114,6 +114,7 @@ module.exports = {
     SCHEMA_COMMITS : "sis_commits",
     SCHEMA_USERS : "sis_users",
     SCHEMA_TOKENS : "sis_tokens",
+    SCHEMA_SCRIPTS : "sis_scripts",
 
     AUTH_EXPIRATION_TIME : 1000 * 60 * 60 * 8, // 8 hrs
     AUTH_TYPE_SIS : "sis",
