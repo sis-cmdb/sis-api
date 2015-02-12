@@ -33,21 +33,21 @@ EndpointController.prototype.handler = function(req, res) {
 
 EndpointController.prototype._runNext = function() {
     if (!this.requestQueue.length || this.childState !== IDLE) {
-	return;
+        return;
     }
     this.childState = BUSY;
     this.currentReq = this.requestQueue.pop();
     var req = this.currentReq.req;
     var message = {
-	type : "request",
-	data : {
-	    path : req.path,
-	    method : req.method,
-	    params : req.params,
-	    body : req.body,
-	    query : req.body,
-	    headers : req.headers
-	}
+        type : "request",
+        data : {
+            path : req.path,
+            method : req.method,
+            params : req.params,
+            body : req.body,
+            query : req.body,
+            headers : req.headers
+        }
     };
     this.child.send(message);
 };
@@ -56,20 +56,20 @@ EndpointController.prototype._spawnWorker = function() {
     this.child = ChildProcess.fork(__dirname + "/../endpoints/runner.js");
     this.childState = SPAWNING;
     this.child.on("message", function(msg) {
-	var type = msg.type;
-	var data = msg.data;
-	if (type === "done") {
-	    this.childState = IDLE;
-	    var res = this.currentReq.res;
-	    this.currentReq = null;
-	    res.status(data.status);
-	    res.set("Content-Type", data.mime);
-	    res.send(data.data);
-	    this._runNext();
-	} else if (type === "ready") {
-	    this.childState = IDLE;
-	    this._runNext();
-	}
+        var type = msg.type;
+        var data = msg.data;
+        if (type === "done") {
+            this.childState = IDLE;
+            var res = this.currentReq.res;
+            this.currentReq = null;
+            res.status(data.status);
+            res.set("Content-Type", data.mime);
+            res.send(data.data);
+            this._runNext();
+        } else if (type === "ready") {
+            this.childState = IDLE;
+            this._runNext();
+        }
     }.bind(this));
 };
 
