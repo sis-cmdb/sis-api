@@ -96,46 +96,7 @@ ApiController.prototype.sendObject = function(res, code, obj) {
 // Converts the q param to an object and assigns a
 // limit and offset
 ApiController.prototype.parseQuery = function(req) {
-    var query = req.query.q || { };
-    // try parsing..
-    try {
-        if (typeof query === 'string') {
-            query = JSON.parse(query);
-        }
-    } catch (ex) {
-        query = {};
-    }
-    if (req.params.version == "v1") {
-        query = SIS.UTIL_QUERY_FROM_V1(query);
-    }
-    var limit = parseInt(req.query.limit, 10) || SIS.MAX_RESULTS;
-    if (limit > SIS.MAX_RESULTS) { limit = SIS.MAX_RESULTS; }
-    var offset = parseInt(req.query.offset, 10) || 0;
-    var fields = req.query.fields;
-    if (fields) {
-        if (typeof fields !== 'string') {
-            fields = null;
-        } else {
-            fields = fields.split(',').join(' ');
-        }
-    }
-    var result = {'query' : query, 'limit' : limit, 'offset' : offset, 'fields' : fields};
-    var sort = req.query.sort;
-    if (sort) {
-        var sortFields = sort.split(',');
-        var sortOpt = sortFields.reduce(function(c, field) {
-            // default asc
-            var opt = 1;
-            if (field[0] == '+' || field[0] == '-') {
-                opt = field[0] == '+' ? 1 : -1;
-                field = field.substr(1);
-            }
-            c[field] = opt;
-            return c;
-        }, { });
-        result.sort = sortOpt;
-    }
-    return result;
+    return webUtil.parseQuery(req.query, req.params.version, true);
 };
 
 ApiController.prototype.parseUpsert = function(req) {
@@ -148,11 +109,7 @@ ApiController.prototype.parseUpsert = function(req) {
 
 // Returns true if the request wants sub-documents populated
 ApiController.prototype.parsePopulate = function(req) {
-    if (typeof req.query.populate == 'string') {
-        return req.query.populate == 'true';
-    } else {
-        return req.query.populate || false;
-    }
+    return webUtil.parsePopulate(req.query);
 };
 
 // Handler for the getAll request (typically GET controller_base/)

@@ -5,7 +5,6 @@ var BPromise = require("bluebird");
 var vm = require("vm");
 var SIS = require("../util/constants");
 var clone = require("clone");
-var createEntityManager = require("../util/entity-manager");
 
 function ScriptRunner(schemaManager) {
     this.schemaManager = schemaManager;
@@ -18,7 +17,7 @@ ScriptRunner.prototype._getScript = function(name) {
     .bind(this).then(function(scriptObj) {
         var scriptText = scriptObj.script;
         var cached = this.scriptCache[name];
-        var scriptTime = scriptObj._sis._updated_at
+        var scriptTime = scriptObj._sis._updated_at;
         var compiled = null;
         if (!cached) {
             compiled = vm.createScript(scriptText, name);
@@ -35,7 +34,7 @@ ScriptRunner.prototype._getScript = function(name) {
             }
             return cached.script;
         }
-    })
+    });
 };
 
 // context apis
@@ -45,7 +44,9 @@ ScriptRunner.prototype._createContext = function(d, req) {
     var ctx = {
         client : new ApiClient(this.schemaManager),
         res : new ApiResponse(d),
-        req : req
+        req : req,
+        BPromise : BPromise,
+        csv : require('csv')
     };
     return vm.createContext(clone(ctx));
 };

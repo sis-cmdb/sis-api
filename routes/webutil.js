@@ -326,3 +326,68 @@ module.exports.flattenCondition = function(condition, schemaManager, mgr) {
         return BPromise.resolve([condition, mgr]);
     }
 };
+
+module.exports.parsePopulate = function(reqQuery) {
+    reqQuery = reqQuery || { };
+    if (typeof reqQuery.populate == 'string') {
+        return reqQuery.populate == 'true';
+    } else {
+        return reqQuery.populate || false;
+    }
+};
+
+module.exports.parseQuery = function(reqQuery, version, enforceLimit) {
+    var query = reqQuery.q || { };
+    // try parsing..
+    try {
+        if (typeof query === 'string') {
+            query = JSON.parse(query);
+        }
+    } catch (ex) {
+        query = {};
+    }
+    if (version === "v1") {
+        query = SIS.UTIL_QUERY_FROM_V1(query);
+    }
+    var fields = reqQuery.fields;
+    if (fields) {
+        if (typeof fields !== 'string') {
+            fields = null;
+        } else {
+            fields = fields.split(',').join(' ');
+        }
+    }
+    var result = {'query' : query, 'fields' : fields};
+    if (enforceLimit) {
+        var limit = parseInt(reqQuery.limit, 10) || SIS.MAX_RESULTS;
+        if (limit > SIS.MAX_RESULTS) { limit = SIS.MAX_RESULTS; }
+        var offset = parseInt(reqQuery.offset, 10) || 0;
+        result.limit = limit;
+        result.offset = offset; 
+    } else {
+        // optional - but still might be there
+        if (reqQuery.limit) {
+            result.limit = parseInt(reqQuery.limit, 10);
+        }
+        if (reqQuery.offset) {
+            result.offset = parseInt(reqQuery.offset, 10);
+        }
+    }
+
+    var sort = reqQuery.sort;
+    if (sort) {
+        var sortFields = sort.split(',');
+        var sortOpt = sortFields.reduce(function(c, field) {
+            // default asc
+            var opt = 1;
+            if (field[0] == '+' || field[0] == '-') {
+                opt = field[0] == '+' ? 1 : -1;
+                field = field.substr(1);
+            }
+            c[field] = opt;
+            return c;
+        }, { });
+        result.sort = sortOpt;
+    }
+    return result;
+};
