@@ -149,6 +149,11 @@ module.exports = {
 
     DEFAULT_OPT_USE_AUTH : true,
 
+    // endpoint message types
+    EP_READY : "ready",
+    EP_REQ   : "request",
+    EP_ERROR : "error",
+    EP_DONE  : "done",
 
     MAX_RESULTS : 1000,
 

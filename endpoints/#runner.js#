@@ -5,7 +5,6 @@ var BPromise = require("bluebird");
 var vm = require("vm");
 var SIS = require("../util/constants");
 var clone = require("clone");
-var createEntityManager = require("../util/entity-manager");
 
 function ScriptRunner(schemaManager) {
     this.schemaManager = schemaManager;

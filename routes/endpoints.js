@@ -1,6 +1,8 @@
 'use strict';
 
 var ChildProcess = require("child_process");
+var express = require("express");
+var SIS = require("../util/constants");
 
 // child states
 var IDLE = 0,
@@ -21,9 +23,11 @@ function EndpointController(config) {
 
 EndpointController.prototype.attach = function(app, base) {
     this._spawnWorker();
-    this.base = base + "/:id";
+    this.base = base;
     // ensure the request is handled with a slash
-    app.use(this.base + "/", this.handler.bind(this));
+    var router = express.Router({ strict : true });
+    router.use("/:id/", this.handler.bind(this));
+    app.use(base, router);
 };
 
 EndpointController.prototype.handler = function(req, res) {
@@ -39,13 +43,13 @@ EndpointController.prototype._runNext = function() {
     this.currentReq = this.requestQueue.pop();
     var req = this.currentReq.req;
     var message = {
-        type : "request",
+        type : SIS.EP_REQ,
         data : {
             path : req.path,
+            endpoint : req.params.id,
             method : req.method,
-            params : req.params,
             body : req.body,
-            query : req.body,
+            query : req.query,
             headers : req.headers
         }
     };
@@ -53,20 +57,20 @@ EndpointController.prototype._runNext = function() {
 };
 
 EndpointController.prototype._spawnWorker = function() {
-    this.child = ChildProcess.fork(__dirname + "/../endpoints/runner.js");
+    this.child = ChildProcess.fork(__dirname + "/../endpoints/main.js");
     this.childState = SPAWNING;
     this.child.on("message", function(msg) {
         var type = msg.type;
         var data = msg.data;
-        if (type === "done") {
+        if (type === SIS.EP_DONE) {
             this.childState = IDLE;
             var res = this.currentReq.res;
             this.currentReq = null;
             res.status(data.status);
-            res.set("Content-Type", data.mime);
+            res.set(data.headers);
             res.send(data.data);
             this._runNext();
-        } else if (type === "ready") {
+        } else if (type === SIS.EP_READY) {
             this.childState = IDLE;
             this._runNext();
         }
