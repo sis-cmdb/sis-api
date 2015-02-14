@@ -4,7 +4,7 @@ module.exports = function(grunt) {
   var BPromise = require('bluebird');
   var requestAsync = BPromise.promisify(require('request'));
 
-  var distFiles = ['routes/*.js', 'tools/*.js', 'util/*.js', 'util/types/*.js', 'server.js'];
+    var distFiles = ['routes/*.js', 'tools/*.js', 'util/*.js', 'util/types/*.js', 'server.js', 'endpoints/*.js'];
 
   grunt.initConfig({
     pkg: grunt.file.readJSON('package.json'),

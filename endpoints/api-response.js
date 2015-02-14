@@ -18,7 +18,6 @@ function Response(d) {
             // throw out
             throw new Error("Double send.");
         } else {
-            console.log(data);
             sent = true;
             d.resolve({
                 status : status,
@@ -27,6 +26,6 @@ function Response(d) {
             });
         }
     };
-};
+}
 
 module.exports = Response;
