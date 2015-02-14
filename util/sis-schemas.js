@@ -125,7 +125,7 @@ module.exports.schemas = [
             name : { type : "String", required : true,  unique : true, match :  /^[a-z0-9_\-]+$/ },
             description : { type : "String" },
             script_type : { type: "String", required : true, enum : ["application/javascript"] },
-            script : { type: "String", code : true, code_type_field : "script_type" },
+            script : { type: "String", required: true, code : true, code_type_field : "script_type" },
             // sis meta
             _sis : {
                 owner : { type : ["String"], required : true }

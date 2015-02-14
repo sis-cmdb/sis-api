@@ -26,6 +26,10 @@ function Response(d) {
             });
         }
     };
+    this.json = function(data) {
+        this.set("Content-Type","application/json")
+            .send(JSON.stringify(data));
+    };
 }
 
 module.exports = Response;

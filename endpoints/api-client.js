@@ -54,8 +54,13 @@ function EntityEp(name, schemaManager) {
 }
 
 function Client(schemaManager) {
+
+    var epCache = { };
     this.entities = function(name) {
-        return new EntityEp(name, schemaManager);
+        if (!epCache[name]) {
+            epCache[name] = new EntityEp(name, schemaManager);
+        }
+        return epCache[name];
     };
 }
 
