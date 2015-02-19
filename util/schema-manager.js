@@ -641,6 +641,34 @@ SchemaManager.prototype._preSave = function(obj) {
     return BPromise.resolve(obj);
 };
 
+SchemaManager.prototype.preAdd = function(obj) {
+    var definition = obj.definition || { };
+    function isCandidate(fieldName) {
+        return typeof definition[fieldName] === 'object' &&
+            definition[fieldName].required &&
+            definition[fieldName].unique;
+    }
+    // figure out the ID field and set it
+    if (!obj.id_field || obj.id_field === SIS.FIELD_ID) {
+        // find one that might be better from the top level
+        if (isCandidate('name')) {
+            obj.id_field = 'name';
+        } else if (isCandidate('id')) {
+            obj.id_field = 'id';
+        } else {
+            // find first..
+            var topFields = Object.keys(definition);
+            for (var i = 0; i < topFields.length; ++i) {
+                if (isCandidate(topFields[i])) {
+                    obj.id_field = topFields[i];
+                    break;
+                }
+            }
+        }
+    }
+    return BPromise.resolve(obj);
+};
+
 SchemaManager.prototype.authorize = function(evt, doc, user, mergedDoc) {
     var commonErr = this._commonAuth(evt, doc, user, mergedDoc);
     if (commonErr) {

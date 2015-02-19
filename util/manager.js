@@ -207,6 +207,7 @@ Manager.prototype.add = function(obj, options) {
     obj = SIS.UTIL_FROM_V1(obj);
     var p = this.authorize(SIS.EVENT_INSERT, obj, user).bind(this)
         .then(this._addByFields(user, SIS.EVENT_INSERT))
+        .then(this.preAdd)
         .then(this._preSave)
         .then(this._save);
     return p;
@@ -233,14 +234,16 @@ Manager.prototype.bulkAdd = function(items, options) {
         }
         item = SIS.UTIL_FROM_V1(item);
         return this.authorize(SIS.EVENT_INSERT, item, user)
-        .bind(this).then(this._addByFields(user, SIS.EVENT_INSERT))
-        .then(function(item) {
-            authorized.push(item);
-            return memo;
-        }).catch(function(err) {
-            memo.errors.push({ err : err, value : item });
-            return memo;
-        });
+            .bind(this)
+            .then(this._addByFields(user, SIS.EVENT_INSERT))
+            .then(this.preAdd)
+            .then(function(item) {
+                authorized.push(item);
+                return memo;
+            }).catch(function(err) {
+                memo.errors.push({ err : err, value : item });
+                return memo;
+            });
     }.bind(this));
     var insertPromise = BPromise.all(authPromises).bind(this)
     .then(function() {
@@ -795,6 +798,12 @@ Manager.prototype._preSaveBulk = function(objs) {
     return BPromise.all(promises).then(function() {
         return [success, errors];
     });
+};
+
+// pre add hook that is called on inserts only
+// before the object is persisted
+Manager.prototype.preAdd = function(obj) {
+    return BPromise.resolve(obj);
 };
 
 // do one last bit of validation for subclasses

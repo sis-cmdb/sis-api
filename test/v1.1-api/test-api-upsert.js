@@ -68,8 +68,8 @@ describe('@API @V1.1API - Upsert', function() {
             name : "test_upsert_2",
             _sis : { owner : ["sistest"] },
             definition : {
-                name : { type : "String", required : true, unique : true },
-                short_name : { type : "String", required : true, unique : true },
+                name : { type : "String" },
+                short_name : { type : "String" },
                 other : "String"
             }
         };
@@ -94,6 +94,9 @@ describe('@API @V1.1API - Upsert', function() {
 
         it("Should upsert with an id field", function(done) {
             schema.id_field = 'name';
+            schema.definition.name.unique = true;
+            schema.definition.name.required = true;
+
             var entity = {
                 name : "foobar",
                 short_name : "foobar_short",
