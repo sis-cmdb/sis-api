@@ -56,8 +56,8 @@ var startServer = function(config, callback) {
 
     //app.use(webUtil.json());
     app.use(bodyParser.json({
-        // one mb limit
-        limit : 1024 * 1024
+        // set byte limit
+        limit : SIS.MAX_BODY_SIZE_BYTES
     }));
     app.use(allowCrossDomain);
 

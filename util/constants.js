@@ -155,7 +155,8 @@ module.exports = {
     EP_ERROR : "error",
     EP_DONE  : "done",
 
-    MAX_RESULTS : 1000,
+    MAX_BODY_SIZE_BYTES : 10 * 1024 * 1024,
+    MAX_RESULTS : 10000,
 
     // headers
     HEADER_TOTAL_COUNT : "x-total-count",
