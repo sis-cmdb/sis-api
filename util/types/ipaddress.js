@@ -115,14 +115,6 @@ module.exports = exports = function IpAddr(mongoose) {
             }
         }
 
-        console.log("Cast: " + JSON.stringify(val));
-
-        // if (val instanceof Number || 'number' == typeof val)
-        //   return mongo.IpAddress.fromNumber(val);
-
-        // if (!Array.isArray(val) && val.toString)
-        //   return mongo.IpAddress.fromString(val.toString());
-
         throw new SchemaType.CastError('IpAddress', val);
     };
 

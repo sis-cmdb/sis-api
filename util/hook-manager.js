@@ -1,16 +1,22 @@
 
 // A class used to manage the SIS Hooks defined by the /hooks api
-
 'use strict';
+
 // node http lib
 var http = require('http');
 // simplified http req
 var request = require('request');
 var nconf = require('nconf');
+var bunyan = require('bunyan');
 
 var SIS = require('./constants');
 var Manager = require("./manager");
 var BPromise = require("bluebird");
+
+var LOGGER = bunyan.createLogger({
+    name : "HookManager"
+});
+
 
 /////////////////////////////////
 // Hook Manager
@@ -111,7 +117,7 @@ HookManager.prototype.dispatchHooks = function(entity, entity_type, event, isBul
     if (!callback) {
         callback = function(err) {
             if (err) {
-                console.log("Error running hooks " + JSON.stringify(err));
+                LOGGER.error({ err: err }, "Error running hooks");
             }
         };
     }

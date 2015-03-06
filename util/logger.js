@@ -28,6 +28,7 @@ module.exports.errorLogger = function(opts) {
         req.id = uuid.v4();
         var childLogger = logger.child({ req_id : req.id });
         req.log = childLogger;
+        res.log = childLogger;
 
         function log() {
             res.removeListener('finish', log);
