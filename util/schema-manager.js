@@ -11,6 +11,14 @@ var SIS = require("./constants");
 var Manager = require("./manager");
 var BPromise = require("bluebird");
 var jsondiffpatch = require("jsondiffpatch");
+var bunyan = require("bunyan");
+
+var LOGGER = bunyan.createLogger({
+    name : "SchemaManager",
+    serializers : {
+        err : bunyan.stdSerializers.err
+    }
+});
 
 var toRegex = function(str) {
     try {
@@ -410,23 +418,19 @@ SchemaManager.prototype.objectRemoved = function(schema) {
     var model = this.getEntityModel(schema);
     var collection = model.collection;
     this._invalidateSchema(name);
-    // seems very hacky - this is for a race condition
-    // exposed by very quick tests that create a collection
-    // requiring an index and then drop it shortly after.
-    // TODO: needs verification / less hackiness
+    // TODO: handle the error when the collection is busy
+    // i.e. index being created
     var d = BPromise.pending();
-    model.collection.dropIndexes(function(err, reply) {
-        model.collection.drop(function(err, reply) {
-            // mongoose throws an error if the collection isn't found..
-            if (err && err.message != 'ns not found') {
-                // at this point we're in a bad state.. we deleted the instance
-                // but still have documents
-                // TODO: handle this
-                d.reject(SIS.ERR_INTERNAL(err));
-            } else {
-                d.resolve(schema);
-            }
-        });
+    model.collection.drop(function(err, reply) {
+        // mongoose throws an error if the collection isn't found..
+        if (err && err.message != 'ns not found') {
+            // at this point we're in a bad state.. we deleted the instance
+            // but still have documents
+            // TODO: handle this
+            d.reject(SIS.ERR_INTERNAL(err));
+        } else {
+            d.resolve(schema);
+        }
     });
     return d.promise;
 };
@@ -604,7 +608,7 @@ SchemaManager.prototype.getEntityModel = function(sisSchema, isInternal) {
         BPromise.promisifyAll(result);
         return result;
     } catch (ex) {
-        console.log(ex);
+        LOGGER.error({ err : ex }, "Error getting entity model");
         return null;
     }
 };

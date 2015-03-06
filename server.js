@@ -4,8 +4,15 @@ var mongoose = require('mongoose');
 var bodyParser = require('body-parser');
 var BPromise = require("bluebird");
 var loggingMiddleware = require('./util/logger');
+var bunyan = require("bunyan");
 
 var SIS = require("./util/constants");
+var LOGGER = bunyan.createLogger({
+    name : "SISServer",
+    serializers : {
+        err : bunyan.stdSerializers.err
+    }
+});
 
 var app = null;
 
@@ -74,10 +81,13 @@ var startServer = function(config, callback) {
 
     mongoose.connect(nconf.get('db').url, opts, function(err) {
         if (err) {
-            throw err;
+            LOGGER.error({ err : err }, "Error connecting");
+            process.exit(1);
         }
 
-        mongoose.connection.on('error', console.error.bind(console, 'MongoDB connection error:'));
+        mongoose.connection.on('error', function(err) {
+            LOGGER.error({ err : err }, "A connection error occurred.");
+        });
 
         // express app settings
         var appConfig = nconf.get('app') || {};
