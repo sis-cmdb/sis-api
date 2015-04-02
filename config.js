@@ -18,6 +18,7 @@ module.exports =
         auth : true,
         auth_config : {
             type : 'sis'
-        }
+        },
+        scripts_enabled : false
     }
 };

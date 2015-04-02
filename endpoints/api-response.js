@@ -1,7 +1,8 @@
 "use strict";
 var BPromise = require("bluebird");
+var csv = require("csv");
 
-function Response(d) {
+function Response(holder) {
     var headers = {};
     var sent = false;
     var status = 200;
@@ -15,20 +16,28 @@ function Response(d) {
     };
     this.send = function(data) {
         if (sent) {
-            // throw out
-            throw new Error("Double send.");
-        } else {
-            sent = true;
-            d.resolve({
-                status : status,
-                data : data,
-                headers : headers
-            });
+            throw new Error("Double send");
         }
+        sent = true;
+        holder.setResponse({
+            status  : status,
+            data    : data,
+            headers : headers
+        });
     };
     this.json = function(data) {
         this.set("Content-Type","application/json")
             .send(JSON.stringify(data));
+    };
+    this.csv = function(data) {
+        csv.stringify(data, function(err, output) {
+            if (err) {
+                this.status(500).json(err);
+            } else {
+                this.set("Content-Type", "text/csv")
+                    .send(output);
+            }
+        }.bind(this));
     };
 }
 

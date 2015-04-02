@@ -2,6 +2,7 @@
 
 var ApiController = require("./apicontroller");
 var SIS = require("../util/constants");
+var nconf = require("nconf");
 
 /////////////////////////////////
 // Scripts controller
@@ -21,6 +22,9 @@ require('util').inherits(ScriptController, ApiController);
 
 // all route controllers expose a setup method
 module.exports.setup = function(app, config) {
+    if (!nconf.get('app:scripts_enabled')) {
+        return;
+    }
     var controller = new ScriptController(config);
     controller.attach(app, "/scripts");
 };

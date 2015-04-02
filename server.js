@@ -96,6 +96,7 @@ var startServer = function(config, callback) {
         for (var k in appConfig) {
             app.set(k, appConfig[k]);
         }
+        app.locals.closeListeners = [];
         var schemaManager = require('./util/schema-manager')(mongoose, appConfig);
         schemaManager.bootstrapEntitySchemas(function(err) {
             if (err) {
@@ -137,7 +138,16 @@ var startServer = function(config, callback) {
 // Run if we're the root module
 if (!module.parent) {
     var config = require('./config');
-    startServer(config);
+    startServer(config, function(app, server) {
+        process.on('SIGINT', function() {
+            server.close(function() {
+                app.locals.closeListeners.forEach(function(handler) {
+                    handler();
+                });
+                process.exit(0);
+            });
+        });
+    });
 }
 
 

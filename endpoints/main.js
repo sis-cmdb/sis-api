@@ -1,3 +1,5 @@
+// The script runner child process entry point
+
 'use strict';
 
 var nconf = require('nconf');
@@ -11,9 +13,9 @@ nconf.defaults(config);
 
 function sendResponse(res) {
     process.send({
-	type : SIS.EP_DONE,
-	data : res
-    });    
+    type : SIS.EP_DONE,
+    data : res
+    });
 }
 
 var opts = nconf.get('db').opts || { };
@@ -24,7 +26,7 @@ mongoose.connectAsync(nconf.get('db').url, opts)
     var d = BPromise.pending();
     schemaManager.bootstrapEntitySchemas(function(err) {
         if (err) { return d.reject(err); }
-        d.resolve(schemaManager);
+        return d.resolve(schemaManager);
     });
     return d.promise;
 }).then(function(schemaManager) {
@@ -47,10 +49,8 @@ mongoose.connectAsync(nconf.get('db').url, opts)
             });
         }
     });
-    process.send({ type : SIS.EP_READY });    
+    process.send({ type : SIS.EP_READY });
 }).catch(function(err) {
     console.log(err);
     process.send({ type : SIS.EP_ERROR, data : err });
 });
-
-

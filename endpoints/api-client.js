@@ -15,10 +15,6 @@ function EntityEp(name, schemaManager) {
             return em.getById(id);
         }).then(function(result) {
             return result.toObject();
-        }).catch(function(err) {
-            console.log(JSON.stringify(err));
-            console.log(err);
-            throw err;
         });
     };
 

@@ -40,10 +40,21 @@ ScriptRunner.prototype._getScript = function(name) {
 // context apis
 var ApiClient = require("./api-client");
 var ApiResponse = require("./api-response");
-ScriptRunner.prototype._createContext = function(d, req) {
+
+// internal holder to ensure the script finishes before sending out
+// a response
+function ResponseHolder() {
+    this.response = null;
+}
+ResponseHolder.prototype.setResponse = function(response) {
+    console.log("Sending response " + response);
+    this.response = response;
+};
+
+ScriptRunner.prototype._createContext = function(holder, req) {
     var ctx = {
         client : new ApiClient(this.schemaManager),
-        res : new ApiResponse(d),
+        res : new ApiResponse(holder),
         req : req,
         BPromise : BPromise,
         csv : require('csv')
@@ -51,30 +62,20 @@ ScriptRunner.prototype._createContext = function(d, req) {
     return vm.createContext(clone(ctx));
 };
 
-var TIMEOUT_ERROR = { };
-
 ScriptRunner.prototype.handleRequest = function(req) {
     var endpoint = req.endpoint;
     return this._getScript(endpoint).bind(this)
     .then(function(script) {
-        var d = BPromise.pending();
-        var ctx = this._createContext(d, req);
+        var holder = new ResponseHolder();
+        var ctx = this._createContext(holder, req);
         script.runInNewContext(ctx);
-        return BPromise.any([d.promise, BPromise.delay(TIMEOUT_ERROR, 60000)]);
-    })
-    .then(function(result) {
-        if (result === TIMEOUT_ERROR) {
-            return {
-                status : 500,
-                data : JSON.stringify({ error : "Request timed out" }),
-                headers : { "Content-Type" : "application/json" }
-            };
-        }
-        return result;
+        return holder.response;
     })
     .catch(function(err) {
         var str = err + "";
-        console.log(err.stack);
+        if (err.stack) {
+            str += " : " + err.stack;
+        }
         return BPromise.reject({ err : str, status : 500 });
     });
 };
