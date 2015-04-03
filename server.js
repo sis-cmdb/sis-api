@@ -137,17 +137,26 @@ var startServer = function(config, callback) {
 
 // Run if we're the root module
 if (!module.parent) {
-    var config = require('./config');
-    startServer(config, function(app, server) {
-        process.on('SIGINT', function() {
-            server.close(function() {
-                app.locals.closeListeners.forEach(function(handler) {
-                    handler();
+    var cluster = require("cluster");
+    if (cluster.isMaster) {
+        var cpuCount = require('os').cpus().length;
+        // Create a worker for each CPU
+        for (var i = 0; i < cpuCount; i += 1) {
+            cluster.fork();
+        }
+    } else {
+        var config = require('./config');
+        startServer(config, function(app, server) {
+            process.on('SIGINT', function() {
+                server.close(function() {
+                    app.locals.closeListeners.forEach(function(handler) {
+                        handler();
+                    });
+                    process.exit(0);
                 });
-                process.exit(0);
             });
         });
-    });
+    }
 }
 
 

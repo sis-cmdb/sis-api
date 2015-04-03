@@ -4,6 +4,8 @@
 
 var util = require('util');
 var diff = require('jsondiffpatch');
+var bunyan = require("bunyan");
+var LOGGER = bunyan.createLogger({ name : "ErrorLogger" });
 
 var V1_TO_SIS_META = {
     'sis_tags'      : 'tags',
@@ -176,6 +178,7 @@ module.exports = {
         if (typeof msg == 'object' && msg.name == 'ValidationError') {
             return [400, { error : util.format("Invalid data %s", msg), code : 1003 }];
         }
+        LOGGER.error({ msg: msg, err: msg });
         return [500, { error : util.format("Internal error %s", msg), code : 1002 }, msg];
     },
     ERR_INTERNAL_OR_NOT_FOUND : function(err, type, id, result) {

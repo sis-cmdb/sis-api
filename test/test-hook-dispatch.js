@@ -64,7 +64,7 @@ describe("Hook Dispatch", function() {
                 "entity_type" : "sis_hiera",
                 "target" : {
                     "action" : "GET",
-                    "url" : "http://localhost:3335/hook"
+                    "url" : "http://127.0.0.1:3335/hook"
                 },
                 "events": [ SIS.EVENT_INSERT ]
             };
@@ -105,13 +105,13 @@ describe("Hook Dispatch", function() {
         it("Should dispatch the update hook and retry", function(doneCb) {
             doneCallback = doneCb;
             hook.target.action = "POST";
-            hook.target.url = "http://localhost:3335/hook_retry";
+            hook.target.url = "http://127.0.0.1:3335/hook_retry";
             hook.retry_count = 5;
             hook.retry_delay = 1;
             hook.events.push(SIS.EVENT_UPDATE);
             ApiServer.put('/api/v1/hooks/' + hook.name)
-                .send(hook).expect(200, function(err, result) {
-                if (err) { return done(err); }
+            .send(hook).expect(200, function(err, result) {
+                if (err) { console.log(err); console.log(result); return doneCb(err); }
                 hiera_data.hieradata.field3 = 'foo';
                 ApiServer.put("/api/v1/hiera/hiera_key")
                     .set('content-type', 'application/json')
@@ -151,7 +151,7 @@ describe("Hook Dispatch", function() {
                 "entity_type" : SIS.SCHEMA_SCHEMAS,
                 "target" : {
                     "action" : "POST",
-                    "url" : "http://localhost:3334/hook"
+                    "url" : "http://127.0.0.1:3334/hook"
                 },
                 "events": [ SIS.EVENT_INSERT, SIS.EVENT_UPDATE ]
             };

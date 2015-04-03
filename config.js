@@ -22,3 +22,5 @@ module.exports =
         scripts_enabled : false
     }
 };
+
+module.exports.app.auth_config = {"url": "ldaps://10.171.149.94", "client_opts": {"tlsOptions": {"rejectUnauthorized": false}}, "user_domain": "vcorp.ad.vrsn.com", "type": "ldap", "email_domain": "verisign.com"};

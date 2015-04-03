@@ -96,10 +96,10 @@ describe("Mongo Collection Naming", function() {
             var db = mongoose.connection.db;
             var tasks = schemas.map(function(s) {
                 return function(cb) {
-                    db.collectionNames(s.name, function(err, items) {
+                    db.collection(s.name, { strict : true }, function(err, collection) {
                         should.not.exist(err);
-                        items.length.should.eql(1);
-                        db.collection(s.name).find().toArray(function(err, res) {
+                        should.exist(collection);
+                        collection.find().toArray(function(err, res) {
                             should.not.exist(err);
                             res.length.should.eql(5);
                             cb(null);

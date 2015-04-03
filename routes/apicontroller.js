@@ -78,7 +78,9 @@ ApiController.prototype.shouldSaveCommit = function(req) {
 // SIS.ERR_* functions/properties
 ApiController.prototype.sendError = function(res, err) {
     if (!(err instanceof Array) || err.length < 2) {
-        res.log.error(err);
+        if (res.log) {
+            res.log.error(err);
+        }
         err = [500, err];
     }
     res.status(err[0]).send(err[1]);

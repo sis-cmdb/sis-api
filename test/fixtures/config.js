@@ -15,6 +15,7 @@ module.exports = {
         address : "127.0.0.1"
     },
     app : {
-        auth : true
+        auth : true,
+        scripts_enabled : false
     }
 };
