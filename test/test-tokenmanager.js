@@ -58,10 +58,12 @@ describe('Token Manager', function() {
                     var t1 = null;
                     var t2 = null;
                     t1 = setTimeout(function() {
-                        console.log("t1");
                         tokenManager.getById(token.name).done(function(token) {
                             should.exist(token);
-                            'admin1'.should.eql(token[SIS.FIELD_USERNAME]);
+                            if (token[SIS.FIELD_USERNAME] !== 'admin1') {
+                                clearTimeout(t2);
+                                done(token[SIS.FIELD_USERNAME]);
+                            }
                         }, function(err) {
                             clearTimeout(t2);
                             done(err);

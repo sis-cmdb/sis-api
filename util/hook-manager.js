@@ -82,7 +82,6 @@ var sendRequest = function(options, retry_count, delay, d) {
 };
 
 var dispatchHook = function(hook, entity, event, isBulk) {
-    console.log("Dispatching hook");
     if (typeof entity.toObject === 'function') {
         entity = entity.toObject();
     }
