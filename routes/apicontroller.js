@@ -86,9 +86,72 @@ ApiController.prototype.sendError = function(res, err) {
     res.status(err[0]).send(err[1]);
 };
 
+function writeJSONArrayChunk(res, array, cStart, cSize, defer) {
+    if (cStart === 0) {
+        res.write("[");
+    }
+    var slice = null;
+    var mapped = null;
+    if (cStart + cSize >= array.length) {
+        // last chunk
+        slice = array.slice(cStart);
+        mapped = slice.map(function(obj) {
+            return JSON.stringify(obj);
+        });
+        res.write(mapped.join(","));
+        res.write("]");
+        defer.resolve(res);
+    } else {
+        // intermediate chunk
+        slice = array.slice(cStart, cStart + cSize);
+        mapped = slice.map(function(obj) {
+            return JSON.stringify(obj);
+        });
+        res.write(mapped.join(","));
+        // add trailing comma
+        res.write(",");
+        setImmediate(function() {
+            writeJSONArrayChunk(res, array, cStart + cSize, cSize, defer);
+        });
+    }
+}
+
+function writeJSONArray(res, array) {
+    var d = BPromise.pending();
+    if (!array.length) {
+        res.write("[]");
+        d.resolve(res);
+    } else {
+        writeJSONArrayChunk(res, array, 0, 5000, d);
+    }
+    return d.promise;
+}
+
 // Send a response with the specified code and data
-ApiController.prototype.sendObject = function(res, code, obj) {
-    res.status(code).send(obj);
+ApiController.prototype.sendObject = function(res, code, obj, isBulk) {
+    res.setHeader("Content-Type","application/json");
+    res.status(code);
+    if (isBulk) {
+        res.write('{"success":');
+        writeJSONArray(res, obj.success).then(function(res) {
+            res.write(',"errors":');
+            return writeJSONArray(res, obj.errors);
+        }).then(function(res) {
+            res.write("}");
+            res.end();
+        });
+    } else if (Array.isArray(obj)) {
+        if (obj.length < 500) {
+            // just send
+            res.send(obj);
+        } else {
+            writeJSONArray(res, obj).then(function(res) {
+                res.end();
+            });
+        }
+    } else {
+        res.send(obj);
+    }
 };
 
 // Parse the query parameters for a given req
@@ -450,7 +513,7 @@ ApiController.prototype._getSendCallback = function(req, res, code) {
             }
         }
         result = self._convertToResponseObject(req, result);
-        self.sendObject(res, code, result);
+        self.sendObject(res, code, result, req.params.isBulk);
         // dispatch hooks
         var hookType = self.getType(req);
         var hookEvt = SIS.METHODS_TO_EVENT[req.method];
