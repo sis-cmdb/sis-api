@@ -27,6 +27,7 @@ module.exports = function(grunt) {
             dest: 'dist/'
           },
           {
+            expand: true,
             src: ["package.json", "npm-shrinkwrap.json"],
             dest: "dist/"
           }
