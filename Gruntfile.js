@@ -4,7 +4,7 @@ module.exports = function(grunt) {
   var BPromise = require('bluebird');
   var requestAsync = BPromise.promisify(require('request'));
 
-    var distFiles = ['routes/*.js', 'tools/*.js', 'util/*.js', 'util/types/*.js', 'server.js', 'endpoints/*.js'];
+  var distFiles = ['routes/*.js', 'tools/*.js', 'util/*.js', 'util/types/*.js', 'server.js', 'endpoints/*.js'];
 
   grunt.initConfig({
     pkg: grunt.file.readJSON('package.json'),
@@ -22,8 +22,9 @@ module.exports = function(grunt) {
       dist: {
         files : [
           {
+            expand: true,
             src: distFiles,
-            dest: 'dist/',
+            dest: 'dist/'
           },
           {
             src: ["package.json", "npm-shrinkwrap.json"],
@@ -257,6 +258,14 @@ module.exports = function(grunt) {
     'clean:dist',
     'buildjson:dist',
     'localtest',
+    'copy:dist',
+    'jshint:dist'
+  ]);
+
+  grunt.registerTask('distnotest', [
+    'env:dist',
+    'clean:dist',
+    'buildjson:dist',
     'copy:dist',
     'jshint:dist'
   ]);
