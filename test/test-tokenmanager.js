@@ -55,13 +55,19 @@ describe('Token Manager', function() {
                     should.not.exist(e);
                     should.exist(token);
                     'admin1'.should.eql(token[SIS.FIELD_USERNAME]);
-                    setTimeout(function() {
+                    var t1 = null;
+                    var t2 = null;
+                    t1 = setTimeout(function() {
+                        console.log("t1");
                         tokenManager.getById(token.name).done(function(token) {
                             should.exist(token);
                             'admin1'.should.eql(token[SIS.FIELD_USERNAME]);
-                        }, done);
+                        }, function(err) {
+                            clearTimeout(t2);
+                            done(err);
+                        });
                     }, 70000);
-                    setTimeout(function() {
+                    t2 = setTimeout(function() {
                         tokenManager.getById(token.name).then(function(token) {
                             done(token);
                         }).catch(function(e) {
