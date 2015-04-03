@@ -86,6 +86,8 @@ ApiController.prototype.sendError = function(res, err) {
     res.status(err[0]).send(err[1]);
 };
 
+var CHUNK_SIZE = 1000;
+
 function writeJSONArrayChunk(res, array, cStart, cSize, defer) {
     if (cStart === 0) {
         res.write("[");
@@ -122,7 +124,7 @@ function writeJSONArray(res, array) {
         res.write("[]");
         d.resolve(res);
     } else {
-        writeJSONArrayChunk(res, array, 0, 5000, d);
+        writeJSONArrayChunk(res, array, 0, CHUNK_SIZE, d);
     }
     return d.promise;
 }
@@ -132,6 +134,7 @@ ApiController.prototype.sendObject = function(res, code, obj, isBulk) {
     res.setHeader("Content-Type","application/json");
     res.status(code);
     if (isBulk) {
+        res.setHeader("X-Accel-Buffering","no");
         res.write('{"success":');
         writeJSONArray(res, obj.success).then(function(res) {
             res.write(',"errors":');
@@ -141,10 +144,11 @@ ApiController.prototype.sendObject = function(res, code, obj, isBulk) {
             res.end();
         });
     } else if (Array.isArray(obj)) {
-        if (obj.length < 500) {
+        if (obj.length < CHUNK_SIZE) {
             // just send
             res.send(obj);
         } else {
+            res.setHeader("X-Accel-Buffering","no");
             writeJSONArray(res, obj).then(function(res) {
                 res.end();
             });
