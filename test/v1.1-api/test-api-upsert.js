@@ -5,14 +5,13 @@ describe('@API @V1.1API - Upsert', function() {
     var BPromise = require('bluebird');
 
     var SIS = require("../../util/constants");
-    var config = require('../fixtures/config');
     var TestUtil = require('../fixtures/util');
 
     var ApiServer = new TestUtil.TestServer();
 
 
     it("Should setup fixtures", function(done) {
-        ApiServer.start(config, function(e) {
+        ApiServer.start(function(e) {
             if (e) { return done(e); }
             ApiServer.becomeSuperUser(done);
         });
@@ -118,6 +117,16 @@ describe('@API @V1.1API - Upsert', function() {
             };
             ApiServer.put("/api/v1.1/entities/test_upsert_2/bar")
             .query({ upsert : true }).send(entity).expect(400, done);
+        });
+
+        it("Should upsert if the id has dots", function(done) {
+            var entity = {
+                name : "foo.bar.baz",
+                short_name: "foo.bar.short",
+                other : "baz"
+            };
+            ApiServer.put("/api/v1.1/entities/test_upsert_2/foo.bar.baz")
+                .query({ upsert : true }).send(entity).expect(201, done);
         });
 
     });

@@ -6,13 +6,12 @@ describe('User Manager', function() {
     var async = require('async');
 
     var SIS = require("../util/constants");
-    var config = require('./fixtures/config');
     var TestUtil = require('./fixtures/util');
     var LocalTest = new TestUtil.LocalTest();
     var schemaManager = null;
 
     before(function(done) {
-        LocalTest.start(config, function(err, mongoose) {
+        LocalTest.start(function(err, mongoose) {
             schemaManager = require("../util/schema-manager")(mongoose, { auth : true });
             done(err);
         });

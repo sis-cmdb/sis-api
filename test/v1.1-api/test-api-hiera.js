@@ -4,13 +4,13 @@ describe('@API @V1.1API - Hiera API', function() {
     var should = require('should');
 
     var SIS = require("../../util/constants");
-    var config = require('../fixtures/config');
+
     var TestUtil = require('../fixtures/util');
 
     var ApiServer = new TestUtil.TestServer();
 
     it("Should setup fixtures", function(done) {
-        ApiServer.start(config, function(e) {
+        ApiServer.start(function(e) {
             if (e) { return done(e); }
             ApiServer.becomeSuperUser(done);
         });

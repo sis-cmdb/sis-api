@@ -4,13 +4,13 @@ describe('@API @V1.1API - Info API', function() {
     var should = require('should');
 
     var SIS = require("../../util/constants");
-    var config = require('../fixtures/config');
+
     var TestUtil = require('../fixtures/util');
 
     var ApiServer = new TestUtil.TestServer();
 
     it("Should setup fixtures", function(done) {
-        ApiServer.start(config, done);
+        ApiServer.start(done);
     });
 
     after(function(done) {

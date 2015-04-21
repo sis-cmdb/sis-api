@@ -5,7 +5,7 @@ describe('@API @V1API - Authorization API Schemas', function() {
     var async = require('async');
 
     var SIS = require("../../util/constants");
-    var config = require('../fixtures/config');
+
     var TestUtil = require('../fixtures/util');
     var AuthFixture = require("../fixtures/authdata-v1");
 
@@ -17,7 +17,7 @@ describe('@API @V1API - Authorization API Schemas', function() {
     var superToken = null;
 
     it("Should setup fixtures", function(done) {
-        ApiServer.start(config, function(err) {
+        ApiServer.start(function(err) {
             if (err) { return done(err); }
             // issue create requests
             var creds = ApiServer.getSuperCreds();

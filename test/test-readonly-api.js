@@ -1,6 +1,6 @@
 describe('Readonly API ', function() {
     "use strict";
-
+    var nconf = require("nconf");
     var schema = {
         "name":"test_entity",
         "owner" : "test",
@@ -9,21 +9,24 @@ describe('Readonly API ', function() {
             "num":   "Number",
             "date":  "Date",
             "bool":  "Boolean",
-            "arr": [],
+            "arr": []
         }
     };
 
     var SIS = require("../util/constants");
-    var config = require('./fixtures/config');
     var should = require('should');
     var TestUtil = require('./fixtures/util');
     var ApiServer = new TestUtil.TestServer();
     var app = null;
 
     it("Should setup fixtures", function(done) {
-        config.app = config.app || { };
-        config.app.readonly = true;
-        ApiServer.start(config, function(err, sd) {
+        nconf.add("readonly", {
+                type: "literal",
+                store: {
+                    "app" : { "readonly" : true }
+                }
+            });
+        ApiServer.start(function(err, sd) {
             if (err) { return done(err); }
             app = sd.app;
             var options = { user : sd.superUser, version : "v1" };
@@ -34,7 +37,7 @@ describe('Readonly API ', function() {
     });
 
     after(function(done) {
-        config.app.readonly = false;
+        nconf.remove("readonly");
         ApiServer.stop(done);
     });
 

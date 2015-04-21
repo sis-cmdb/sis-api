@@ -5,7 +5,7 @@ describe('@API @V1.1API - Filtering API', function() {
     var async = require('async');
 
     var SIS = require("../../util/constants");
-    var config = require('../fixtures/config');
+
     var TestUtil = require('../fixtures/util');
 
     var ApiServer = new TestUtil.TestServer();
@@ -35,7 +35,7 @@ describe('@API @V1.1API - Filtering API', function() {
     });
 
     it("Should setup fixtures", function(done) {
-        ApiServer.start(config, function(e) {
+        ApiServer.start(function(e) {
             if (e) { return done(e); }
             ApiServer.becomeSuperUser(function(e) {
                 if (e) { return done(e); }

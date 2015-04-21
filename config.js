@@ -8,7 +8,7 @@ module.exports =
                 "server": {
                     "auto_reconnect": true,"socketOptions": {"keepAlive": 1}, "poolSize": 5
                 },
-                db: {"native_parser": true, w: 1, j: true}
+                db: {w: 1, j: true}
             }
     },
     server : {

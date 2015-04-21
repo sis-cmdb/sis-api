@@ -5,7 +5,7 @@ describe('@API @V1API - Bulk Delete API', function() {
     var async = require('async');
 
     var SIS = require("../../util/constants");
-    var config = require('../fixtures/config');
+
     var TestUtil = require('../fixtures/util');
     var AuthFixture = require("../fixtures/authdata-v1");
 
@@ -20,7 +20,7 @@ describe('@API @V1API - Bulk Delete API', function() {
     };
 
     it("Should setup fixtures", function(done) {
-        ApiServer.start(config, function(e) {
+        ApiServer.start(function(e) {
             if (e) { return done(e); }
             ApiServer.becomeSuperUser(function(e) {
                 if (e) { return done(e); }

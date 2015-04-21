@@ -5,6 +5,7 @@ var bodyParser = require('body-parser');
 var BPromise = require("bluebird");
 var loggingMiddleware = require('./util/logger');
 var bunyan = require("bunyan");
+var nconf = require("nconf");
 
 var SIS = require("./util/constants");
 var LOGGER = bunyan.createLogger({
@@ -47,16 +48,11 @@ if (process.env.SIS_DEBUG) {
     BPromise.longStackTraces();
 }
 
-var startServer = function(config, callback) {
+var startServer = function(callback) {
     'use strict';
 
     var passport = require("passport");
     var webUtil = require("./routes/webutil");
-    var nconf = require('nconf');
-
-    nconf.env('__').argv();
-    nconf.defaults(config);
-
     var app = express();
 
     app.use(loggingMiddleware.logger());
@@ -137,16 +133,32 @@ var startServer = function(config, callback) {
 
 // Run if we're the root module
 if (!module.parent) {
-    var cluster = require("cluster");
-    if (cluster.isMaster) {
-        var cpuCount = require('os').cpus().length;
-        // Create a worker for each CPU
-        for (var i = 0; i < cpuCount; i += 1) {
-            cluster.fork();
+    nconf.env('__')
+        .argv()
+        .file("config.json.local", "conf/config.json.local")
+        .file("config.json", "conf/config.json");
+    if (nconf.get("app:use_cluster")) {
+        var cluster = require("cluster");
+        if (cluster.isMaster) {
+            var cpuCount = require('os').cpus().length;
+            // Create a worker for each CPU
+            for (var i = 0; i < cpuCount; i += 1) {
+                cluster.fork();
+            }
+        } else {
+            startServer(function(app, server) {
+                process.on('SIGINT', function() {
+                    server.close(function() {
+                        app.locals.closeListeners.forEach(function(handler) {
+                            handler();
+                        });
+                        process.exit(0);
+                    });
+                });
+            });
         }
     } else {
-        var config = require('./config');
-        startServer(config, function(app, server) {
+        startServer(function(app, server) {
             process.on('SIGINT', function() {
                 server.close(function() {
                     app.locals.closeListeners.forEach(function(handler) {

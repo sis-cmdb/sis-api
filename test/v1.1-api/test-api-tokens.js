@@ -5,14 +5,14 @@ describe('@API @V1.1API - Authorization API Tokens', function() {
     var async = require('async');
 
     var SIS = require("../../util/constants");
-    var config = require('../fixtures/config');
+
     var TestUtil = require('../fixtures/util');
     var AuthFixture = require("../fixtures/authdata");
 
     var ApiServer = new TestUtil.TestServer();
 
     it("Should setup fixtures", function(done) {
-        ApiServer.start(config, function(err) {
+        ApiServer.start(function(err) {
             if (err) {
                 console.log(err);
                 return done(err);

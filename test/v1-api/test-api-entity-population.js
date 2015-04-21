@@ -5,13 +5,13 @@ describe('@API @V1API - Entity Population API', function() {
     var async = require('async');
 
     var SIS = require("../../util/constants");
-    var config = require('../fixtures/config');
+
     var TestUtil = require('../fixtures/util');
 
     var ApiServer = new TestUtil.TestServer();
 
     it("Should setup fixtures", function(done) {
-        ApiServer.start(config, function(e) {
+        ApiServer.start(function(e) {
             if (e) { return done(e); }
             ApiServer.becomeSuperUser(done);
         });

@@ -5,7 +5,6 @@ describe('Convert from v1 to v1.1', function() {
     var BPromise = require('bluebird');
 
     var SIS = require("../util/constants");
-    var config = require('./fixtures/config');
     var TestUtil = require('./fixtures/util');
 
     describe("Utility methods", function() {
@@ -14,7 +13,7 @@ describe('Convert from v1 to v1.1', function() {
         var sm = null;
 
         it("Should setup fixtures", function(done) {
-            ApiServer.start(config, function(e, serverData) {
+            ApiServer.start(function(e, serverData) {
                 if (e) { return done(e); }
                 mongoose = serverData.mongoose;
                 sm = serverData.schemaManager;
@@ -207,7 +206,7 @@ describe('Convert from v1 to v1.1', function() {
         var ApiServer = new TestUtil.TestServer();
 
         before(function(done) {
-            ApiServer.start(config, function(err, serverData) {
+            ApiServer.start(function(err, serverData) {
                 var mongoose = serverData.mongoose;
                 var schemasColl = BPromise.promisifyAll(mongoose.connection.collection('sis_schemas'));
                 var entityColl = BPromise.promisifyAll(mongoose.connection.collection(schemaObj.name));
@@ -230,7 +229,7 @@ describe('Convert from v1 to v1.1', function() {
         });
 
         it("Should setup fixtures", function(done) {
-            ApiServer.start(config, function(e, serverData) {
+            ApiServer.start(function(e, serverData) {
                 if (e) { return done(e); }
                 ApiServer.becomeSuperUser(done);
             });

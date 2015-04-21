@@ -168,7 +168,7 @@ module.exports.loadReplicationServers = function() {
     }
     try {
         var parsed = JSON.parse(process.env.SIS_REPL_DATA);
-        if (!parsed instanceof Array || !parsed.length) {
+        if (!Array.isArray(parsed) || !parsed.length) {
             throw "replication data is invalid.";
         }
         var servers = parsed.map(function(serverObj) {

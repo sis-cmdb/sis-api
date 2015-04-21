@@ -86,30 +86,31 @@ ApiController.prototype.sendError = function(res, err) {
     res.status(err[0]).send(err[1]);
 };
 
-var CHUNK_SIZE = 1000;
+var CHUNK_SIZE = 100;
 
 function writeJSONArrayChunk(res, array, cStart, cSize, defer) {
-    if (cStart === 0) {
-        res.write("[");
-    }
     var slice = null;
     var mapped = null;
+    var jsonStr = null;
     if (cStart + cSize >= array.length) {
         // last chunk
         slice = array.slice(cStart);
-        mapped = slice.map(function(obj) {
-            return JSON.stringify(obj);
-        });
-        res.write(mapped.join(","));
-        res.write("]");
+        jsonStr = JSON.stringify(slice);
+        if (cStart === 0) {
+            res.write(jsonStr);
+        } else {
+            res.write(jsonStr.substring(1));
+        }
         defer.resolve(res);
     } else {
         // intermediate chunk
         slice = array.slice(cStart, cStart + cSize);
-        mapped = slice.map(function(obj) {
-            return JSON.stringify(obj);
-        });
-        res.write(mapped.join(","));
+        jsonStr = JSON.stringify(slice);
+        if (cStart === 0) {
+            res.write(jsonStr.substring(0, jsonStr.length - 1));
+        } else {
+            res.write(jsonStr.substring(1, jsonStr.length - 1));
+        }
         // add trailing comma
         res.write(",");
         setImmediate(function() {

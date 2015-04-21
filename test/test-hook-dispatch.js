@@ -2,13 +2,12 @@ describe("Hook Dispatch", function() {
     "use strict";
 
     var SIS = require("../util/constants");
-    var config = require('./fixtures/config');
     var should = require('should');
     var TestUtil = require('./fixtures/util');
     var ApiServer = new TestUtil.TestServer();
 
     it("Should setup fixtures", function(done) {
-        ApiServer.start(config, function(e) {
+        ApiServer.start(function(e) {
             if (e) { return done(e); }
             ApiServer.becomeSuperUser(done);
         });

@@ -1,6 +1,12 @@
 "use strict";
 
 var BPromise = require("bluebird");
+var nconf = require('nconf');
+
+function loadConfig() {
+    nconf.env('__').argv();
+    nconf.file("config.test.json", __dirname + "/config.test.json");
+}
 
 function TestServer() {
     var serverData = null;
@@ -14,19 +20,20 @@ function TestServer() {
         return serverData;
     };
 
-    this.start = function(config, callback) {
+    this.start = function(callback) {
         if (!process.env.SIS_REMOTE_URL) {
             var SIS = require("../../util/constants");
             // start a local server
             if (!serverData) {
+                loadConfig();
                 var server = require('../../server');
-                server.startServer(config, function(app, http) {
+                return server.startServer(function(app, http) {
                     var sd = {
                         server : server,
                         mongoose : server.mongoose,
                         http : http,
                         app : app,
-                        request : require('supertest')('http://127.0.0.1:' + config.server.port),
+                        request : require('supertest')('http://127.0.0.1:' + nconf.get("server:port")),
                         local : true
                     };
 
@@ -60,7 +67,7 @@ function TestServer() {
                             serverData.superUser = localSuper;
                             serverData.username = 'sistest_super';
                             serverData.password = 'sistest';
-                            callback(null, serverData);
+                            return callback(null, serverData);
                         });
                     });
                 });
@@ -93,12 +100,15 @@ function TestServer() {
 
     this.becomeSuperUser = function(callback) {
         var creds = this.getSuperCreds();
-        if (!creds) { return callback("not initialized."); }
+        if (!creds) {
+            callback("not initialized.");
+            return;
+        }
         var self = this;
         this.getTempToken(creds.username, creds.password, function(e, t) {
             if (e) { return callback(e); }
             self.authToken = t.name;
-            callback(null);
+            return callback(null);
         });
     };
 
@@ -165,14 +175,12 @@ module.exports.TestServer = TestServer;
 function LocalTest() {
     var dbData = null;
 
-    this.start = function(config, callback) {
+    this.start = function(callback) {
         if (dbData) {
-            return callback(null, dbData.mongoose);
+            callback(null, dbData.mongoose);
+            return;
         }
-        var nconf = require('nconf');
-        nconf.env('__').argv();
-        nconf.defaults(config);
-
+        loadConfig();
         var mongoose = require('mongoose');
         mongoose.connect(nconf.get('db').url);
         mongoose.connection.once('open', function() {

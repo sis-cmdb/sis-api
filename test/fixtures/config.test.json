@@ -1,0 +1,27 @@
+{
+    "db" : {
+        "url" : "mongodb://localhost/sis-test",
+        "opts" : {
+            "server" : {
+                "auto_reconnect" : true,
+                "socketOptions" : {
+                    "keepAlive" :  1,
+                    "socketTimeoutMS": 0
+                },
+                "poolSize" : 10
+            },
+            "db" : {
+                "w" : 1,
+                "j" : true
+            }
+        }
+    },
+    "server" : {
+        "port" : 3001,
+        "address" : "127.0.0.1"
+    },
+    "app" : {
+        "auth" : true,
+        "scripts_enabled" : false
+    }
+}

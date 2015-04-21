@@ -4,7 +4,6 @@ describe('Replication Simulation', function() {
   "use strict";
 
   var SIS = require("../util/constants");
-  var config = require('./fixtures/config');
   var should = require('should');
   var TestUtil = require('./fixtures/util');
   var ApiServer = new TestUtil.TestServer();
@@ -12,7 +11,7 @@ describe('Replication Simulation', function() {
   var schemaManager = null;
 
   it("Should setup fixtures", function(done) {
-    ApiServer.start(config, function(err, serverData) {
+    ApiServer.start(function(err, serverData) {
         if (err) { return done(err); }
         schemaManager = serverData.schemaManager;
         ApiServer.becomeSuperUser(done);

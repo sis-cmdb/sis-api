@@ -2,7 +2,6 @@ describe('SchemaManager', function() {
   "use strict";
 
   var SIS = require("../util/constants");
-  var config = require('./fixtures/config');
   var should = require('should');
   var TestUtil = require('./fixtures/util');
   var LocalTest = new TestUtil.LocalTest();
@@ -10,7 +9,7 @@ describe('SchemaManager', function() {
   var schemaManager = null;
 
   before(function(done) {
-    LocalTest.start(config, function(err, mongoose) {
+    LocalTest.start(function(err, mongoose) {
         schemaManager = require("../util/schema-manager")(mongoose, { auth : false});
         done(err);
     });
