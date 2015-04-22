@@ -47,9 +47,9 @@ describe('Readonly API ', function() {
     });
 
     var paths = [
-        "/api/v1/schemas",
-        "/api/v1/hiera",
-        "/api/v1/entities/test_entity"
+        "/api/v1.1/schemas",
+        "/api/v1.1/hiera",
+        "/api/v1.1/entities/test_entity"
     ];
 
     paths.map(function(path) {

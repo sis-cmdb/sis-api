@@ -92,11 +92,11 @@ module.exports.initUsers = function(ApiServer, token, users, callback) {
     async.parallel(names.map(function(name) {
         // delete user
         return function(cb) {
-            ApiServer.del('/api/v1/users/' + name, token)
+            ApiServer.del('/api/v1.1/users/' + name, token)
             .end(function(err, res) {
                 if (res.status == 404 || res.status == 200) {
                     var user = users[name];
-                    ApiServer.post('/api/v1/users', token)
+                    ApiServer.post('/api/v1.1/users', token)
                         .send(user)
                         .expect(201, cb);
                 } else {
@@ -166,7 +166,7 @@ module.exports.deleteSchemas = function(ApiServer, schemas, ensureExists, callba
         schemas = TestUtil.objectValues(schemas);
     }
     async.map(schemas, function(schema, cb) {
-        var req = ApiServer.del("/api/v1/schemas/" + schema.name);
+        var req = ApiServer.del("/api/v1.1/schemas/" + schema.name);
         if (ensureExists) {
             req = req.expect(200);
         }
@@ -179,7 +179,7 @@ module.exports.addSchemas = function(ApiServer, schemas, callback) {
         schemas = TestUtil.objectValues(schemas);
     }
     async.map(schemas, function(schema, cb) {
-        ApiServer.post("/api/v1/schemas").send(schema)
+        ApiServer.post("/api/v1.1/schemas").send(schema)
             .expect(201, cb);
     }, callback);
 };

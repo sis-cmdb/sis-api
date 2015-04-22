@@ -134,7 +134,7 @@ module.exports = {
     OPT_AUTH_CONFIG : "auth_config",
 
     // supported versions
-    SUPPORTED_VERSIONS : ["v1","v1.1"],
+    SUPPORTED_VERSIONS : ["v1.1"],
     CURRENT_VERSION : CURRENT_VERSION,
 
     ROLE_USER : "user",

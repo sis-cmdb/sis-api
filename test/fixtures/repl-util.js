@@ -12,7 +12,7 @@ var createSchemas = function() {
     for (var i = 0; i < NUM_SCHEMAS; ++i) {
         result.push({
             name : 'seedtest_schema_' + i,
-            owner : ['sis_seed'],
+            _sis : { owner : ['sis_seed'] },
             definition : {
                 name : { type : "String", required : true, unique : true },
                 number : "Number"
@@ -28,7 +28,7 @@ var createEntities = function(schemas) {
         var entities = [];
         for (var i = 0; i < ENTITIES_PER_SCHEMA; ++i) {
             entities.push({
-                owner : ['sis_seed'],
+                _sis : { owner : ['sis_seed'] },
                 name : 'seedtest_s' + idx + '_e' + i,
                 number : i
             });
@@ -49,7 +49,7 @@ var createHooks = function(schemas) {
                     action : 'POST'
                 },
                 events : ['update'],
-                owner : ['sis_seed'],
+                _sis : { owner : ['sis_seed'] },
                 entity_type : schema.name
             });
         }
@@ -62,7 +62,7 @@ var createHiera = function() {
     for (var i = 0; i < NUM_HIERA; ++i) {
         result.push({
             name : 'seedtest_hiera_' + i,
-            owner : ['sis_seed'],
+            _sis : { owner : ['sis_seed'] },
             hieradata : {
                 num : i,
                 num_str : i + ''
@@ -128,13 +128,13 @@ var hiera = createHiera();
 // and schema/hook/hiera names start with seedtest_
 module.exports.seedData = function(ApiServer, callback) {
     var funcs = [
-        getUpsertFunc(ApiServer, schemas, '/api/v1/schemas'),
-        getUpsertFunc(ApiServer, hooks, '/api/v1/hooks'),
-        getUpsertFunc(ApiServer, hiera, '/api/v1/hiera')
+        getUpsertFunc(ApiServer, schemas, '/api/v1.1/schemas'),
+        getUpsertFunc(ApiServer, hooks, '/api/v1.1/hooks'),
+        getUpsertFunc(ApiServer, hiera, '/api/v1.1/hiera')
     ];
     Object.keys(entities).forEach(function(schemaName) {
         var items = entities[schemaName];
-        funcs.push(getUpsertFunc(ApiServer, items, '/api/v1/entities/' + schemaName));
+        funcs.push(getUpsertFunc(ApiServer, items, '/api/v1.1/entities/' + schemaName));
     });
     // run them
     async.series(funcs, callback);
@@ -142,13 +142,13 @@ module.exports.seedData = function(ApiServer, callback) {
 
 module.exports.verifySeedData = function(ApiServer, callback) {
     var funcs = [
-        getVerifyFunc(ApiServer, schemas, '/api/v1/schemas'),
-        getVerifyFunc(ApiServer, hooks, '/api/v1/hooks'),
-        getVerifyFunc(ApiServer, hiera, '/api/v1/hiera')
+        getVerifyFunc(ApiServer, schemas, '/api/v1.1/schemas'),
+        getVerifyFunc(ApiServer, hooks, '/api/v1.1/hooks'),
+        getVerifyFunc(ApiServer, hiera, '/api/v1.1/hiera')
     ];
     Object.keys(entities).forEach(function(schemaName) {
         var items = entities[schemaName];
-        funcs.push(getVerifyFunc(ApiServer, items, '/api/v1/entities/' + schemaName));
+        funcs.push(getVerifyFunc(ApiServer, items, '/api/v1.1/entities/' + schemaName));
     });
     // run them
     async.series(funcs, callback);

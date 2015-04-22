@@ -59,7 +59,7 @@ describe("Hook Dispatch", function() {
 
             hook = {
                 "name" : hookName,
-                "owner" : "Test",
+                _sis : { "owner" : ["Test"] },
                 "entity_type" : "sis_hiera",
                 "target" : {
                     "action" : "GET",
@@ -72,7 +72,7 @@ describe("Hook Dispatch", function() {
                 if (err) {
                     done(err);
                 }
-                ApiServer.post('/api/v1/hooks')
+                ApiServer.post('/api/v1.1/hooks')
                     .send(hook)
                     .expect(201, done);
             });
@@ -80,13 +80,13 @@ describe("Hook Dispatch", function() {
 
         after(function(done) {
             hookHttpServer.close();
-            ApiServer.del('/api/v1/hooks/' + hookName)
+            ApiServer.del('/api/v1.1/hooks/' + hookName)
                 .expect(200, done);
         });
 
         var hiera_data = {
             "name" : "hiera_key",
-            "owner" : "test",
+            _sis : { "owner" : "test" },
             "hieradata" : {
                 "field" : "String",
                 "field2" : "Number"
@@ -95,7 +95,7 @@ describe("Hook Dispatch", function() {
 
         it("Should dispatch the hiera hook", function(doneCb) {
             doneCallback = doneCb;
-            ApiServer.post("/api/v1/hiera")
+            ApiServer.post("/api/v1.1/hiera")
                 .set('content-type', 'application/json')
                 .send(hiera_data)
                 .end(function(err, res) { });
@@ -108,11 +108,11 @@ describe("Hook Dispatch", function() {
             hook.retry_count = 5;
             hook.retry_delay = 1;
             hook.events.push(SIS.EVENT_UPDATE);
-            ApiServer.put('/api/v1/hooks/' + hook.name)
+            ApiServer.put('/api/v1.1/hooks/' + hook.name)
             .send(hook).expect(200, function(err, result) {
                 if (err) { console.log(err); console.log(result); return doneCb(err); }
                 hiera_data.hieradata.field3 = 'foo';
-                ApiServer.put("/api/v1/hiera/hiera_key")
+                ApiServer.put("/api/v1.1/hiera/hiera_key")
                     .set('content-type', 'application/json')
                     .send(hiera_data)
                     .end(function(err, res) { });
@@ -146,7 +146,7 @@ describe("Hook Dispatch", function() {
 
             hook = {
                 "name" : hookName,
-                "owner" : [ "Test" ],
+                _sis : { "owner" : [ "Test" ] },
                 "entity_type" : SIS.SCHEMA_SCHEMAS,
                 "target" : {
                     "action" : "POST",
@@ -159,7 +159,7 @@ describe("Hook Dispatch", function() {
                 if (err) {
                     done(err);
                 }
-                ApiServer.post('/api/v1/hooks')
+                ApiServer.post('/api/v1.1/hooks')
                     .send(hook)
                     .expect(201, done);
             });
@@ -167,13 +167,13 @@ describe("Hook Dispatch", function() {
 
         after(function(done) {
             hookHttpServer.close();
-            ApiServer.del('/api/v1/hooks/' + hookName)
+            ApiServer.del('/api/v1.1/hooks/' + hookName)
                 .expect(200, done);
         });
 
         var hookSchema = {
             "name" : "test",
-            "owner" : "test",
+            _sis :{ "owner" : "test" },
             "definition" : {
                 "field" : "String",
                 "field2" : "Number"
@@ -182,7 +182,7 @@ describe("Hook Dispatch", function() {
 
         it("Should dispatch the schema hook", function(doneCb) {
             doneCallback = doneCb;
-            ApiServer.post("/api/v1/schemas")
+            ApiServer.post("/api/v1.1/schemas")
                 .set('content-type', 'application/json')
                 .send(hookSchema)
                 .end(function(err, res) { });

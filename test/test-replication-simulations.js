@@ -43,7 +43,7 @@ describe('Replication Simulation', function() {
                 .expect(201, function(err, res) {
                 if (err) { return done(err); }
                 schema = res.body;
-                ApiServer.post("/api/v1/entities/" + schema.name)
+                ApiServer.post("/api/v1.1/entities/" + schema.name)
                     .send(entity).expect(201, function(err, res) {
                     if (err) { return done(err); }
                     // simulate a schema update
@@ -56,7 +56,7 @@ describe('Replication Simulation', function() {
         });
     });
     it("should fetch an entity without number", function(done) {
-        ApiServer.get("/api/v1/entities/" + schema.name)
+        ApiServer.get("/api/v1.1/entities/" + schema.name)
             .expect(200, function(err, res) {
             should.not.exist(err);
             var entities = res.body;
@@ -71,7 +71,7 @@ describe('Replication Simulation', function() {
         schemaManager.model.remove({ name : schema.name }, function(err, res) {
             if (err) { return done(err); }
             // now expect a 404
-            ApiServer.get("/api/v1/entities/" + schema.name)
+            ApiServer.get("/api/v1.1/entities/" + schema.name)
                 .expect(404, done);
         });
     });

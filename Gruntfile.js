@@ -71,7 +71,7 @@ module.exports = function(grunt) {
           require: 'test/fixtures/coverage-blanket'
         },
         src: ['test/init-tests.js', 'test/test-tokenmanager.js', 'test/test-*.js',
-              'test/v1-api/test-*', 'test/v1.1-api/test-*']
+              'test/v1.1-api/test-*']
       },
       coverage: {
         options: {

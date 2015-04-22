@@ -9,7 +9,7 @@ describe('@Replication - Entities', function() {
     servers.forEach(function(server, idx) {
         var schema = {
             name : "test_repl_entities",
-            owner : ["sistest"],
+            _sis : { owner : ["sistest"] },
             track_history : false,
             definition : {
                 name : { type : "String", required : true, unique : true },
@@ -17,9 +17,9 @@ describe('@Replication - Entities', function() {
             }
         };
 
-        var SCHEMA_BASE_URL = '/api/v1/schemas';
+        var SCHEMA_BASE_URL = '/api/v1.1/schemas';
         var SCHEMA_ITEM_URL = SCHEMA_BASE_URL + '/' + schema.name;
-        var BASE_URL = '/api/v1/entities/' + schema.name;
+        var BASE_URL = '/api/v1.1/entities/' + schema.name;
 
         describe("Replication from " + server.host, function() {
             var entity = {
