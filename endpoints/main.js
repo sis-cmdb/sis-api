@@ -54,3 +54,9 @@ mongoose.connectAsync(nconf.get('db').url, opts)
     console.log(err);
     process.send({ type : SIS.EP_ERROR, data : err });
 });
+
+// need to also register the disconnect handler
+process.on("disconnect", function() {
+    // this is not ok.
+    process.exit(1);
+});

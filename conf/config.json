@@ -25,6 +25,9 @@
             "type" : "sis"
         },
         "scripts_enabled" : false,
+        "scripts_min" : 1,
+        "scripts_max" : 2,
+        "script_worker_idle_time_ms" : 300000,
         "use_cluster" : true
     }
 }

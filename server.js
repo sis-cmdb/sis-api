@@ -123,6 +123,11 @@ var startServer = function(callback) {
 
             // listen
             var httpServer = app.listen(nconf.get('server').port, function(err) {
+                httpServer.on("close", function() {
+                    app.locals.closeListeners.forEach(function(handler) {
+                        handler();
+                    });
+                });
                 if (callback) {
                     callback(app, httpServer);
                 }
@@ -133,6 +138,13 @@ var startServer = function(callback) {
 
 // Run if we're the root module
 if (!module.parent) {
+    var setupCloseHandlers = function(app, server) {
+        process.on("SIGINT", function() {
+            server.close(function() {
+                process.exit(0);
+            });
+        });
+    };
     nconf.env('__')
         .argv()
         .file("config.json.local", __dirname + "/conf/config.json.local")
@@ -145,29 +157,16 @@ if (!module.parent) {
             for (var i = 0; i < cpuCount; i += 1) {
                 cluster.fork();
             }
-        } else {
-            startServer(function(app, server) {
-                process.on('SIGINT', function() {
-                    server.close(function() {
-                        app.locals.closeListeners.forEach(function(handler) {
-                            handler();
-                        });
-                        process.exit(0);
-                    });
-                });
+            // create workers when they exit
+            cluster.on('exit', function(worker) {
+                LOGGER.error({ msg : 'worker died. forking again.', worker_pid : worker.process.pid });
+                cluster.fork();
             });
+        } else {
+            startServer(setupCloseHandlers);
         }
     } else {
-        startServer(function(app, server) {
-            process.on('SIGINT', function() {
-                server.close(function() {
-                    app.locals.closeListeners.forEach(function(handler) {
-                        handler();
-                    });
-                    process.exit(0);
-                });
-            });
-        });
+        startServer(setupCloseHandlers);
     }
 }
 

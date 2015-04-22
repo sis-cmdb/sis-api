@@ -47,6 +47,7 @@ EndpointWorker.prototype.create = function() {
     var timer = setTimeout(function() {
         this.childState = ERROR;
         this.destroy();
+        LOGGER.error("Failed to spawn child within 5 seconds");
         createDefer.reject({ error : "Failed to spawn within 5 seconds" });
     }.bind(this), 5000);
     this.child.on("message", function(msg) {
@@ -157,8 +158,9 @@ function EndpointController(config) {
                 worker.destroy();
             }
         },
-        min : 4,
-        max : 8,
+        min : nconf.get("app:scripts_min") || 1,
+        max : nconf.get("app:scripts_max") || 2,
+        idleTimeoutMillis : nconf.get("app:script_worker_idle_time_ms") || 300000,
         log : function(msg) {
             LOGGER.debug(msg);
         }
@@ -175,7 +177,9 @@ EndpointController.prototype.attach = function(app, base) {
     var self = this;
     app.locals.closeListeners.push(function() {
         LOGGER.info("Draining pool");
-        self.workerPool.drain();
+        self.workerPool.drain(function() {
+            self.workerPool.destroyAllNow();
+        });
     });
 };
 
@@ -198,7 +202,6 @@ EndpointController.prototype._runNext = function() {
         } else {
             var p = worker.handleRequest(req);
             p.then(function(data) {
-                LOGGER.info({ msg : "Received message frm child", data : data });
                 res.status(data.status);
                 res.set(data.headers);
                 res.send(data.data);
@@ -227,7 +230,6 @@ module.exports.setup = function(app, config) {
     if (!nconf.get('app:scripts_enabled')) {
         return;
     }
-    console.log("Running endpoints");
     var controller = new EndpointController(config);
     controller.attach(app, "/api/v1.1/endpoints");
 };

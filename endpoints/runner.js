@@ -43,12 +43,13 @@ var ApiResponse = require("./api-response");
 
 // internal holder to ensure the script finishes before sending out
 // a response
-function ResponseHolder() {
+function ResponseHolder(defer) {
     this.response = null;
+    this.defer = defer;
 }
 ResponseHolder.prototype.setResponse = function(response) {
-    console.log("Sending response " + response);
     this.response = response;
+    this.defer.resolve(this);
 };
 
 ScriptRunner.prototype._createContext = function(holder, req) {
@@ -66,9 +67,13 @@ ScriptRunner.prototype.handleRequest = function(req) {
     var endpoint = req.endpoint;
     return this._getScript(endpoint).bind(this)
     .then(function(script) {
-        var holder = new ResponseHolder();
+        var defer = BPromise.pending();
+        var holder = new ResponseHolder(defer);
         var ctx = this._createContext(holder, req);
         script.runInNewContext(ctx);
+        return defer.promise;
+    })
+    .then(function(holder) {
         return holder.response;
     })
     .catch(function(err) {
