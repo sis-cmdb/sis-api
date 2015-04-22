@@ -5,6 +5,7 @@ var BasicStrategy = require('passport-http').BasicStrategy;
 var SIS = require("../util/constants");
 var BPromise = require("bluebird");
 var util = require("util");
+var _ = require("lodash");
 
 // authorization using user and pass via the user manager
 var _verifyUserPass = function(user, pass, done) {
@@ -329,10 +330,14 @@ module.exports.flattenCondition = function(condition, schemaManager, mgr) {
 
 module.exports.parsePopulate = function(reqQuery) {
     reqQuery = reqQuery || { };
-    if (typeof reqQuery.populate == 'string') {
-        return reqQuery.populate == 'true';
+    var param = reqQuery.populate;
+    if (typeof param === 'string') {
+        if (param === 'true') { return true; }
+        if (param === 'false') { return false; }
+        // array
+        return _.uniq(param.split(",").map(_.trim));
     } else {
-        return reqQuery.populate || false;
+        return param || false;
     }
 };
 
@@ -363,7 +368,7 @@ module.exports.parseQuery = function(reqQuery, version, enforceLimit) {
         if (limit > SIS.MAX_RESULTS) { limit = SIS.MAX_RESULTS; }
         var offset = parseInt(reqQuery.offset, 10) || 0;
         result.limit = limit;
-        result.offset = offset; 
+        result.offset = offset;
     } else {
         // optional - but still might be there
         if (reqQuery.limit) {

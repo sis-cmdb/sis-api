@@ -5,6 +5,7 @@ var BPromise = require("bluebird");
 var passport = require("passport");
 var webUtil = require("./webutil");
 var nconf = require("nconf");
+var _ = require("lodash");
 
 // Constructor for the ApiController base
 // The controller base attaches to an express app and
@@ -204,8 +205,9 @@ ApiController.prototype.getAll = function(req, res) {
             return BPromise.resolve([]);
         }
         options.lean = req.useLean;
-        if (this.parsePopulate(req)) {
-            return mgr.getPopulateFields(this.sm).then(function(populateFields) {
+        var populate = this.parsePopulate(req);
+        if (populate) {
+            return mgr.getPopulateFields(this.sm, populate).then(function(populateFields) {
                 if (populateFields) {
                     options.populate = populateFields;
                 }
@@ -225,8 +227,9 @@ ApiController.prototype.get = function(req, res) {
     var p = this.getManager(req).bind(this).then(function(mgr) {
         var options = this._getReqOptions(req);
         options.lean = req.useLean;
-        if (this.parsePopulate(req)) {
-            return mgr.getPopulateFields(this.sm).then(function(populateFields) {
+        var populate = this.parsePopulate(req);
+        if (populate) {
+            return mgr.getPopulateFields(this.sm, populate).then(function(populateFields) {
                 if (populateFields) {
                     options.populate = populateFields;
                 }

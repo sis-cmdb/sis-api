@@ -2,6 +2,7 @@
 
 var webUtil = require("../routes/webutil");
 var createEntityManager = require("../util/entity-manager");
+var _ = require("lodash");
 
 function EntityEp(name, schemaManager) {
     var mgrPromise = schemaManager.getById(name, { lean : true })
@@ -10,9 +11,25 @@ function EntityEp(name, schemaManager) {
             return createEntityManager(model, schema, { });
         });
 
-    this.get = function(id) {
+    this.get = function(id, query) {
+        query = query || { };
+        var rq = webUtil.parseQuery(query, '1.1', false);
+        var populate = webUtil.parsePopulate(query);
+        var lean = false;
         return mgrPromise.then(function(em) {
-            return em.getById(id);
+            lean = em.model.schema._sis_defaultpaths.length === 0;
+            var options = { };
+            options.lean = lean;
+            if (populate) {
+                return em.getPopulateFields(schemaManager, populate).then(function(populateFields) {
+                    if (populateFields) {
+                        options.populate = populateFields;
+                    }
+                    return em.getById(id, options);
+                });
+            } else {
+                return em.getById(id, options);
+            }
         }).then(function(result) {
             return result.toObject();
         });
@@ -33,8 +50,10 @@ function EntityEp(name, schemaManager) {
             if (rq.offset) { options.skip = rq.offset; }
             options.lean = lean;
             if (populate) {
-                return mgr.getPopulateFields(schemaManager).then(function(fields) {
-                    if (fields) { options.populate = fields; }
+                return mgr.getPopulateFields(schemaManager, populate).then(function(fields) {
+                    if (fields) {
+                        options.populate = fields;
+                    }
                     return mgr.getAll(flattenedCondition, options, rq.fields);
                 });
             } else {

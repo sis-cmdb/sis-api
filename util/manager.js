@@ -5,6 +5,7 @@ var BPromise = require("bluebird");
 var SIS = require('./constants');
 var jsondiffpatch = require("jsondiffpatch");
 var hat = require('hat');
+var _ = require("lodash");
 
 // Constructor for a Manager base
 // A manager is responsible for communicating with
@@ -102,7 +103,7 @@ Manager.prototype.count = function(condition, callback) {
         });
 };
 
-Manager.prototype.getPopulateFields = function(schemaManager) {
+Manager.prototype.getPopulateFields = function(schemaManager, subList) {
     var schemaNameToPaths = this._getPopulateFields();
     if (!schemaNameToPaths) {
         return BPromise.resolve(null);
@@ -114,7 +115,7 @@ Manager.prototype.getPopulateFields = function(schemaManager) {
         });
 
     if (!schemasToLoad.length) {
-        var fields = this._getFieldsFromPopulateObject(schemaNameToPaths);
+        var fields = this._getFieldsFromPopulateObject(schemaNameToPaths, subList);
         return BPromise.resolve(fields);
     } else {
         var self = this;
@@ -133,7 +134,7 @@ Manager.prototype.getPopulateFields = function(schemaManager) {
             if (!loadedSchemas.length) {
                 return null;
             } else {
-                var fields = self._getFieldsFromPopulateObject(schemaNameToPaths);
+                var fields = self._getFieldsFromPopulateObject(schemaNameToPaths, subList);
                 return fields;
             }
         });
@@ -748,11 +749,16 @@ Manager.prototype._getPopulateFields = function() {
     }, { });
 };
 
-Manager.prototype._getFieldsFromPopulateObject = function(refToPaths) {
+Manager.prototype._getFieldsFromPopulateObject = function(refToPaths, subList) {
     var refs = Object.keys(refToPaths);
-    return refs.reduce(function(result, ref) {
+    var paths = refs.reduce(function(result, ref) {
         return result.concat(refToPaths[ref]);
-    }, []).join(" ");
+    }, []);
+    if (Array.isArray(subList)) {
+        paths = _.intersection(paths, subList);
+    }
+    if (!paths.length) { return null; }
+    return paths.join(" ");
 };
 
 // returns a promise function that accepts a document from
