@@ -3,8 +3,8 @@ module.exports = function(grunt) {
   require('load-grunt-tasks')(grunt);
   var BPromise = require('bluebird');
   var requestAsync = BPromise.promisify(require('request'));
-
   var distFiles = ['routes/*.js', 'tools/*.js', 'util/*.js', 'util/types/*.js', 'server.js', 'endpoints/*.js'];
+  var confFiles = ['conf/config.json'];
 
   grunt.initConfig({
     pkg: grunt.file.readJSON('package.json'),
@@ -30,6 +30,11 @@ module.exports = function(grunt) {
             expand: true,
             src: ["package.json", "npm-shrinkwrap.json"],
             dest: "dist/"
+          },
+          {
+              expand: true,
+              src: confFiles,
+              dest: "dist/"
           }
         ]
       }
