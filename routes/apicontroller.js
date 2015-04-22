@@ -4,6 +4,7 @@ var SIS = require("../util/constants");
 var BPromise = require("bluebird");
 var passport = require("passport");
 var webUtil = require("./webutil");
+var nconf = require("nconf");
 
 // Constructor for the ApiController base
 // The controller base attaches to an express app and
@@ -33,6 +34,7 @@ function ApiController(opts) {
     if (opts[SIS.OPT_FIRE_HOOKS]) {
         this.hm = require('../util/hook-manager')(this.sm);
     }
+    this.getterReadPref = nconf.get("app:get_read_pref");
 }
 
 // overrides
@@ -631,13 +633,17 @@ ApiController.prototype._finish = function(req, res, p, code) {
 
 // get request options to pass to managers per request
 ApiController.prototype._getReqOptions = function(req) {
-    return {
+    var result = {
         user : req.user,
         version : req.params.version,
         log : req.log,
         params : req.params,
         query : req.query
     };
+    if (req.method === "GET" && this.getterReadPref) {
+        result.read = this.getterReadPref;
+    }
+    return result;
 };
 
 // export it
