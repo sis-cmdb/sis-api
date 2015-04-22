@@ -67,7 +67,7 @@ describe('Token Manager', function() {
                             clearTimeout(t2);
                             done(JSON.stringify(err));
                         });
-                    }, 65000);
+                    }, 70000);
                     t2 = setTimeout(function() {
                         tokenManager.getById(token.name).then(function(token) {
                             done(token);
