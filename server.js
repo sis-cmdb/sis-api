@@ -135,8 +135,8 @@ var startServer = function(callback) {
 if (!module.parent) {
     nconf.env('__')
         .argv()
-        .file("config.json.local", "conf/config.json.local")
-        .file("config.json", "conf/config.json");
+        .file("config.json.local", __dirname + "/conf/config.json.local")
+        .file("config.json", __dirname + "/conf/config.json");
     if (nconf.get("app:use_cluster")) {
         var cluster = require("cluster");
         if (cluster.isMaster) {
