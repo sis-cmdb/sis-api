@@ -31,7 +31,10 @@ function EntityEp(name, schemaManager) {
                 return em.getById(id, options);
             }
         }).then(function(result) {
-            return result.toObject();
+            if (!lean) {
+                result = result.toObject();
+            }
+            return result;
         });
     };
 
