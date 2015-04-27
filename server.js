@@ -148,13 +148,15 @@ if (!module.parent) {
         var cluster = require("cluster");
         if (cluster.isMaster) {
             var cpuCount = require('os').cpus().length;
+            var worker = null;
             // Create a worker for each CPU
             for (var i = 0; i < cpuCount; i += 1) {
-                cluster.fork();
+                worker = cluster.fork();
+                LOGGER.info({ worker_pid : worker.process.pid }, "Created worker");
             }
             // create workers when they exit
             cluster.on('exit', function(worker) {
-                LOGGER.error({ msg : 'worker died. forking again.', worker_pid : worker.process.pid });
+                LOGGER.error({ worker_pid : worker.process.pid }, 'worker died. forking again.');
                 cluster.fork();
             });
         } else {
