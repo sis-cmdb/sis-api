@@ -21,7 +21,8 @@ function EntityEp(name, schemaManager) {
             var options = { };
             options.lean = lean;
             if (populate) {
-                return em.getPopulateFields(schemaManager, populate).then(function(populateFields) {
+                return em.getPopulateFields(schemaManager, populate)
+                .then(function(populateFields) {
                     if (populateFields) {
                         options.populate = populateFields;
                     }
@@ -53,7 +54,8 @@ function EntityEp(name, schemaManager) {
             if (rq.offset) { options.skip = rq.offset; }
             options.lean = lean;
             if (populate) {
-                return mgr.getPopulateFields(schemaManager, populate).then(function(fields) {
+                return mgr.getPopulateFields(schemaManager, populate)
+                .then(function(fields) {
                     if (fields) {
                         options.populate = fields;
                     }

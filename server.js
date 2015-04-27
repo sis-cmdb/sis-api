@@ -30,26 +30,21 @@ var routes = [
     'endpoints'
 ];
 
-var allowCrossDomain = function(req,res,next) {
-    var origin = req.get("origin") || "*";
-    res.set('Access-Control-Allow-Origin', origin);
-    res.set('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE');
-    res.set('Access-Control-Allow-Headers', 'Content-Type,X-Requested-With,x-auth-token,Authorization');
-    res.set('Access-Control-Expose-Headers', "x-total-count");
-    // TODO: remove this hardcoded ish
-    if (req.path == "/api/v1.1/users/auth_token" && req.method == "POST") {
-        res.set('Access-Control-Allow-Credentials', true);
-        res.set("WWW-Authenticate", 'Basic realm="Users"');
-    }
-    next();
-};
-
 if (process.env.SIS_DEBUG) {
     BPromise.longStackTraces();
 }
 
 var startServer = function(callback) {
     'use strict';
+
+    var allowCrossDomain = function(req,res,next) {
+        var origin = req.get("origin") || "*";
+        res.set('Access-Control-Allow-Origin', origin);
+        res.set('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE');
+        res.set('Access-Control-Allow-Headers', 'Content-Type,X-Requested-With,x-auth-token,Authorization');
+        res.set('Access-Control-Expose-Headers', "x-total-count");
+        next();
+    };
 
     var passport = require("passport");
     var webUtil = require("./routes/webutil");
