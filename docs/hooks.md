@@ -61,8 +61,11 @@ A hook can be represented by the following schema definition:
     // - sis_hiera - type for heira entries in SIS
     "entity_type" : { "type" : "String", "required" : true },
 
-    // The owners the hook.  Note that this does not need to correlate with the entity type of the hook.
-    "owner" : { "type" : ["String"] }
+    "_sis" : {
+        // The owners the hook.  Note that this does not need to correlate with the entity type of the hook.
+        // See [Role Based Access Control](./docs/rbac.md)
+        "owner" : { "type" : ["String"] }
+    }
 }
 ```
 
@@ -71,7 +74,7 @@ For example, a hook that listens for all events on the `sample` entities above w
 ```javascript
 {
     "name" : "sample_hook",
-    "owner" : ["SISG1"],
+    "_sis" : { "owner" : ["SISG1"] },
     "entity_type" : "sample",
     "retry_count" : 5, // max number of times to retry sending the hook
     "retry_delay" : 10, // delay in seconds between retries
@@ -125,7 +128,7 @@ The following is an example payload that would be sent to a service via a webhoo
             "anything" : "goes",
             "in" : ["this", "field"]
          },
-        "owner" : ["SISG1"]
+        "_sis" : { "owner" : ["SISG1"] }
     }
 }
 ```

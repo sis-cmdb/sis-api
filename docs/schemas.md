@@ -54,8 +54,7 @@ Note that Date and Buffer types are *not currently supported* in SIS.
 
 ### Reserved fields
 
-Definition fields cannot start with `_` or `sis_`.  Additionally, `owner` is a
-reserved field and should not be present in the definition object.
+Definition fields cannot start with `_` or `sis_`.
 
 ## Schema Objects
 
@@ -72,14 +71,16 @@ A schema object can be represented by the following schema definition:
         "match" : "/^[a-z0-9_]+$/"
     },
 
-    // Whether the schema is locked - defaults to false
-    "sis_locked" : { "type" : "Boolean", "required" : true, "default" : false },
+    "_sis" : {
+        // Whether the schema is locked - defaults to false
+        "locked" : { "type" : "Boolean", "required" : true, "default" : false },
 
-    // Whether the schema can be updated
-    "sis_immutable" : { "type" : "Boolean", "required" : true, "default" : false },
+        // Whether the schema can be updated
+        "immutable" : { "type" : "Boolean", "required" : true, "default" : false },
 
-    // The owner groups of the schema
-    "owner" : { "type" : ["String"], "required" : true },
+        // The owner groups of the schema
+        "owner" : { "type" : ["String"], "required" : true }
+    },
 
     // The schema definition.  Must be a valid definition object
     "definition" : { "type" : "Mixed", "required" : true },
@@ -118,7 +119,7 @@ The following is an example schema object for a schema named `sample`:
 ```javascript
 {
     "name" : "sample",
-    "owner" : ["SISG1", "SISG2"],
+    "_sis" : { "owner" : ["SISG1", "SISG2"] },
     "definition" : {
         "requiredField" : { "type" : "String", "required" : true },
         "uniqueNumberField" : { "type" : "Number", "unique" : true },

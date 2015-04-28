@@ -23,8 +23,11 @@ A Hiera object in SIS has the following schema definition:
     // Required and unique string.
     "name" : { "type" : "String", "required" : true, "unique" : true },
 
-    // The owner groups of the schema
-    // See [Role Based Access Control](./docs/rbac.md)
+    "_sis" : {
+        // The owner groups of the schema
+        // See [Role Based Access Control](./docs/rbac.md)
+        "owner" : { "type" : ["String"] }
+    },
 
     // The actual key value pairs associated with the entry
     "hieradata" : { "type" : "Mixed", "required" : true }
@@ -36,7 +39,7 @@ An example Hiera object is below:
 ```javascript
 {
     "name" : "sample.env",
-    "owner" : ["SISG1"],
+    "_sis" : { "owner" : ["SISG1"] },
     "hieradata" : {
         "port" : 1000,
         "num_instances" : 1,

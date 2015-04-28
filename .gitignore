@@ -10,6 +10,8 @@ lib-cov
 *.ignore.js
 *.pyc
 report*.xml
+coverage.html
+
 pids
 logs
 results

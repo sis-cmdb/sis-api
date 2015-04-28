@@ -262,7 +262,7 @@ The object looks like a [MongoDB query document](http://docs.mongodb.org/manual/
 
 For instance:
 
-`/api/v1.1/schemas?q={"owner":"SIS"}` returns a list of schemas where "SIS" is an owner.
+`/api/v1.1/schemas?q={"_sis.owner":"SIS"}` returns a list of schemas where "SIS" is an owner.
 
 #### Joins
 
@@ -336,7 +336,7 @@ As an example, to insert 3 items in the `sample` schema defined in [Schema Objec
             "anything" : "goes",
             "in" : ["this", "field"]
          },
-        "owner" : ["SISG1"]
+        "_sis" : { "owner" : ["SISG1"] }
     },
     {
         "stringField":    "sampleString2",
@@ -347,7 +347,7 @@ As an example, to insert 3 items in the `sample` schema defined in [Schema Objec
             "anything" : "goes",
             "in" : ["this", "field"]
          },
-        "owner" : ["SISG1"]
+        "_sis" : { "owner" : ["SISG1"] }
     },
     {
         "stringField":    "sampleString3",
@@ -358,7 +358,7 @@ As an example, to insert 3 items in the `sample` schema defined in [Schema Objec
             "anything" : "goes",
             "in" : ["this", "field"]
          },
-        "owner" : ["SISG1"]
+        "_sis" : { "owner" : ["SISG1"] }
     }
 ]
 ```
@@ -392,7 +392,7 @@ For instance, consider the following `sample` object that exists in SIS and can 
     "uniqueNumberField" : 1001,
     "requiredField" : "r",
     "anythingField" : { },
-    "owner" : ["SISG1"]
+    "_sis" : { "owner" : ["SISG1"] }
     // some other SIS fields omitted
 }
 ```

@@ -27,7 +27,7 @@ The data contained in the entity is based on the `definition` field of the schem
 // Schema named 'sample'
 {
     "name" : "sample",
-    "owner" : ["SISG1", "SISG2"],
+    "_sis" : { "owner" : ["SISG1", "SISG2"] },
     "definition" : {
         "requiredField" : { "type" : "String", "required" : true },
         "uniqueNumberField" : { "type" : "Number", "unique" : true },
@@ -56,7 +56,7 @@ An entity object for the schema looks like:
         "anything" : "goes",
         "in" : ["this", "field"]
      },
-    "owner" : ["SISG1"]
+    "_sis" : { "owner" : ["SISG1"] }
 }
 ```
 

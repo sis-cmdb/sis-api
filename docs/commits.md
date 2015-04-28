@@ -82,13 +82,12 @@ The following is a commit log for a hiera entry that was added, updated, and del
 [
 // initial add of object
 {
-    "_updated_at": 1385599521201,
     "type": "sis_hiera",
     "entity_id": "hiera_entry",
     "action": "insert",
     "modified_by": "user1",
     "commit_data": {
-        "__v": 0,
+        "_v": 0,
         "_updated_at": 1385599521199,
         "name": "hiera_entry",
         "hieradata": {
@@ -97,16 +96,18 @@ The following is a commit log for a hiera entry that was added, updated, and del
         },
         "_id": "529692213a74002bdf000003",
         "_created_at": 1385599521199,
-        "owner": ["group1"]
+        "_sis" : { "owner": ["group1"] }
     },
     "date_modified": 1385599521199,
     "_id": "529692213a74002bdf000004",
-    "__v": 0,
-    "_created_at": 1385599521200
+    "_v": 0,
+    "_sis" : {
+        "_created_at": 1385599521200,
+        "_updated_at": 1385599521201
+    }
 },
 // update
 {
-    "_updated_at": 1385599522221,
     "type": "sis_hiera",
     "entity_id": "hiera_entry",
     "action": "update",
@@ -121,12 +122,14 @@ The following is a commit log for a hiera entry that was added, updated, and del
     },
     "date_modified": 1385599522218,
     "_id": "529692223a74002bdf000005",
-    "__v": 0,
-    "_created_at": 1385599522220
+    "_v": 0,
+    "_sis" : {
+        "_updated_at": 1385599522221,
+        "_created_at": 1385599522220
+    }
 },
 // deletion
 {
-    "_updated_at": 1385599523236,
     "type": "sis_hiera",
     "entity_id": "hiera_entry",
     "action": "delete",
@@ -139,13 +142,16 @@ The following is a commit log for a hiera entry that was added, updated, and del
             "field_n": 0
         },
         "_id": "529692213a74002bdf000003",
-        "__v": 0,
+        "_v": 0,
         "_created_at": 1385599521199,
-        "owner": ["group1"]
+        "_sis" : { "owner": ["group1"] }
     },
     "date_modified": 1385599523236,
     "_id": "529692233a74002bdf000006",
-    "__v": 0,
-    "_created_at": 1385599523236
+    "_v": 0,
+    "_sis" : {
+        "_created_at": 1385599523236,
+        "_updated_at": 1385599523236
+    }
 }]
 ```
