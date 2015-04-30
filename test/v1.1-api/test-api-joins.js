@@ -435,6 +435,73 @@ describe('@API @V1.1API - Entity Join API', function() {
             });
         });
 
+        it("Should work with $or and fetch anc 0 and anc 1 via leaf docs", function(done) {
+            var query = {
+                "$or" : [
+                    { "leaf_docs.leaf.num" : 6 },
+                    { "leaf_docs.leaf.num" : 13 }
+                ]
+            };
+            ApiServer.get("/api/v1.1/entities/" + ancestor_schema.name)
+            .query({ q : JSON.stringify(query)}).expect(200, function(e, r) {
+                if (e) { done(e); return; }
+                r = r.body;
+                r.length.should.eql(2);
+                var nums = r.map(function(anc) {
+                    return anc.num;
+                });
+                nums.sort();
+                nums[0].should.eql(0);
+                nums[1].should.eql(1);
+                done();
+            });
+        });
+
+        it("Should work with and normal fields $or and fetch anc 1 via leaf docs", function(done) {
+            var query = {
+                // fetches anc 1 and anc 0 per previous test
+                "$or" : [
+                    { "leaf_docs.leaf.num" : 6 },
+                    { "leaf_docs.leaf.num" : 13 }
+                ],
+                "num" : 1
+            };
+            ApiServer.get("/api/v1.1/entities/" + ancestor_schema.name)
+            .query({ q : JSON.stringify(query)}).expect(200, function(e, r) {
+                if (e) { done(e); return; }
+                r = r.body;
+                r.length.should.eql(1);
+                var nums = r.map(function(anc) {
+                    return anc.num;
+                });
+                nums.sort();
+                nums[0].should.eql(1);
+                done();
+            });
+        });
+
+        it("Should work with $nor and fetch anc 2+", function(done) {
+            var query = {
+                // fetches anc 1 and anc 0 per previous test
+                "$nor" : [
+                    { "leaf_docs.leaf.num" : 6 },
+                    { "leaf_docs.leaf.num" : 13 }
+                ]
+            };
+            ApiServer.get("/api/v1.1/entities/" + ancestor_schema.name)
+            .query({ q : JSON.stringify(query)}).expect(200, function(e, r) {
+                if (e) { done(e); return; }
+                r = r.body;
+                r.length.should.eql(4);
+                var nums = r.map(function(anc) {
+                    return anc.num;
+                });
+                nums.sort();
+                nums.should.eql([2,3,4,5]);
+                done();
+            });
+        });
+
     });
 
 

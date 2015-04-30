@@ -251,6 +251,21 @@ var addIdsToFlattenedCondition = function(flattened, path, ids) {
     }
 };
 
+function getValidKeys(condition) {
+    var keys = Object.keys(condition);
+    if (!keys.length) {
+        return null;
+    }
+    var invalid = keys.some(function(key) {
+        return key[key.length - 1] === '.' ||
+            ((key === "$or" || key === "$and" || key === "$nor") &&
+             !Array.isArray(condition[key]));
+    });
+    return invalid ? null : keys;
+}
+
+var OR_AND_NOR = ["$or","$and","$nor"];
+
 // "flatten" a query to deal with all joins
 // returns a promise for the flattened query + mgr
 module.exports.flattenCondition = function(condition, schemaManager, mgr) {
@@ -259,41 +274,66 @@ module.exports.flattenCondition = function(condition, schemaManager, mgr) {
         !references || !references.length) {
         return BPromise.resolve([condition, mgr]);
     }
-    var keys = Object.keys(condition);
-    if (!keys.length) {
+    var keys = getValidKeys(condition);
+    if (!keys) {
         return BPromise.resolve([condition, mgr]);
     }
     var paths = references.map(function(ref) {
         return ref;
     });
 
-    var found = false;
+    function mapInnerCondition(innerCond) {
+        return module.exports.flattenCondition(innerCond, schemaManager, mgr);
+    }
+
+    var mustFlatten = false;
     var flattened = { };
+    var orAndNorPromises = [];
     // the field in the condition that maps
     // to a join path
     var fieldToPath = {};
-    for (var k = 0; k < keys.length; ++k) {
-        var key = keys[k];
-        if (key[key.length - 1] == '.') {
-            // invalid query - just let it flow.
-            return BPromise.resolve([condition, mgr]);
+
+    // deal with $or and $and and $nor
+    OR_AND_NOR.forEach(function(key) {
+        if (condition[key]) {
+            var promise = BPromise.map(condition[key], mapInnerCondition)
+                .then(function(flatResults) {
+                    // flatResults is an array of arrays where
+                    // each array is a flattend condition, manager tuple
+                    // so we need to only grab the flattened conditions out
+                    var flatConditions = flatResults.map(function(fr) {
+                        return fr[0];
+                    });
+                    return [key, flatConditions];
+                });
+            orAndNorPromises.push(promise);
+            mustFlatten = true;
+            delete condition[key];
         }
+    });
+
+    // or and nor already taken care of
+    var k = 0;
+    var key = null;
+    for (k = 0; k < keys.length; ++k) {
+        key = keys[k];
         // compare with the references - probably a better way to do
         // this ;)
         for (var i = 0; i < paths.length; ++i) {
             var ref = paths[i].path + ".";
             if (key.indexOf(ref) === 0 && key != ref + "_id") {
                 fieldToPath[key] = [paths[i], condition[key]];
-                found = true;
+                mustFlatten = true;
                 break;
             }
         }
         if (!fieldToPath[key]) {
-            // shallow copy to flattened
+            // shallow copy to flattened since it is a reference to an embedded
+            // subdoc
             flattened[key] = condition[key];
         }
     }
-    if (found) {
+    if (mustFlatten) {
         // need to flatten the condition
         // convert all keys in the fieldToPath to
         // path => [id]
@@ -305,24 +345,41 @@ module.exports.flattenCondition = function(condition, schemaManager, mgr) {
             return getObjectIds(schemaPath, cond, remainingPath,
                                 schemaManager, mgr.model);
         });
-        return BPromise.all(promises).then(function(results) {
-            var refConds = {};
-            for (var i = 0; i < results.length; ++i) {
-                var key = fieldKeys[i];
-                var path = fieldToPath[key][0].path;
-                var ids = results[i];
-                addIdsToFlattenedCondition(refConds, path, ids);
-            }
-            for (var k in refConds) {
-                var v = refConds[k];
-                if (v instanceof Array) {
-                    flattened[k] = { "$in" : v };
-                } else {
-                    flattened[k] = v;
-                }
-            }
-            return BPromise.resolve([flattened, mgr]);
-        });
+        var resultPromise = BPromise.resolve([flattened, mgr]);
+        if (promises.length) {
+            resultPromise = resultPromise.spread(function(flattened, mgr) {
+                return BPromise.all(promises).then(function(results) {
+                    var refConds = {};
+                    for (var i = 0; i < results.length; ++i) {
+                        var key = fieldKeys[i];
+                        var path = fieldToPath[key][0].path;
+                        var ids = results[i];
+                        addIdsToFlattenedCondition(refConds, path, ids);
+                    }
+                    for (var k in refConds) {
+                        var v = refConds[k];
+                        if (v instanceof Array) {
+                            flattened[k] = { "$in" : v };
+                        } else {
+                            flattened[k] = v;
+                        }
+                    }
+                    return BPromise.resolve([flattened, mgr]);
+                });
+            });
+        }
+        if (orAndNorPromises.length) {
+            resultPromise = resultPromise.spread(function(flattened, mgr) {
+                return BPromise.all(orAndNorPromises).then(function(results) {
+                    results.forEach(function(res) {
+                        // res is tuple of key => flattened conditions
+                        flattened[res[0]] = res[1];
+                    });
+                    return BPromise.resolve([flattened, mgr]);
+                });
+            });
+        }
+        return resultPromise;
     } else {
         return BPromise.resolve([condition, mgr]);
     }
