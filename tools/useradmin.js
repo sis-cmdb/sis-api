@@ -5,7 +5,6 @@ var mongoose = require('mongoose');
 var nconf = require('nconf');
 var SIS = require('../util/constants');
 var fs = require('fs');
-var config = require('../config');
 
 if (process.argv.length != 4) {
     console.log("Require an action and argument.");
@@ -19,8 +18,11 @@ if (['update','delete'].indexOf(action) == -1) {
     process.exit(1);
 }
 
-nconf.env('__').argv();
-nconf.defaults(config);
+nconf.env('__')
+    .argv()
+    .file("config.json.local", __dirname + "/../conf/config.json.local")
+    .file("config.json", __dirname + "/../conf/config.json");
+
 var appConfig = nconf.get('app') || {};
 if (!appConfig.auth) {
     console.log("Authentication is not enabled.");
