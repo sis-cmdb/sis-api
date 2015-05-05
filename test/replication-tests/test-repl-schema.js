@@ -8,7 +8,7 @@ describe('@Replication - Schemas', function() {
 
     var schema = {
         name : "test_repl_schema",
-        owner : ["sistest"],
+        _sis : { owner : ["sistest"] },
         track_history : false,
         definition : {
             name : { type : "String", required : true, unique : true },
@@ -16,7 +16,7 @@ describe('@Replication - Schemas', function() {
         }
     };
 
-    var BASE_URL = '/api/v1/schemas';
+    var BASE_URL = '/api/v1.1/schemas';
     var ITEM_URL = BASE_URL + '/' + schema.name;
 
     servers.forEach(function(server, idx) {

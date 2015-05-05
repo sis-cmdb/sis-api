@@ -188,13 +188,15 @@ var should = require('should');
 module.exports.verifyExpected = function(servers, opts, callback) {
     var url = opts.url;
     var status = opts.status;
-    async.map(servers, function(server, cb) {
-        server.get(url).expect(status, function(err, res) {
-            if (err) { return cb(err); }
-            if (opts.data) {
-                res.body.should.eql(opts.data);
-            }
-            cb(null, res.body);
-        });
-    }, callback);
+    setTimeout(function() {
+        async.map(servers, function(server, cb) {
+            server.get(url).expect(status, function(err, res) {
+                if (err) { return cb(err); }
+                if (opts.data) {
+                    res.body.should.eql(opts.data);
+                }
+                cb(null, res.body);
+            });
+        }, callback);
+    }, 500);
 };
