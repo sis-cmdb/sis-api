@@ -33,7 +33,7 @@ In SIS terms, these are called `hooks`.
 - Control access to objects and ensure the right users can manage them.
 - Access the API from any website using a browser that supports [CORS](http://en.wikipedia.org/wiki/Cross-origin_resource_sharing).
 
-More details can be found in the (API Documentation)[./docs/index.md]
+More details can be found in the [API Documentation](./docs/index.md)
 
 # Requirements
 
