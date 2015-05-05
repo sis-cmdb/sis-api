@@ -691,6 +691,8 @@ Manager.prototype.getPermissionsForObject = function(obj, user) {
 Manager.prototype.applyPartial = function (full, partial) {
     if (typeof partial !== 'object' || partial instanceof Array) {
         return partial;
+    } else if (typeof full !== 'object' || full instanceof Array) {
+        return partial;
     } else {
         // merge the object
         var result = full;

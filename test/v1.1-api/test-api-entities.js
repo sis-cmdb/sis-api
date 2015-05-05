@@ -200,7 +200,7 @@ describe('@API @V1.1API - Entity API', function() {
                 .end(function() {
                 ApiServer.post('/api/v1.1/schemas')
                     .send(schema).expect(201, function(err, result) {
-                    if (err) { return done(err, result); }
+                    if (err) { done(err, result); return; }
                     ApiServer.post("/api/v1.1/entities/test_nested_entity")
                         .set("Content-Type", "application/json")
                         .send(entity)
@@ -239,6 +239,32 @@ describe('@API @V1.1API - Entity API', function() {
             ApiServer.put("/api/v1.1/entities/test_nested_entity/" + entity._id)
                 .set("Content-Type", "application/json")
                 .send({"mixed_obj" : {"crazy" : null, "awesome" : "here"}})
+                .expect(200, function(err, result) {
+                    result = result.body;
+                    delete entity._sis;
+                    delete result._sis;
+                    result.should.eql(entity);
+                    done(err, result);
+                });
+        });
+        it("Should change the type of mixed_obj to a string", function(done) {
+            entity.mixed_obj = "random string";
+            ApiServer.put("/api/v1.1/entities/test_nested_entity/" + entity._id)
+                .set("Content-Type", "application/json")
+                .send({"mixed_obj" : "random string"})
+                .expect(200, function(err, result) {
+                    result = result.body;
+                    delete entity._sis;
+                    delete result._sis;
+                    result.should.eql(entity);
+                    done(err, result);
+                });
+        });
+        it("Should change type of mixed_obj to a dict again", function(done) {
+            entity.mixed_obj = { "key" : "value" };
+            ApiServer.put("/api/v1.1/entities/test_nested_entity/" + entity._id)
+                .set("Content-Type", "application/json")
+                .send({"mixed_obj" : entity.mixed_obj })
                 .expect(200, function(err, result) {
                     result = result.body;
                     delete entity._sis;

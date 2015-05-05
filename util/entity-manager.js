@@ -262,7 +262,7 @@ EntityManager.prototype.applyUpdate = function(result, entity) {
     this.mixedTypes.forEach(function(p) {
         var old = oldMixed[p];
         var entityVal = getValueForPath(p, entity);
-        this.applyPartial(old, entityVal);
+        old = this.applyPartial(old, entityVal);
         result.set(p, old);
         result.markModified(p);
     }.bind(this));
