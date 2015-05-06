@@ -12,7 +12,8 @@ module.exports = function(grunt) {
       dist : {
         SIS_RUN_LONG_TESTS : 'true',
         JUNIT_REPORT_PATH : grunt.option('report_path') || '_reports/report.xml'
-      }
+      },
+      build : { }
     },
     copy: {
       dist: {
