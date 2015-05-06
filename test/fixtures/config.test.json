@@ -26,7 +26,8 @@
     },
     "logger" : {
         "options" : {
-            "name" : "SIS-test"
+            "name" : "SIS-test",
+            "level" : "warn"
         }
     }
 }
