@@ -23,5 +23,10 @@
     "app" : {
         "auth" : true,
         "scripts_enabled" : true
+    },
+    "logger" : {
+        "options" : {
+            "name" : "SIS-test"
+        }
     }
 }

@@ -3,18 +3,8 @@ var express = require('express');
 var mongoose = require('mongoose');
 var bodyParser = require('body-parser');
 var BPromise = require("bluebird");
-var loggingMiddleware = require('./util/logger');
-var bunyan = require("bunyan");
+var logger = require('./util/logger');
 var nconf = require("nconf");
-
-var SIS = require("./util/constants");
-var LOGGER = bunyan.createLogger({
-    name : "SISServer",
-    serializers : {
-        err : bunyan.stdSerializers.err
-    }
-});
-
 var app = null;
 
 // routes we want to include
@@ -37,6 +27,11 @@ if (process.env.SIS_DEBUG) {
 var startServer = function(callback) {
     'use strict';
 
+    var SIS = require("./util/constants");
+    var LOGGER = logger.createLogger({
+        name : "SISServer"
+    });
+
     var allowCrossDomain = function(req,res,next) {
         var origin = req.get("origin") || "*";
         res.set('Access-Control-Allow-Origin', origin);
@@ -50,7 +45,7 @@ var startServer = function(callback) {
     var webUtil = require("./routes/webutil");
     var app = express();
 
-    app.use(loggingMiddleware.logger());
+    app.use(logger.loggingMiddleware());
 
     //app.use(webUtil.json());
     app.use(bodyParser.json({
@@ -110,7 +105,7 @@ var startServer = function(callback) {
             });
 
             // setup error handler
-            app.use(loggingMiddleware.errorLogger());
+            app.use(logger.errorLoggingMiddleware());
             app.use(function(err, req, res, next) {
                 var errObj = SIS.ERR_INTERNAL("Unexpected error : " + err);
                 res.status(errObj[0]).send(errObj[1]);
@@ -131,8 +126,7 @@ var startServer = function(callback) {
     });
 };
 
-// Run if we're the root module
-if (!module.parent) {
+function main() {
     var setupCloseHandlers = function(app, server) {
         process.on("SIGINT", function() {
             server.close(function() {
@@ -144,6 +138,11 @@ if (!module.parent) {
         .argv()
         .file("config.json.local", __dirname + "/conf/config.json.local")
         .file("config.json", __dirname + "/conf/config.json");
+
+    var LOGGER = logger.createLogger({
+        name : "SISMain"
+    });
+
     if (nconf.get("app:use_cluster")) {
         var cluster = require("cluster");
         if (cluster.isMaster) {
@@ -165,6 +164,11 @@ if (!module.parent) {
     } else {
         startServer(setupCloseHandlers);
     }
+}
+
+// Run if we're the root module
+if (!module.parent) {
+    main();
 }
 
 

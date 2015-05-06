@@ -5,10 +5,10 @@ var express = require("express");
 var Pool = require("generic-pool");
 var BPromise = require("bluebird");
 var nconf = require("nconf");
-var bunyan = require("bunyan");
+var logger = require("../util/logger");
 
-var WORKER_LOGGER = bunyan.createLogger({ name:"EndpointWorker" });
-var LOGGER = bunyan.createLogger({ name : "EndpointController" });
+var WORKER_LOGGER = logger.createLogger({ name:"EndpointWorker" });
+var LOGGER = logger.createLogger({ name : "EndpointController" });
 
 var SIS = require("../util/constants");
 // child states
@@ -61,12 +61,13 @@ EndpointWorker.prototype.create = function() {
                 // send it back up to the master
                 this.defer.resolve(data);
             } else if (this.childState === TIMEDOUT) {
-                // ignore
+                // ignore - the request already timed out
             }
         } else if (type === SIS.EP_READY && this.childState === SPAWNING) {
             this.childState = IDLE;
             clearTimeout(timer);
             createDefer.resolve(this);
+            LOGGER.debug({pid : this.child.pid}, "Spawned worker process");
         } else {
             // unexpected state
             WORKER_LOGGER.error({ message: "Received unexpected message.",
@@ -161,8 +162,12 @@ function EndpointController(config) {
         min : nconf.get("app:scripts_min") || 1,
         max : nconf.get("app:scripts_max") || 2,
         idleTimeoutMillis : nconf.get("app:script_worker_idle_time_ms") || 300000,
-        log : function(msg) {
-            LOGGER.debug(msg);
+        log : function(msg, level) {
+            // level is one of 'verbose', 'warn', 'info', 'error'
+            if (level === 'verbose') { level = 'trace'; }
+            if (typeof LOGGER[level] === 'function') {
+                LOGGER[level](msg);
+            }
         }
     });
 }
@@ -208,6 +213,7 @@ EndpointController.prototype._runNext = function() {
                 self.workerPool.release(worker);
             }).catch(function(err) {
                 if (err instanceof Error) {
+                    LOGGER.error({ err: err }, "Endpoint caught an error");
                     err = {
                         status : 500,
                         error : err + ": " + err.stack

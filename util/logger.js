@@ -1,15 +1,30 @@
 // logger middleware
 var bunyan = require('bunyan');
 var uuid = require('node-uuid');
+var nconf = require('nconf');
+var _ = require('lodash');
 
 function toResponseTime(time) {
     var diff = process.hrtime(time);
     return (diff[0] * 1000) + (diff[1] / 1000000);
 }
 
+function createLogger(opts) {
+    var loggerOptions = nconf.get("logger:options");
+    var serializerOpts = {
+        serializers : {
+            err : bunyan.stdSerializers.err
+        }
+    };
+    opts = _.merge(opts || { }, loggerOptions, serializerOpts);
+    return bunyan.createLogger(opts);
+}
+
+module.exports.createLogger = createLogger;
+
 // heavily borrowed from https://github.com/villadora/express-bunyan-logger/blob/master/index.js
 // but trimmed down
-module.exports.errorLogger = function(opts) {
+module.exports.errorLoggingMiddleware = function(opts) {
     if (process.env.SIS_DISABLE_LOGGING === 'true') {
         return function(err, req, res, next) {
             next(err);
@@ -21,8 +36,8 @@ module.exports.errorLogger = function(opts) {
     opts.serializers.req = opts.serializers.req || bunyan.stdSerializers.req;
     opts.serializers.res = opts.serializers.res || bunyan.stdSerializers.res;
     opts.serializers.err = opts.serializers.err || bunyan.stdSerializers.err;
+    var logger = createLogger(opts);
 
-    var logger = bunyan.createLogger(opts);
     return function(err, req, res, next) {
         var startTime = process.hrtime();
         req.id = uuid.v4();
@@ -57,8 +72,8 @@ module.exports.errorLogger = function(opts) {
     };
 };
 
-module.exports.logger = function(opts) {
-    var logger = module.exports.errorLogger(opts);
+module.exports.loggingMiddleware = function(opts) {
+    var logger = module.exports.errorLoggingMiddleware(opts);
     return function(req, res, next) {
         logger(null, req, res, next);
     };

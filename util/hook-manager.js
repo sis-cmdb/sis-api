@@ -7,13 +7,13 @@ var http = require('http');
 // simplified http req
 var request = require('request');
 var nconf = require('nconf');
-var bunyan = require('bunyan');
+var logger = require("./logger");
 
 var SIS = require('./constants');
 var Manager = require("./manager");
 var BPromise = require("bluebird");
 
-var LOGGER = bunyan.createLogger({
+var LOGGER = logger.createLogger({
     name : "HookManager"
 });
 

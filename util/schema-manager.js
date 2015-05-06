@@ -11,13 +11,10 @@ var SIS = require("./constants");
 var Manager = require("./manager");
 var BPromise = require("bluebird");
 var jsondiffpatch = require("jsondiffpatch");
-var bunyan = require("bunyan");
+var logger = require("./logger");
 
-var LOGGER = bunyan.createLogger({
-    name : "SchemaManager",
-    serializers : {
-        err : bunyan.stdSerializers.err
-    }
+var LOGGER = logger.createLogger({
+    name : "SchemaManager"
 });
 
 var toRegex = function(str) {
