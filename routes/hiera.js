@@ -22,12 +22,18 @@ require('util').inherits(HieraController, ApiController);
 
 // The GET/:id request needs to send only the hiera object back
 HieraController.prototype.convertToResponseObject = function(req, obj) {
+    if (typeof obj.hieradata === 'undefined') {
+        obj.hieradata = { };
+    }
     if (req.method == "GET" && req.params.id &&
         !req.params.isCommitApi) {
         // dirty hack to inform the caller that no more
         // conversions are necessary.
         req.params.doneConverting = true;
         return JSON.stringify(obj.hieradata);
+    }
+    if (typeof obj.toObject === "function") {
+        obj = obj.toObject({ minimize : false });
     }
     return obj;
 };

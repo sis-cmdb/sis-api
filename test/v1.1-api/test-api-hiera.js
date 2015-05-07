@@ -45,12 +45,6 @@ describe('@API @V1.1API - Hiera API', function() {
                 .send({"name" : "whatever", hieradata : null })
                 .expect(400, done);
         });
-        it("Should fail to add an entry with empty dict 'hieradata'", function(done) {
-            ApiServer.post("/api/v1.1/hiera")
-                .set("Content-Type", "application/json")
-                .send({"name" : "whatever", hieradata : {} })
-                .expect(400, done);
-        });
         it("Should fail to update an entry that doesn't exist", function(done) {
             ApiServer.put("/api/v1.1/hiera/dne")
                 .set("Content-Type", "application/json")
@@ -152,7 +146,8 @@ describe('@API @V1.1API - Hiera API', function() {
             ["this","is",{ name : "a" }, "list", 20],
             "a string",
             { "a" : "non empty hash" },
-            []
+            [],
+            { }
         ];
         var hieraEntry = {
             name : "non_objects",

@@ -29,11 +29,6 @@ HieraManager.prototype.validate = function(entry, toUpdate, options) {
         hieradata === null) {
         return "hieradata is missing";
     }
-    if (typeof hieradata === "object" && !Array.isArray(hieradata)) {
-        if (!Object.keys(hieradata).length) {
-            return "empty objects are not allowed";
-        }
-    }
     return this.validateOwner(entry, options);
 };
 
