@@ -25,13 +25,14 @@ HieraManager.prototype.validate = function(entry, toUpdate, options) {
     }
     var name = entry.name;
     var hieradata = entry.hieradata;
-    try {
-        // validate it's an object
-        if (!Object.keys(entry.hieradata).length) {
-            return "hieradata cannot be empty";
+    if (typeof hieradata === "undefined" ||
+        hieradata === null) {
+        return "hieradata is missing";
+    }
+    if (typeof hieradata === "object" && !Array.isArray(hieradata)) {
+        if (!Object.keys(hieradata).length) {
+            return "empty objects are not allowed";
         }
-    } catch (ex) {
-        return "hieradata is not a valid object";
     }
     return this.validateOwner(entry, options);
 };

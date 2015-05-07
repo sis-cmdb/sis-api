@@ -689,9 +689,11 @@ Manager.prototype.getPermissionsForObject = function(obj, user) {
 // Utility method to apply a partial object to the full one
 // This supports nested documents
 Manager.prototype.applyPartial = function (full, partial) {
-    if (typeof partial !== 'object' || partial instanceof Array) {
+    if (typeof partial !== 'object' || Array.isArray(partial)) {
         return partial;
-    } else if (typeof full !== 'object' || full instanceof Array) {
+    } else if (typeof full !== 'object' || Array.isArray(full)) {
+        return partial;
+    } else if (Array.isArray(full) !== Array.isArray(partial)) {
         return partial;
     } else {
         // merge the object

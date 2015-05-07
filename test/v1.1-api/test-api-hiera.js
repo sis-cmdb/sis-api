@@ -11,7 +11,7 @@ describe('@API @V1.1API - Hiera API', function() {
 
     it("Should setup fixtures", function(done) {
         ApiServer.start(function(e) {
-            if (e) { return done(e); }
+            if (e) { done(e); return; }
             ApiServer.becomeSuperUser(done);
         });
     });
@@ -39,10 +39,16 @@ describe('@API @V1.1API - Hiera API', function() {
                 .send({"name" : "whatever"})
                 .expect(400, done);
         });
-        it("Should fail to add a non object hieradata", function(done) {
+        it("Should fail to add an entry with null 'hieradata'", function(done) {
             ApiServer.post("/api/v1.1/hiera")
                 .set("Content-Type", "application/json")
-                .send({"name" : "name", "hieradata" : "string"})
+                .send({"name" : "whatever", hieradata : null })
+                .expect(400, done);
+        });
+        it("Should fail to add an entry with empty dict 'hieradata'", function(done) {
+            ApiServer.post("/api/v1.1/hiera")
+                .set("Content-Type", "application/json")
+                .send({"name" : "whatever", hieradata : {} })
                 .expect(400, done);
         });
         it("Should fail to update an entry that doesn't exist", function(done) {
@@ -50,12 +56,6 @@ describe('@API @V1.1API - Hiera API', function() {
                 .set("Content-Type", "application/json")
                 .send({"name" : "dne", _sis : { "owner" : "foo" }, "hieradata" : {"key1" : "v1"}})
                 .expect(404, done);
-        });
-        it("Should fail to add an empty entry", function(done) {
-            ApiServer.post("/api/v1.1/hiera")
-                .set("Content-Type", "application/json")
-                .send({"name": "entry", _sis : { "owner" : "foo" }, "hieradata" : {}})
-                .expect(400, done);
         });
     });
 
@@ -142,6 +142,63 @@ describe('@API @V1.1API - Hiera API', function() {
         it("Should delete the hiera entry", function(done) {
             ApiServer.del("/api/v1.1/hiera/host.name.here")
                 .expect(200, done);
+        });
+    });
+
+    describe("Non object type support", function() {
+        var initialValue = { test : "data" };
+        var values = [
+            100,
+            ["this","is",{ name : "a" }, "list", 20],
+            "a string",
+            { "a" : "non empty hash" },
+            []
+        ];
+        var hieraEntry = {
+            name : "non_objects",
+            _sis : { owner : ["test"] },
+            hieradata : initialValue
+        };
+
+        function ensureGetEquals(value, done) {
+            ApiServer.get("/api/v1.1/hiera/" + hieraEntry.name)
+                .expect(200, function(err, res) {
+                    if (err) { done(err); return; }
+                    var hieradata = res.body;
+                    hieradata.should.eql(value);
+                    done();
+                });
+        }
+
+        function ensureEqual(value, done) {
+            return function(err, res) {
+                if (err) { done(err); return; }
+                var hieradata = res.body.hieradata;
+                should.exist(hieradata);
+                hieradata.should.eql(value);
+                ensureGetEquals(value, done);
+            };
+        }
+
+        before(function(done) {
+             ApiServer.del("/api/v1.1/hiera/" + hieraEntry.name)
+             .end(function(err) {
+                 if (err) { done(err); return; }
+                 ApiServer.post("/api/v1.1/hiera")
+                     .set("Content-Type", "application/json")
+                     .send(hieraEntry)
+                     .expect(201, ensureEqual(initialValue, done));
+             });
+        });
+
+        values.forEach(function(val) {
+            it("Should set hiera to " + JSON.stringify(val), function(done) {
+                hieraEntry.hieradata = val;
+                ApiServer.put("/api/v1.1/hiera/" + hieraEntry.name)
+                    .set("Content-Type", "application/json")
+                    .send(hieraEntry)
+                    .expect(200, ensureEqual(val, done));
+            });
         });
     });
 });
