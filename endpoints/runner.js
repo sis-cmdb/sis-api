@@ -9,6 +9,7 @@ var clone = require("clone");
 function ScriptRunner(schemaManager) {
     this.schemaManager = schemaManager;
     this.manager = require("../util/script-manager")(schemaManager);
+    this.hieraManager = require("../util/hiera-manager")(schemaManager);
     this.scriptCache = { };
 }
 
@@ -54,7 +55,7 @@ ResponseHolder.prototype.setResponse = function(response) {
 
 ScriptRunner.prototype._createContext = function(holder, req) {
     var ctx = {
-        client : new ApiClient(this.schemaManager),
+        client : new ApiClient(this.schemaManager, this.hieraManager),
         res : new ApiResponse(holder),
         req : req,
         BPromise : BPromise,
