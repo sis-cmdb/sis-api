@@ -10,7 +10,10 @@ function GenericEp(hieraManager) {
         var rq = webUtil.parseQuery(query, '1.1', false);
         var options = { read : "nearest", lean : true };
         return hieraManager.getById(id, options).then(function(obj) {
-            return obj.hieradata;
+            obj.hieradata = obj.hieradata || { };
+            var result = {};
+            result[id] = obj.hieradata;
+            return result;
         });
     };
 

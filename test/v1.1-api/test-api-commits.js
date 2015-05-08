@@ -198,7 +198,9 @@ describe('@API @V1.1API - History API', function() {
                                 if (test.type !== "hiera") {
                                     item.should.eql(res.body);
                                 } else {
-                                    item.hieradata.should.eql(res.body);
+                                    var hieraResult = {};
+                                    hieraResult[item[idField]] = item.hieradata;
+                                    hieraResult.should.eql(res.body);
                                 }
                                 setTimeout(function() {
                                     insertItem(idx + 1);

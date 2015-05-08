@@ -30,7 +30,9 @@ HieraController.prototype.convertToResponseObject = function(req, obj) {
         // dirty hack to inform the caller that no more
         // conversions are necessary.
         req.params.doneConverting = true;
-        return JSON.stringify(obj.hieradata);
+        var result = { };
+        result[req.params.id] = obj.hieradata;
+        return result;
     }
     if (typeof obj.toObject === "function") {
         obj = obj.toObject({ minimize : false });

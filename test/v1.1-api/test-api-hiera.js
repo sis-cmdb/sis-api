@@ -78,14 +78,16 @@ describe('@API @V1.1API - Hiera API', function() {
                 .send(item)
                 .expect(201, done);
         });
-        it("Should receive only the data portion", function(done) {
+        it("Should receive only the data portion with key", function(done) {
             ApiServer
                 .get("/api/v1.1/hiera/host.name.here")
                 .expect(200)
                 .end(function(err, res) {
                     should.not.exist(err);
-                    should.exist(res.body.servers);
-                    should.exist(res.body.port);
+                    should.exist(res.body['host.name.here']);
+                    var body = res.body['host.name.here'];
+                    should.exist(body.servers);
+                    should.exist(body.port);
                     done();
                 });
         });
@@ -147,7 +149,8 @@ describe('@API @V1.1API - Hiera API', function() {
             "a string",
             { "a" : "non empty hash" },
             [],
-            { }
+            { },
+            200
         ];
         var hieraEntry = {
             name : "non_objects",
@@ -159,8 +162,10 @@ describe('@API @V1.1API - Hiera API', function() {
             ApiServer.get("/api/v1.1/hiera/" + hieraEntry.name)
                 .expect(200, function(err, res) {
                     if (err) { done(err); return; }
-                    var hieradata = res.body;
-                    hieradata.should.eql(value);
+                    var hieraObject = res.body;
+                    should.exist(hieraObject[hieraEntry.name]);
+                    var hieraData = hieraObject[hieraEntry.name];
+                    hieraData.should.eql(value);
                     done();
                 });
         }
