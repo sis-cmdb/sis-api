@@ -243,19 +243,19 @@ describe('@API @V1.1API - Authorization API Entities', function() {
                 name : "String"
             }
         };
-        var users = ['admin1', 'admin2', 'user_g3'];
+        var testUsers = ['admin1', 'admin2', 'user_g3'];
         var updates = {
             'admin1' : {
                 pass : ['admin1'],
-                fail : users.filter(function(u) { return u != 'admin1'; })
+                fail : testUsers.filter(function(u) { return u != 'admin1'; })
             },
             'admin2' : {
                 pass : ['admin2'],
-                fail : users.filter(function(u) { return u != 'admin2'; })
+                fail : testUsers.filter(function(u) { return u != 'admin2'; })
             },
             'user_g3' : {
                 pass : ['user_g3'],
-                fail : users.filter(function(u) { return u != 'user_g3'; })
+                fail : testUsers.filter(function(u) { return u != 'user_g3'; })
             }
         };
         var userToEntity = { };
@@ -272,7 +272,7 @@ describe('@API @V1.1API - Authorization API Entities', function() {
         });
 
         // adds
-        users.forEach(function(user) {
+        testUsers.forEach(function(user) {
             it("should add an entity for " + user, function(done) {
                 var token = userToTokens[user].name;
                 var entity = {
@@ -288,7 +288,7 @@ describe('@API @V1.1API - Authorization API Entities', function() {
             });
         });
         // updates
-        users.forEach(function(user) {
+        testUsers.forEach(function(user) {
             var entity = {
                 name : user + "-update"
             };
@@ -311,7 +311,7 @@ describe('@API @V1.1API - Authorization API Entities', function() {
 
         });
         // deletes
-        users.forEach(function(user) {
+        testUsers.forEach(function(user) {
             it("should delete the entity for " + user, function(done) {
                 var token = userToTokens[user].name;
                 ApiServer.del("/api/v1.1/entities/" + schema.name + "/" + userToEntity[user]._id, token)
@@ -320,7 +320,7 @@ describe('@API @V1.1API - Authorization API Entities', function() {
         });
 
         // regardless of token, user should be able to create, update and delete an open schema
-        users.forEach(function(user) {
+        testUsers.forEach(function(user) {
             it(user + " should manage a schema entirely", function(done) {
                 var token = userToTokens[user].name;
                 var u_schema = {
@@ -359,19 +359,19 @@ describe('@API @V1.1API - Authorization API Entities', function() {
                 name : "String"
             }
         };
-        var users = ['admin1', 'admin2', 'user_g3'];
+        var testUsers = ['admin1', 'admin2', 'user_g3'];
         var updates = {
             'admin1' : {
                 pass : ['admin1'],
-                fail : users.filter(function(u) { return u != 'admin1'; })
+                fail : testUsers.filter(function(u) { return u != 'admin1'; })
             },
             'admin2' : {
                 pass : ['admin2'],
-                fail : users.filter(function(u) { return u != 'admin2'; })
+                fail : testUsers.filter(function(u) { return u != 'admin2'; })
             },
             'user_g3' : {
                 pass : ['user_g3'],
-                fail : users.filter(function(u) { return u != 'user_g3'; })
+                fail : testUsers.filter(function(u) { return u != 'user_g3'; })
             }
         };
         var userToEntity = { };
@@ -388,7 +388,7 @@ describe('@API @V1.1API - Authorization API Entities', function() {
         });
 
         // adds
-        users.forEach(function(user) {
+        testUsers.forEach(function(user) {
             it("should add an entity for " + user, function(done) {
                 var token = userToTokens[user].name;
                 var entity = {
@@ -404,7 +404,7 @@ describe('@API @V1.1API - Authorization API Entities', function() {
             });
         });
         // updates
-        users.forEach(function(user) {
+        testUsers.forEach(function(user) {
             var entity = {
                 name : user + "-update"
             };
@@ -427,7 +427,7 @@ describe('@API @V1.1API - Authorization API Entities', function() {
 
         });
         // deletes
-        users.forEach(function(user) {
+        testUsers.forEach(function(user) {
             it("should delete the entity for " + user, function(done) {
                 var token = userToTokens[user].name;
                 ApiServer.del("/api/v1.1/entities/" + schema.name + "/" + userToEntity[user]._id, token)
@@ -436,7 +436,7 @@ describe('@API @V1.1API - Authorization API Entities', function() {
         });
 
         // users should not be able to create public schemas they don't own
-        users.forEach(function(user) {
+        testUsers.forEach(function(user) {
             it(user + " should not manage a public schema entirely", function(done) {
                 var token = userToTokens[user].name;
                 var u_schema = {
@@ -456,6 +456,174 @@ describe('@API @V1.1API - Authorization API Entities', function() {
                         should.not.exist(e);
                         ApiServer.del("/api/v1.1/schemas/" + schema.name, token)
                         .expect(401, done);
+                    });
+                });
+            });
+        });
+    });
+
+    describe("Any owner can modify entities", function() {
+        var schemaOwners = ["test_g1", "test_g3"];
+        var schema = {
+            name : "test_any_owner_schema",
+            _sis : { owner : schemaOwners },
+            any_owner_can_modify : true,
+            definition : {
+                name : "String"
+            }
+        };
+
+        var usersWhoCanUpdate = userNames.filter(function(uName) {
+            var u = users[uName];
+            if (u.super_user) { return true; }
+            var roles = Object.keys(u.roles);
+            return roles.some(function(r) {
+                return schemaOwners.indexOf(r) !== -1;
+            });
+        });
+
+        var usersWhoCannotUpdate = userNames.filter(function(u) {
+            return usersWhoCanUpdate.indexOf(u) === -1;
+        });
+
+        var usersInBothGroups = userNames.filter(function(uName) {
+            var u = users[uName];
+            if (u.super_user) { return true; }
+            return schemaOwners.every(function(r) {
+                return r in u.roles;
+            });
+        });
+
+        var usersNotInBothGroups = userNames.filter(function(u) {
+            return usersInBothGroups.indexOf(u) === -1;
+        });
+
+        var userToEntity = { };
+        before(function(done) {
+            // nuke existing schema
+            ApiServer.authToken = superToken;
+            AuthFixture.deleteSchemas(ApiServer, [schema], false, function(err, res) {
+                if (err) { done(err); return; }
+                AuthFixture.addSchemas(ApiServer, [schema], function(e, r) {
+                    ApiServer.authToken = null;
+                    done(e);
+                });
+            });
+        });
+
+        var entityIds = [];
+
+
+        it("Should add the entity and have any_owner_can_modify as true", function(done) {
+            var entity = {
+                name : "initial",
+                _sis : { owner : schemaOwners }
+            };
+            ApiServer.authToken = superToken;
+            ApiServer.post("/api/v1.1/entities/" + schema.name)
+            .send(entity).expect(201, function(err, res) {
+                should.not.exist(err);
+                res = res.body;
+                entity.name.should.eql(res.name);
+                res._sis[SIS.FIELD_ANY_ADMIN_MOD].should.eql(true);
+                entity = res;
+                done();
+            });
+        });
+
+        var endpoint = ["/api/v1.1/entities", schema.name].join("/");
+        usersWhoCanUpdate.forEach(function(u) {
+            var testName = u + " can create/update the entity";
+            it(testName, function(done) {
+                var token = userToTokens[u].name;
+                ApiServer.post(endpoint, token).send({
+                    name : u,
+                    _sis : { owner : schemaOwners }
+                }).expect(201, function(err, res) {
+                    should.not.exist(err);
+                    res = res.body;
+                    res.name.should.eql(u);
+                    var id = res._id;
+                    ApiServer.put(endpoint + "/" + id, token).send({
+                        name : u + "_update"
+                    }).expect(200, function(err, res) {
+                        should.not.exist(err);
+                        res = res.body;
+                        res.name.should.eql(u + "_update");
+                        entityIds.push(res._id);
+                        done();
+                    });
+                });
+            });
+        });
+
+        usersWhoCannotUpdate.forEach(function(u) {
+            var testName = u + " can not create/update an entity";
+            it(testName, function(done) {
+                var token = userToTokens[u].name;
+                ApiServer.post(endpoint, token).send({
+                    name : u,
+                    _sis : { owner : schemaOwners }
+                }).expect(401, function(err, res) {
+                    should.not.exist(err);
+                    ApiServer.put(endpoint + "/" + entityIds[0], token).send({
+                        name : u
+                    }).expect(401, function(err, res) {
+                        should.not.exist(err);
+                        done();
+                    });
+                });
+            });
+        });
+
+        // now ensure that we can override the any owner can modify
+        var entityIdsByBoth = [];
+        usersInBothGroups.forEach(function(u) {
+            var testName = u + " can create/update an entity";
+            it(testName, function(done) {
+                var token = userToTokens[u].name;
+                ApiServer.post(endpoint, token).send({
+                    name : u,
+                    _sis : { owner : schemaOwners,
+                             any_owner_can_modify : false
+                           }
+                }).expect(201, function(err, res) {
+                    should.not.exist(err);
+                    res = res.body;
+                    res.name.should.eql(u);
+                    res._sis[SIS.FIELD_ANY_ADMIN_MOD].should.eql(false);
+                    ApiServer.put(endpoint + "/" + res._id, token).send({
+                        name : u + "_both"
+                    }).expect(200, function(err, res) {
+                        should.not.exist(err);
+                        res = res.body;
+                        res.name.should.eql(u + "_both");
+                        entityIdsByBoth.push(res._id);
+                        done();
+                    });
+                });
+            });
+        });
+
+        usersNotInBothGroups.forEach(function(u) {
+            var testName = u + " cannot create/update an entity";
+            it(testName, function(done) {
+                var token = userToTokens[u].name;
+                ApiServer.post(endpoint, token).send({
+                    name : u,
+                    _sis : { owner : schemaOwners,
+                             any_owner_can_modify : false
+                           }
+
+                }).expect(401, function(err, res) {
+                    // try to update one of the ones created
+                    should.not.exist(err);
+                    ApiServer.put(endpoint + "/" + entityIdsByBoth[0], token)
+                    .send({
+                        name : u + "_should_fail"
+                    }).expect(401, function(err, res) {
+                        should.not.exist(err);
+                        done();
                     });
                 });
             });

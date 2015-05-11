@@ -105,6 +105,15 @@ EntityManager.prototype.validate = function(entity, toUpdate, options) {
                 }
             }
         }
+        if (!toUpdate) {
+            // match the any owner can modify of the schema
+            if (this.schema[SIS.FIELD_ANY_ADMIN_MOD]) {
+                entity[SIS.FIELD_SIS_META] = entity[SIS.FIELD_SIS_META] || { };
+                if (typeof entity[SIS.FIELD_SIS_META][SIS.FIELD_ANY_ADMIN_MOD] === "undefined") {
+                    entity[SIS.FIELD_SIS_META][SIS.FIELD_ANY_ADMIN_MOD] = true;
+                }
+            }
+        }
         // // handle sub objects
         // for (var i = 0; i < this.references.length; ++i) {
         //     var err = this.fixSubObject(entity, this.references[i], isUpdate);
@@ -176,20 +185,24 @@ EntityManager.prototype.authorize = function(evt, doc, user, mergedDoc) {
     if (!this.authEnabled) {
         return Manager.prototype.authorize.call(this, evt, doc, user, mergedDoc);
     }
+    var meta = null;
     if (user[SIS.FIELD_SUPERUSER]) {
         return Manager.prototype.authorize.call(this, evt, doc, user, mergedDoc);
     }
     if (this.schema[SIS.FIELD_IS_OPEN] || this.schema[SIS.FIELD_IS_PUBLIC]) {
+        // the schema allows anybody to add entities
         var userGroups = user[SIS.FIELD_ROLES] ? Object.keys(user[SIS.FIELD_ROLES]) : [];
         if (!userGroups.length) {
             return SIS.ERR_BAD_REQ("User must have roles assigned.");
         }
-        var meta = mergedDoc ? mergedDoc[SIS.FIELD_SIS_META] : doc[SIS.FIELD_SIS_META];
+        // ensure the owners are set
+        meta = mergedDoc ? mergedDoc[SIS.FIELD_SIS_META] : doc[SIS.FIELD_SIS_META];
         if (!meta[SIS.FIELD_OWNER]) {
             meta[SIS.FIELD_OWNER] = userGroups;
         }
         return Manager.prototype.authorize.call(this, evt, doc, user, mergedDoc);
     }
+
     // authorize against entity subset or schema
     var ownerSubset = this._getOwnerSubset(user, this.schema);
     if (!ownerSubset.length) {
@@ -245,13 +258,15 @@ EntityManager.prototype.applyUpdate = function(result, entity) {
 
     var getValueForPath = function(path, obj) {
         if (!obj) {
-            return null;
+            return undefined;
         }
         var paths = path.split(".");
         for (var i = 0; i < paths.length; ++i) {
             var p = paths[i];
             obj = obj[p];
-            if (!obj) {
+            if (obj === undefined) {
+                return undefined;
+            } else if (!obj) {
                 return null;
             }
         }
@@ -262,6 +277,9 @@ EntityManager.prototype.applyUpdate = function(result, entity) {
     this.mixedTypes.forEach(function(p) {
         var old = oldMixed[p];
         var entityVal = getValueForPath(p, entity);
+        if (entityVal === undefined) {
+            return;
+        }
         old = this.applyPartial(old, entityVal);
         result.set(p, old);
         result.markModified(p);

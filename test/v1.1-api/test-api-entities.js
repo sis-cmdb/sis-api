@@ -273,6 +273,32 @@ describe('@API @V1.1API - Entity API', function() {
                     done(err, result);
                 });
         });
+        it("Should change mixed_obj to null", function(done) {
+            entity.mixed_obj = null;
+            ApiServer.put("/api/v1.1/entities/test_nested_entity/" + entity._id)
+                .set("Content-Type", "application/json")
+                .send({"mixed_obj" : entity.mixed_obj })
+                .expect(200, function(err, result) {
+                    result = result.body;
+                    delete entity._sis;
+                    delete result._sis;
+                    result.should.eql(entity);
+                    done(err, result);
+                });
+        });
+        it("Should change mixed_obj back to a dict", function(done) {
+            entity.mixed_obj = {"hello":"world"};
+            ApiServer.put("/api/v1.1/entities/test_nested_entity/" + entity._id)
+                .set("Content-Type", "application/json")
+                .send({"mixed_obj" : entity.mixed_obj })
+                .expect(200, function(err, result) {
+                    result = result.body;
+                    delete entity._sis;
+                    delete result._sis;
+                    result.should.eql(entity);
+                    done(err, result);
+                });
+        });
     });
 
     describe("Entity locking", function() {

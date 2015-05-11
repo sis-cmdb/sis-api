@@ -169,6 +169,14 @@ Manager.prototype._commonAuth = function(evt, doc, user, mergedDoc) {
     return null;
 };
 
+Manager.prototype._canOperate = function(doc, user) {
+    var docMeta = doc[SIS.FIELD_SIS_META] || {};
+    var permission = this.getPermissionsForObject(doc, user);
+    return permission === SIS.PERMISSION_ADMIN ||
+        permission === SIS.PERMISSION_USER_ALL_GROUPS ||
+        (docMeta[SIS.FIELD_ANY_ADMIN_MOD] && permission === SIS.PERMISSION_USER);
+};
+
 // Authorize a user to operate on a particular document
 // if evt is SIS.EVENT_UPDATE, mergedDoc is the updated object
 // otherwise doc is the object being added/deleted
@@ -177,23 +185,20 @@ Manager.prototype.authorize = function(evt, doc, user, mergedDoc) {
     if (commonErr) {
         return BPromise.reject(commonErr);
     }
-    // get the permissions on the doc being added/updated/deleted
-    var permission = this.getPermissionsForObject(doc, user);
-    if (permission != SIS.PERMISSION_ADMIN &&
-        permission != SIS.PERMISSION_USER_ALL_GROUPS) {
-        return BPromise.reject(SIS.ERR_BAD_CREDS("Insufficient permissions."));
+
+    // check for any owner can modify privileges
+    var canOperateOnDoc = this._canOperate(doc, user);
+    if (!canOperateOnDoc) {
+        return BPromise.reject(SIS.ERR_BAD_CREDS("Insufficient permissions on source document."));
     }
-    if (evt != SIS.EVENT_UPDATE) {
-        // insert / delete
+    if (evt !== SIS.EVENT_UPDATE) {
         return BPromise.resolve(doc);
-    } else {
-        var updatedPerms = this.getPermissionsForObject(mergedDoc, user);
-        if (updatedPerms != SIS.PERMISSION_ADMIN &&
-            updatedPerms != SIS.PERMISSION_USER_ALL_GROUPS) {
-            return BPromise.reject(SIS.ERR_BAD_CREDS("Insufficient permissions."));
-        }
-        return BPromise.resolve(mergedDoc);
     }
+    canOperateOnDoc = this._canOperate(mergedDoc, user);
+    if (!canOperateOnDoc) {
+        return BPromise.reject(SIS.ERR_BAD_CREDS("Insufficient permissisons on update object."));
+    }
+    return BPromise.resolve(mergedDoc);
 };
 
 // Ensures the user can add the object and then add it
@@ -689,6 +694,9 @@ Manager.prototype.getPermissionsForObject = function(obj, user) {
 // Utility method to apply a partial object to the full one
 // This supports nested documents
 Manager.prototype.applyPartial = function (full, partial) {
+    if (full === null || partial === null) {
+        return partial;
+    }
     if (typeof partial !== 'object' || Array.isArray(partial)) {
         return partial;
     } else if (typeof full !== 'object' || Array.isArray(full)) {
