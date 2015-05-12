@@ -429,21 +429,6 @@ Manager.prototype._convertToV11 = function(found) {
         });
     });
 };
-//
-// Manager.prototype._unsetV1Fields = function(id) {
-//     // need to tell mongo to unset
-//     var pathsToUnset = Object.keys(SIS.V1_TO_SIS_META).reduce(function(ret, k) {
-//         ret[k] = "";
-//         return ret;
-//     }, { });
-//     // also __v
-//     pathsToUnset.__v = "";
-//     return this.model.updateAsync({ _id : id },{ $unset : pathsToUnset},
-//                                   { safe : true, strict: false})
-//     .bind(this).then(function() {
-//         return this.model.findOneAsync({ _id : id });
-//     });
-// };
 
 Manager.prototype.finishUpdate = function(old, updated) {
     return BPromise.resolve(updated);
@@ -499,6 +484,62 @@ Manager.prototype.update = function(id, obj, options) {
         saveFunc = this._getCasSave(obj, cas);
     }
     return this._update(id, obj, options, saveFunc);
+};
+
+// Note bulk updates are horribly inefficient at the moment
+Manager.prototype.bulkUpdateQuery = function(condition, obj, options) {
+    var user = options.user;
+    var memo = { success : [], errors : [] };
+    return this.getAll(condition, { lean : true }, this.idField)
+    .bind(this).then(function(items) {
+        var self = this;
+        if (!items.length) {
+            return memo;
+        }
+        // for now just try to update it all
+        return BPromise.map(items, function(item) {
+            return self.update(item[self.idField], obj, options)
+            .then(function(result) {
+                memo.success.push([result[0],result[1]]);
+            }).catch(function(err) {
+                memo.errors.push({
+                    err : err,
+                    value : item
+                });
+            });
+        }).then(function() {
+            return memo;
+        });
+    });
+};
+
+Manager.prototype.bulkUpdateArray = function(items, options) {
+    var user = options.user;
+    var memo = { success : [], errors : [] };
+    if (!items.length) {
+        return BPromise.resolve(memo);
+    }
+    var self = this;
+    return BPromise.map(items, function(item) {
+        if (!item[self.idField]) {
+            memo.errors.push({
+                err : SIS.ERR_BAD_REQ("Missing ID field in bulk update"),
+                value : item
+            });
+            return memo;
+        }
+        return self.update(item[self.idField], item, options)
+        .then(function(result) {
+            memo.success.push([result[0],result[1]]);
+        }).catch(function(err) {
+            memo.errors.push({
+                err : err,
+                value : item
+            });
+        });
+    }).then(function() {
+        return memo;
+    });
 };
 
 // Ensures the user can delete the object and then delete it

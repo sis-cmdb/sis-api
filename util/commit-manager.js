@@ -32,43 +32,8 @@ function CommitManager(schemaManager) {
     this.idField = 'name';
     self.model = schemaManager.getSisModel(SIS.SCHEMA_COMMITS);
 
-    this.recordHistoryBulk = function(items, user, action, type) {
-        if (action != 'insert' && action != 'delete') {
-            return BPromise.reject(SIS.ERR_INTERNAL("Only insert and delete supported"));
-        }
-        var idField = this.idField;
-        var ts = Date.now();
-        var commits = items.map(function(item) {
-            var commit = {
-                entity_id : item[idField],
-                action : action,
-                type : type,
-                entity_oid : item._id
-            };
-            if (user && user[SIS.FIELD_NAME]) {
-                commit[SIS.FIELD_MODIFIED_BY] = user[SIS.FIELD_NAME];
-            }
-            commit.commit_data = docToPojo(item);
-            if (action == 'insert') {
-                commit.date_modified = item[SIS.FIELD_SIS_META][SIS.FIELD_UPDATED_AT];
-            } else {
-                commit.date_modified = ts;
-            }
-            var commitMeta = { };
-            commitMeta[SIS.FIELD_UPDATED_AT] = ts;
-            commitMeta[SIS.FIELD_CREATED_AT] = ts;
-            commit[SIS.FIELD_SIS_META] = commitMeta;
-            return new self.model(commit).toObject();
-        });
-        // do a bulk insert directly
-        var insert = BPromise.promisify(self.model.collection.insert, self.model.collection);
-        return insert(commits).then(function() {
-            return items;
-        });
-    };
-
-    this.recordHistory = function(oldDoc, newDoc, user, type, callback) {
-        var id = oldDoc ? oldDoc[this.idField] : newDoc[this.idField];
+    function createCommitObject(oldDoc, newDoc, user, type, ts) {
+        var id = oldDoc ? oldDoc[self.idField] : newDoc[self.idField];
         var oid = oldDoc ? oldDoc._id : newDoc._id;
         var action = oldDoc ? (newDoc ? "update" : "delete") : "insert";
         var doc = { 'type' : type,
@@ -81,11 +46,11 @@ function CommitManager(schemaManager) {
         switch (action) {
             case 'insert':
                 doc.commit_data = docToPojo(newDoc);
-                doc.date_modified = newDoc[SIS.FIELD_SIS_META][SIS.FIELD_CREATED_AT];
+                doc.date_modified = newDoc[SIS.FIELD_SIS_META][SIS.FIELD_UPDATED_AT];
                 break;
             case 'delete':
                 doc.commit_data = docToPojo(oldDoc);
-                doc.date_modified = Date.now();
+                doc.date_modified = ts;
                 break;
             case 'update':
                 // oldDoc is an object, newDoc is a doc
@@ -98,12 +63,59 @@ function CommitManager(schemaManager) {
                 });
                 if (!hasChanged) {
                     // just exit
-                    return callback(null, null);
+                    return null;
                 }
                 doc.date_modified = mod_date;
                 break;
             default:
                 break;
+        }
+        var commitMeta = {};
+        commitMeta[SIS.FIELD_UPDATED_AT] = ts;
+        commitMeta[SIS.FIELD_CREATED_AT] = ts;
+        doc[SIS.FIELD_SIS_META] = commitMeta;
+        return doc;
+    }
+
+    this.recordHistoryBulk = function(items, user, action, type) {
+        var ts = Date.now();
+        var commits = [];
+
+        if (action === "insert") {
+            commits = items.map(function(item) {
+                return createCommitObject(null, item, user, type, ts);
+            });
+        } else if (action === "delete") {
+            commits = items.map(function(item) {
+                return createCommitObject(item, null, user, type, ts);
+            });
+        } else {
+            commits = items.map(function(item) {
+                return createCommitObject(item[0], item[1], user, type, ts);
+            }).filter(function(item) {
+                return item !== null;
+            });
+        }
+        commits = commits.map(function(c) {
+            return new self.model(c).toObject();
+        });
+        if (!commits.length) {
+            return BPromise.resolve(items);
+        }
+
+        // do a bulk insert directly
+        var insert = BPromise.promisify(self.model.collection.insert, self.model.collection);
+        return insert(commits).then(function() {
+            return items;
+        });
+    };
+
+    this.recordHistory = function(oldDoc, newDoc, user, type, callback) {
+        var ts = Date.now();
+        var doc = createCommitObject(oldDoc, newDoc, user, type, ts);
+        if (!doc) {
+            callback(null, null);
+            return;
         }
         var entry = new self.model(doc);
         entry.save(function(err, res) {

@@ -25,8 +25,13 @@ module.exports.createLogger = createLogger;
 // heavily borrowed from https://github.com/villadora/express-bunyan-logger/blob/master/index.js
 // but trimmed down
 module.exports.errorLoggingMiddleware = function(opts) {
+    var SIS = require("./constants");
     if (process.env.SIS_DISABLE_LOGGING === 'true') {
         return function(err, req, res, next) {
+            if (err instanceof Error && err.message === "invalid json") {
+                res.status(400).send(SIS.ERR_BAD_REQ("Invalid JSON"));
+                return;
+            }
             next(err);
         };
     }
@@ -67,7 +72,10 @@ module.exports.errorLoggingMiddleware = function(opts) {
 
         res.on('finish', log);
         res.on('close', log);
-
+        if (err instanceof Error && err.message === "invalid json") {
+            res.status(400).send(SIS.ERR_BAD_REQ("Invalid JSON"));
+            return;
+        }
         next(err);
     };
 };

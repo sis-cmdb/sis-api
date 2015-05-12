@@ -92,14 +92,14 @@ var dispatchHook = function(hook, entity, event, isBulk) {
         'data' : entity,
         'is_bulk' : isBulk || false
     };
-    if (event == SIS.EVENT_UPDATE) {
+    if (event == SIS.EVENT_UPDATE && !isBulk) {
         // array of two
         data.data = entity[1];
         data.old_value = entity[0];
     }
     var options = {
         "uri" : hook.target.url,
-        "method" : hook.target.action,
+        "method" : hook.target.action
     };
     if (options.method == 'GET') {
         data.data = JSON.stringify(entity);

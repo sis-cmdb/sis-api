@@ -259,16 +259,50 @@ ApiController.prototype.delete = function(req, res) {
         var rq = this.parseQuery(req);
         var condition = rq.query;
         if (!condition || !Object.keys(condition).length) {
-            return this.sendError(res, SIS.ERR_BAD_REQ("Bulk delete requires a non empty query."));
+            this.sendError(res, SIS.ERR_BAD_REQ("Bulk delete requires a non empty query."));
+            return;
         }
-        p = this.getManager(req).bind({}).then(function(mgr) {
-            return webUtil.flattenCondition(condition,self.sm,mgr);
+        p = this.getManager(req).bind(this).then(function(mgr) {
+            return webUtil.flattenCondition(condition,this.sm,mgr);
         }).spread(function(flattenedCondition, mgr) {
             // delegate to mgr
             return mgr.bulkDelete(flattenedCondition, options);
         });
         this._finish(req, res, p, 200);
     }
+};
+
+ApiController.prototype.bulkUpdate = function(req, res) {
+    // either an array of objects or a query with an object to set
+    var obj = req.body;
+    var options = this._getReqOptions(req);
+    var p = null;
+    req.params.isBulk = true;
+    if (Array.isArray(obj)) {
+        if (!obj.length) {
+            return this.sendError(res, SIS.ERR_BAD_REQ("Array must not be empty."));
+        }
+        // array of individual objects
+        p = this.getManager(req).call('bulkUpdateArray', obj, options);
+    } else {
+        if (typeof obj !== "object") {
+            return this.sendError(res, SIS.ERR_BAD_REQ("Bulk update requires array or object as body"));
+        }
+        var rq = this.parseQuery(req);
+        var condition = rq.query;
+        if (!condition || !Object.keys(condition).length) {
+            return this.sendError(res, SIS.ERR_BAD_REQ("A valid query is required"));
+        }
+        if (!Object.keys(obj).length) {
+            return this.sendError(res, SIS.ERR_BAD_REQ("Body should not be empty"));
+        }
+        p = this.getManager(req).bind(this).then(function(mgr) {
+            return webUtil.flattenCondition(condition,this.sm, mgr);
+        }).spread(function(flattenedCondition, mgr) {
+            return mgr.bulkUpdateQuery(flattenedCondition, obj, options);
+        });
+    }
+    return this._finish(req, res, p, 200);
 };
 
 // Handler for the update request (typically PUT controller_base:/id)
@@ -345,8 +379,10 @@ ApiController.prototype.attach = function(app, prefix) {
     if (!app.get(SIS.OPT_READONLY)) {
         // wrap authorization around modification calls
         app.put(prefix + "/:id", this._wrapAuth(this.update));
+        app.put(prefix, this._wrapAuth(this.bulkUpdate));
         app.post(prefix, this._wrapAuth(this.add));
         app.delete(prefix + "/:id?", this._wrapAuth(this.delete));
+        app.put(prefix, this._wrapAuth(this.bulkUpdate));
         // enable the commit api if we have a commitManager
         if (this.commitManager) {
             this._enableCommitApi(app, prefix);
@@ -465,18 +501,14 @@ ApiController.prototype._enableCommitApi = function(app, prefix) {
 
 ApiController.prototype._convertToResponseObject = function(req, obj) {
     var self = this;
-    var isV1 = req.params.version == "v1";
     if (req.params.isBulk) {
         // change the success array
         obj.success = obj.success.map(function(o) {
-            o = self.convertToResponseObject(req, o);
-            if (!req.params.doneConverting) {
-                if (isV1) {
-                    o = SIS.UTIL_TO_V1(o);
-                } else {
-                    o = SIS.UTIL_FROM_V1(o);
-                }
+            if (req.method == SIS.METHOD_PUT) {
+                // get the update value
+                o = o[1];
             }
+            o = self.convertToResponseObject(req, o);
             return o;
         });
         return obj;
@@ -484,24 +516,10 @@ ApiController.prototype._convertToResponseObject = function(req, obj) {
     if (obj instanceof Array) {
         obj = obj.map(function(o) {
             o = self.convertToResponseObject(req, o);
-            if (!req.params.doneConverting) {
-                if (isV1) {
-                    o = SIS.UTIL_TO_V1(o);
-                } else {
-                    o = SIS.UTIL_FROM_V1(o);
-                }
-            }
             return o;
         });
     } else {
         obj = self.convertToResponseObject(req, obj);
-        if (!req.params.doneConverting) {
-            if (isV1) {
-                obj = SIS.UTIL_TO_V1(obj);
-            } else {
-                obj = SIS.UTIL_FROM_V1(obj);
-            }
-        }
     }
     return obj;
 };
@@ -573,16 +591,6 @@ ApiController.prototype._saveSingleCommit = function(req, result) {
 };
 
 ApiController.prototype._saveBulkCommits = function(req, items) {
-    var old = null;
-    var now = null;
-    switch (req.method) {
-        // only post and del supported here
-        case SIS.METHOD_POST:
-        case SIS.METHOD_DELETE:
-            break;
-        default:
-            return BPromise.reject(SIS.ERR_INTERNAL("invalid bulk commits being saved"));
-    }
     // save it
     var action = SIS.METHODS_TO_EVENT[req.method];
     var type = this.getType(req);
