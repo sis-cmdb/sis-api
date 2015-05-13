@@ -3,7 +3,7 @@ Table of Contents
 
 - [Entity API](#entity-api)
     - [Entity objects](#entity-objects)
-    - [Entity Owner Field](#entity-owner-field)
+    - [Entity Ownership](#entity-ownership)
     - [Retrieving Entities](#retrieving-entities-of-a-particular-schema)
     - [Creating a new entity](#creating-a-new-entity)
     - [Updating an entity](#updating-an-entity)
@@ -60,9 +60,11 @@ An entity object for the schema looks like:
 }
 ```
 
-## Entity Owner Field
+## Entity Ownership
 
-The `owner` field of an entity must be a subset of the `owner` field of the schema it belongs to.  If not specified, the intersection of the users's role groups and the schema owners is used.  See the SIS [Role Based Access Control](./docs/rbac.md) document for more information.
+The `_sis.owner` field of an entity must be a subset of the `_sis.owner` field of the schema it belongs to.  If not specified, the intersection of the users's role groups and the schema owners is used.  See the SIS [Role Based Access Control](./docs/rbac.md) document for more information.
+
+Additionally, the `_sis.any_owner_can_modify` boolean field allows any user who belongs to at least one group of the `_sis.owner` field of the entity to manage it.
 
 ## Retrieving Entities of a particular schema
 

@@ -53,10 +53,17 @@ The `hieradata` object can be anything provided the values are JSON friendly.
 ## Retrieving Hiera data
 
 * `GET /api/v1.1/hiera` - returns a list of hiera entries
-* `GET /api/v1.1/hiera/:name` - returns only the `hieradata` portion of the hiera entry with the name specified.
+* `GET /api/v1.1/hiera/:name` - returns a hash with a single key value pair as a hash where the key is the supplied `:name` parameter and the value is hieradata value of the object.  For instance, using the above example, the result of `GET /api/v1.1/hiera/sample.env` would be:
 
-This matches what hiera-http expects and is modeled based on the information in this [blog post](http://www.craigdunn.org/2012/11/puppet-data-from-couchdb-using-hiera-http/).
-
+```javascript
+{
+    "sample.env" : {
+        "port" : 1000,
+        "num_instances" : 1,
+        "db_host" : "db.sample.env"
+    }
+}
+```
 
 
 ## Adding a new hiera entry

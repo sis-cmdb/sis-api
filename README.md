@@ -39,8 +39,8 @@ More details can be found in the [API Documentation](./docs/index.md)
 
 The following are required to build and run SIS:
 
-- [node](nodejs.org) 0.10.x.
-- [mongodb](https://www.mongodb.org/) 2.4+.
+- [node](nodejs.org) 0.12.x or iojs 1.8.x+
+- [mongodb](https://www.mongodb.org/) 2.6+.
 
 # Building and Testing
 
@@ -55,32 +55,54 @@ The following are required to build and run SIS:
 
 # Configuration
 
-The configuration is exported in the `config.js` module.  A sample config.js looks like:
+The configuration is represented in conf/config.json and overrides can be supplied via conf/config.json.  An annotated config.json looks like:
 
 ```javascript
-module.exports = {
+{
     // database specific configuration
-    db: {
+    "db": {
         // a mongo db connection string
-        url : "mongodb://localhost/sis"
+        "url" : "mongodb://localhost/sis"
     },
     // server specific config
-    server : {
+    "server" : {
         // the tcp port to listen on
-        port : 3000
+        "port" : 3000
     },
     // application specific settings
-    app : {
+    "app" : {
         // whether Role Based Access Control is enabled.  Defaults to true
-        auth : true
+        "auth" : true
         // authentication backend config.  See below
         // defaults to a sis backend.
-        auth_config : {
+        "auth_config" : {
             // specific info per backend
         },
         // whether the app only serves read requests (GET).  Defaults to false
-        readonly : false
-    }
+        "readonly" : false,
+        // whether to enable custom scripts support
+        "scripts_enabled" : false,
+        // minimum workers to run scripts in pool
+        "scripts_min" : 1,
+        // maximum workers to run scripts in pool
+        "scripts_max" : 2,
+        // time that a worker can remain idle before being collected
+        "script_worker_idle_time_ms" : 300000,
+        // use the cluster module
+        "use_cluster" : true,
+        // optional read preference to use on GET requests
+        "get_read_pref" : "nearest"
+    },
+    // default logger options - see bunyan configuration
+    "logger" : {
+        "options" : {
+            "name" : "SIS",
+            "level" : "debug",
+            "streams" : [{
+                "path" : "./sis.log"
+            }]
+        }
+    },
 }
 ```
 
@@ -91,7 +113,7 @@ module.exports = {
 The default backend authenticates a user against a password stored with the user object.  Password hashes are stored in SIS if this backend is used.  Configure using:
 
 ```javascript
-auth_config : {
+"auth_config" : {
     "type" : "sis"
 }
 ```
@@ -103,7 +125,7 @@ The LDAP authentication backend authenticates users belonging to a particular us
 Configure the backend using:
 
 ```javascript
-auth_config : {
+"auth_config" : {
     "type" : "ldap",
     "url" : "<url of the LDAP endpoint>",
     "user_domain" : "<the user domain to authenticate against>",
@@ -119,7 +141,7 @@ auth_config : {
 As an example, with the following config:
 
 ```javascript
-auth_config : {
+"auth_config" : {
     "type" : "ldap",
     "url" : "ldap://10.1.1.1",
     "user_domain" : "ad.corp.com",
