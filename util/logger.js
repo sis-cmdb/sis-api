@@ -72,8 +72,10 @@ module.exports.errorLoggingMiddleware = function(opts) {
 
         res.on('finish', log);
         res.on('close', log);
-        if (err instanceof Error && err.message === "invalid json") {
-            res.status(400).send(SIS.ERR_BAD_REQ("Invalid JSON"));
+        if (err && ((err instanceof Error && err.message === "invalid json") ||
+                    (err.name === "SyntaxError"))) {
+            err = SIS.ERR_BAD_REQ("Invalid JSON");
+            res.status(err[0]).send(err[1]);
             return;
         }
         next(err);

@@ -21,24 +21,36 @@ describe('@API @V1.1API - Schema API', function() {
         ApiServer.stop(done);
     });
 
+    function errHandler(done) {
+        return function(err, res) {
+            should.not.exist(err);
+            err = res.body;
+            err.should.be.instanceof(Object);
+            err.should.not.be.instanceof(Array);
+            should.exist(err.code);
+            should.exist(err.error);
+            done();
+        };
+    }
+
     describe("Schema failure cases", function() {
         it("Should fail if type does not exist ", function(done) {
-            ApiServer.get("/api/v1.1/schemas/dne").expect(404, done);
+            ApiServer.get("/api/v1.1/schemas/dne").expect(404, errHandler(done));
         });
         it("Should fail to delete type if it doesn't exist", function(done) {
-            ApiServer.del("/api/v1.1/schemas/dne").expect(404, done);
+            ApiServer.del("/api/v1.1/schemas/dne").expect(404, errHandler(done));
         });
         it("Should fail to add an invalid schema", function(done) {
             ApiServer.post("/api/v1.1/schemas")
                 .set("Content-type", "application/json")
                 .send({"name" : "no_owner_or_def"})
-                .expect(400, done);
+                .expect(400, errHandler(done));
         });
         it("Should fail to update a schema that DNE", function(done) {
             ApiServer.put("/api/v1.1/schemas/DNE")
                 .set("Content-type", "application/json")
                 .send({"name" : "DNE", _sis : { "owner" : "DNE" }, "definition" : {"k" : "String"}})
-                .expect(404, done);
+                .expect(404, errHandler(done));
         });
         it("Should fail to add a schema with a bad name", function(done) {
             var schema = {
@@ -51,7 +63,7 @@ describe('@API @V1.1API - Schema API', function() {
             ApiServer.post("/api/v1.1/schemas")
                 .set("Content-type", "application/json")
                 .send(schema)
-                .expect(400, done);
+                .expect(400, errHandler(done));
         });
         it("Should fail to add a schema with a non existent ID field", function(done) {
             var schema = {
@@ -65,7 +77,7 @@ describe('@API @V1.1API - Schema API', function() {
             ApiServer.post("/api/v1.1/schemas")
                 .set("Content-type", "application/json")
                 .send(schema)
-                .expect(400, done);
+                .expect(400, errHandler(done));
         });
         it("Should fail to add a schema with a non unique / required id field", function(done) {
             var schema = {
@@ -79,7 +91,13 @@ describe('@API @V1.1API - Schema API', function() {
             ApiServer.post("/api/v1.1/schemas")
                 .set("Content-type", "application/json")
                 .send(schema)
-                .expect(400, done);
+                .expect(400, errHandler(done));
+        });
+        it("Should fail to add a schema with invalid JSON", function(done) {
+            ApiServer.post("/api/v1.1/schemas")
+                .set("Content-type", "application/json")
+                .send("{ Invalid JSON }")
+                .expect(400, errHandler(done));
         });
     });
     describe("Allowed schemas in v1.1", function() {
