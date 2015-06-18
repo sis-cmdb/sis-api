@@ -175,7 +175,7 @@ module.exports = function(grunt) {
       process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
       var done = this.async();
       var infoPromises = webInstances.map(function(host) {
-          var url = 'https://' + host.ip + '/api/v1.1/info';
+          var url = 'http://' + host.ip + '/api/v1.1/info';
           var opts = {
               uri : url,
               json : true
@@ -203,29 +203,31 @@ module.exports = function(grunt) {
   });
 
   grunt.registerTask('apitest', 'Run remote api tests', function() {
-    var inventory = grunt.option("ansible-inventory");
-    if (!inventory || !grunt.file.exists(inventory)) {
-        return grunt.fail.fatal("inventory does not exist - set ansible-inventory");
-    }
-    var webInstances = getWebInstancesFromInventory(inventory);
-    // verify the info for all of them are the same (at least API version)
-    // and then test only one
-    if (!webInstances.length) {
-        return grunt.fail.fatal("no web instances found"); 
-    }
-    // run the test against ONE host
-    var host = webInstances[0];
-    var host_fixed = host.host.replace(/\./g, '_');
-    grunt.config.set('env.' + host_fixed, {
-        SIS_REMOTE_USERNAME : 'sistest',
-        SIS_REMOTE_PASSWORD : 'sistest',
-        SIS_REMOTE_URL : 'https://' + host.ip,
-        JUNIT_REPORT_PATH : 'report_apitest_' + host_fixed + '.xml',
-        NODE_TLS_REJECT_UNAUTHORIZED : "0"
-    });
-    grunt.task.run('env:' + host_fixed);
-    grunt.task.run('mochaTest:remote');
-    grunt.task.run('verifySameApi');
+      var inventory = grunt.option("ansible-inventory");
+      if (!inventory || !grunt.file.exists(inventory)) {
+          return grunt.fail.fatal("inventory does not exist - set ansible-inventory");
+      }
+      var webInstances = getWebInstancesFromInventory(inventory);
+      // verify the info for all of them are the same (at least API version)
+      // and then test only one
+      if (!webInstances.length) {
+          return grunt.fail.fatal("no web instances found"); 
+      }
+      // run the test against ONE host
+      var host = webInstances[0];
+      var host_fixed = host.host.replace(/\./g, '_');
+      var envData = {
+          SIS_REMOTE_USERNAME : 'sistest',
+          SIS_REMOTE_PASSWORD : 'sistest',
+          SIS_REMOTE_URL : 'https://' + host.ip,
+          JUNIT_REPORT_PATH : 'report_apitest_' + host_fixed + '.xml',
+          NODE_TLS_REJECT_UNAUTHORIZED : "0"
+      };
+      grunt.config.set('env.' + host_fixed, envData);
+      console.log(envData);
+      grunt.task.run('env:' + host_fixed);
+      grunt.task.run('mochaTest:remote');
+      grunt.task.run('verifySameApi');
   });
 
   grunt.registerTask('repltest', 'Run replication tests', function() {

@@ -398,6 +398,10 @@ module.exports.parsePopulate = function(reqQuery) {
     }
 };
 
+var ERROR_QUERY = {};
+
+module.exports.ERROR_QUERY = ERROR_QUERY;
+
 module.exports.parseQuery = function(reqQuery, version, enforceLimit) {
     var query = reqQuery.q || { };
     // try parsing..
@@ -405,8 +409,13 @@ module.exports.parseQuery = function(reqQuery, version, enforceLimit) {
         if (typeof query === 'string') {
             query = JSON.parse(query);
         }
+        if (typeof query !== "object" ||
+            Array.isArray(query) ||
+            !query) {
+            query = ERROR_QUERY;
+        }
     } catch (ex) {
-        query = {};
+        query = ERROR_QUERY;
     }
     if (version === "v1") {
         query = SIS.UTIL_QUERY_FROM_V1(query);

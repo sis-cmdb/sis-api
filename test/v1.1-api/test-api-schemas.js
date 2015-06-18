@@ -12,7 +12,10 @@ describe('@API @V1.1API - Schema API', function() {
 
     it("Should setup fixtures", function(done) {
         ApiServer.start(function(e) {
-            if (e) { return done(e); }
+            if (e) {
+                done(e);
+                return;
+            }
             ApiServer.becomeSuperUser(done);
         });
     });
@@ -132,13 +135,22 @@ describe('@API @V1.1API - Schema API', function() {
                     ApiServer.post("/api/v1.1/schemas")
                         .set("Content-type", "application/json")
                         .send(schema)
-                        .expectAsync(201).nodeify(function(err, res) {
-                            if (err) {
-                                console.log(res.body);
-                            }
-                            done(err);
-                        });
+                        .expectAsync(201).nodeify(done);
                 });
+            });
+        });
+        var badQueries = [
+            "fooo",
+            "null",
+            "foo:bar",
+            '["valid","array"]'
+        ];
+
+        badQueries.forEach(function(bq) {
+            it("Should return a 400 with query " + bq, function(done) {
+                ApiServer.get("/api/v1.1/schemas")
+                    .query({ q: bq })
+                    .expectAsync(400).nodeify(done);
             });
         });
     });

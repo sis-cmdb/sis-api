@@ -186,6 +186,10 @@ ApiController.prototype.parsePopulate = function(req) {
 ApiController.prototype.getAll = function(req, res) {
     this.applyDefaults(req);
     var rq = this.parseQuery(req);
+    if (rq.query === webUtil.ERROR_QUERY) {
+        this.sendError(res, SIS.ERR_BAD_REQ("Query parameter is invalid.  Must be JSON"));
+        return;
+    }
     var options = this._getReqOptions(req);
     options.skip = rq.offset;
     options.limit = rq.limit;
