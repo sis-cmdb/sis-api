@@ -219,7 +219,7 @@ module.exports = function(grunt) {
       var envData = {
           SIS_REMOTE_USERNAME : 'sistest',
           SIS_REMOTE_PASSWORD : 'sistest',
-          SIS_REMOTE_URL : 'https://' + host.ip,
+          SIS_REMOTE_URL : 'http://' + host.ip,
           JUNIT_REPORT_PATH : 'report_apitest_' + host_fixed + '.xml',
           NODE_TLS_REJECT_UNAUTHORIZED : "0"
       };
@@ -241,7 +241,7 @@ module.exports = function(grunt) {
     var webInstances = getWebInstancesFromInventory(inventory);
     var data = webInstances.map(function(wi) {
         return {
-            url : 'https://' + wi.ip,
+            url : 'http://' + wi.ip,
             host : wi.host
         };
     });
