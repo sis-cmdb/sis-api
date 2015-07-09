@@ -232,7 +232,7 @@ Manager.prototype.add = function(obj, options) {
     if (err) {
         return BPromise.reject(SIS.ERR_BAD_REQ(err));
     }
-    obj = SIS.UTIL_FROM_V1(obj);
+    obj = SIS.ENSURE_SIS_META(obj);
     var p = this.authorize(SIS.EVENT_INSERT, obj, user).bind(this)
         .then(this._addByFields(user, SIS.EVENT_INSERT))
         .then(this.preAdd)
@@ -260,7 +260,7 @@ Manager.prototype.bulkAdd = function(items, options) {
             memo.errors.push({ err : err, value : item });
             return BPromise.resolve(memo);
         }
-        item = SIS.UTIL_FROM_V1(item);
+        item = SIS.ENSURE_SIS_META(item);
         return this.authorize(SIS.EVENT_INSERT, item, user)
             .bind(this)
             .then(this._addByFields(user, SIS.EVENT_INSERT))
@@ -393,7 +393,7 @@ Manager.prototype._update = function(id, obj, options, saveFunc) {
         var user = options.user;
 
         // always convert the obj to V1.1
-        obj = SIS.UTIL_FROM_V1(obj);
+        obj = SIS.ENSURE_SIS_META(obj);
 
         // update metas
         // set meta fields
@@ -432,7 +432,7 @@ Manager.prototype._getCasSave = function(obj, cas) {
         return validate().bind(this).then(function() {
             // set the ID on the id field
             cas[this.idField] = doc[this.idField];
-            obj = SIS.UTIL_FROM_V1(obj);
+            obj = SIS.ENSURE_SIS_META(obj);
             // find and update
             // need to add the update time
             this.applyPreSaveFields(obj);
@@ -540,7 +540,7 @@ Manager.prototype.delete = function(id, options) {
     var user = options.user;
     var self = this;
     var p = this.getById(id, { lean : true }).then(function(obj) {
-            obj = SIS.UTIL_FROM_V1(obj);
+            obj = SIS.ENSURE_SIS_META(obj);
             return self.authorize(SIS.EVENT_DELETE, obj, user);
         })
         .then(this._remove.bind(this))
@@ -559,7 +559,7 @@ Manager.prototype.bulkDelete = function(condition, options) {
         }
         var toDelete = [];
         var authPromises = items.map(function(item) {
-            item = SIS.UTIL_FROM_V1(item);
+            item = SIS.ENSURE_SIS_META(item);
             return this.authorize(SIS.EVENT_DELETE, item, user)
             .then(function(res) {
                 toDelete.push(res);
@@ -648,11 +648,9 @@ Manager.prototype.validateOwner = function(obj, options) {
     if (!obj) {
         return SIS.FIELD_OWNER + " field is required.";
     }
-    if (options.version != "v1") {
-        obj = obj[SIS.FIELD_SIS_META];
-        if (!obj) {
-            return SIS.FIELD_OWNER + " field is required in " + SIS.FIELD_SIS_META;
-        }
+    obj = obj[SIS.FIELD_SIS_META];
+    if (!obj) {
+        return SIS.FIELD_OWNER + " field is required in " + SIS.FIELD_SIS_META;
     }
     if (!obj[SIS.FIELD_OWNER]) {
         return SIS.FIELD_OWNER + " field is required.";

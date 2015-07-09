@@ -74,8 +74,7 @@ EntityManager.prototype.validate = function(entity, toUpdate, options) {
             if (rf[0] == "_") {
                 // v1 does not allow any _
                 // v1.1+ allows SIS.FIELD_SIS_META
-                if (options.version == "v1" ||
-                    rf != SIS.FIELD_SIS_META) {
+                if (rf != SIS.FIELD_SIS_META) {
                     delete entity[rf];
                 }
             }
@@ -99,8 +98,7 @@ EntityManager.prototype.validate = function(entity, toUpdate, options) {
             if (rf[0] == "_") {
                 // v1 does not allow any _
                 // v1.1+ allows SIS.FIELD_SIS_META
-                if (options.version == "v1" ||
-                    rf != SIS.FIELD_SIS_META) {
+                if (rf != SIS.FIELD_SIS_META) {
                     return rf + " is a reserved field";
                 }
             }
@@ -152,12 +150,8 @@ EntityManager.prototype.validate = function(entity, toUpdate, options) {
 };
 
 EntityManager.prototype._hasOwners = function(obj, options) {
-    if (options.version == "v1") {
-        return SIS.FIELD_OWNER in obj;
-    } else {
-        return SIS.FIELD_SIS_META in obj &&
-            SIS.FIELD_OWNER in obj[SIS.FIELD_SIS_META];
-    }
+    return SIS.FIELD_SIS_META in obj &&
+        SIS.FIELD_OWNER in obj[SIS.FIELD_SIS_META];
 };
 
 EntityManager.prototype._getOwnerSubset = function(user, schema) {

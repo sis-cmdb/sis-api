@@ -6,28 +6,6 @@ var util = require('util');
 var diff = require('jsondiffpatch');
 var logger = require("./logger");
 
-var V1_TO_SIS_META = {
-    'sis_tags'      : 'tags',
-    'sis_locked'    : 'locked',
-    'sis_immutable' : 'immutable',
-    'owner'         : 'owner',
-    '_references'   : '_references',
-    '_created_at'   : '_created_at',
-    '_updated_at'   : '_updated_at',
-    '_created_by'   : '_created_by',
-    '_updated_by'   : '_updated_by',
-    '_trans_id'     : '_trans_id'
-};
-
-var SIS_META_TO_V1 = function() {
-    var res = { };
-    for (var k in V1_TO_SIS_META) {
-        var v = V1_TO_SIS_META[k];
-        res[v] = k;
-    }
-    return res;
-}();
-
 var FIELD_LOCKED = "locked";
 var FIELD_IMMUTABLE = "immutable";
 var FIELD_OWNER = "owner";
@@ -345,12 +323,7 @@ module.exports = {
         return paths;
     },
 
-    // field mapping
-    V1_TO_SIS_META : V1_TO_SIS_META,
-
-    SIS_META_TO_V1 : SIS_META_TO_V1,
-
-    UTIL_FROM_V1 : function(obj) {
+    ENSURE_SIS_META : function(obj) {
         if (!obj) {
             return obj;
         }
@@ -360,62 +333,6 @@ module.exports = {
             sisMeta[FIELD_SIS_VERSION] = CURRENT_VERSION;
         }
         return obj;
-    },
-
-    UTIL_TO_V1 : function(obj) {
-        if (!obj) {
-            return obj;
-        }
-        if (typeof obj.toObject === "function") {
-            obj = obj.toObject();
-        }
-        if (!obj[FIELD_SIS_META]) {
-            return obj;
-        }
-        // not in place
-        var result = { };
-        for (var k in obj) {
-            if (k != FIELD_SIS_META) {
-                result[k] = obj[k];
-            }
-        }
-        var sisMeta = obj[FIELD_SIS_META];
-        for (k in SIS_META_TO_V1) {
-            if (k in sisMeta) {
-                result[SIS_META_TO_V1[k]] = sisMeta[k];
-            }
-        }
-        if ('_v' in obj) {
-            result.__v = obj._v;
-        }
-        return result;
-    },
-
-    UTIL_QUERY_FROM_V1 : function(query) {
-        var andDoc = query.$and || [];
-        if (!(andDoc instanceof Array)) {
-            andDoc = [andDoc];
-        }
-        for (var k in V1_TO_SIS_META) {
-            if (k in query) {
-                var tmp = query[k];
-                delete query[k];
-                // change it to an or
-                var v1Doc = {};
-                v1Doc[k] = tmp;
-                var v11Doc = {};
-                var metaField = V1_TO_SIS_META[k];
-                v11Doc[FIELD_SIS_META + "." + metaField] = tmp;
-                var orDoc = {
-                    $or : [v1Doc, v11Doc]
-                };
-                andDoc.push(orDoc);
-            }
-        }
-        if (andDoc.length) {
-            query.$and = andDoc;
-        }
-        return query;
     },
 
     UTIL_SET_DEFAULT_ARRAY : function(obj, path) {

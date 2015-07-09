@@ -417,9 +417,6 @@ module.exports.parseQuery = function(reqQuery, version, enforceLimit) {
     } catch (ex) {
         query = ERROR_QUERY;
     }
-    if (version === "v1") {
-        query = SIS.UTIL_QUERY_FROM_V1(query);
-    }
     var fields = reqQuery.fields;
     if (fields) {
         if (typeof fields !== 'string') {

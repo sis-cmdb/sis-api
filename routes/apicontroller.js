@@ -470,10 +470,6 @@ ApiController.prototype._enableCommitApi = function(app, prefix) {
             if (err || !result) {
                 self.sendError(res, SIS.ERR_NOT_FOUND("commit", hid));
             } else {
-                if (req.params.version == "v1") {
-                    result = SIS.UTIL_TO_V1(result);
-                    result.value_at = SIS.UTIL_TO_V1(result.value_at);
-                }
                 result.value_at = self.convertToResponseObject(req, result.value_at);
                 self.sendObject(res, 200, result);
             }
@@ -490,9 +486,6 @@ ApiController.prototype._enableCommitApi = function(app, prefix) {
                 self.sendError(res, SIS.ERR_NOT_FOUND("commit at time", utc));
             } else {
                 result = self.convertToResponseObject(req, result);
-                if (req.params.version == "v1") {
-                    result = SIS.UTIL_TO_V1(result);
-                }
                 self.sendObject(res, 200, result);
             }
         });

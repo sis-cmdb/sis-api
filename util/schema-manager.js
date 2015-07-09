@@ -129,8 +129,7 @@ SchemaManager.prototype.validate = function(modelObj, toUpdate, options) {
             return "Cannot add an empty schema.";
         }
         for (var i = 0; i < fields.length; ++i) {
-            if ((fields[i][0] == '_' && fields[i] != SIS.FIELD_SIS_META) ||
-                (fields[i].indexOf('sis_') === 0 && options.version == "v1")) {
+            if (fields[i][0] == '_' && fields[i] !== SIS.FIELD_SIS_META) {
                 return fields[i] + " is a reserved field";
             } else if (typeof modelObj.definition[fields[i]] === 'object') {
                 // if it is empty, convert to mixed
@@ -155,7 +154,7 @@ SchemaManager.prototype.validate = function(modelObj, toUpdate, options) {
                 if (!toRegex(schemaType.options.match)) {
                     throw "match " + schemaType.options.match;
                 }
-            } else if (options.version == "v1" && path === "owner") {
+            } else if (path === "_sis.owner") {
                 if (schemaType.constructor.name !== 'SchemaArray' ||
                     !schemaType.caster ||
                     schemaType.caster.instance != "String") {

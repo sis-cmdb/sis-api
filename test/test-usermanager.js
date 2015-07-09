@@ -248,7 +248,6 @@ describe('User Manager', function() {
                     var copy = JSON.parse(JSON.stringify(u2));
                     copy.roles = copy.roles || {};
                     copy.roles[group] = role;
-                    copy = SIS.UTIL_TO_V1(copy);
                     userManager.update(u2.name, copy, { user : u1 }).nodeify(function(err, obj) {
                         if (pass) {
                             obj = validateUpdate(err, obj);
@@ -280,7 +279,6 @@ describe('User Manager', function() {
                     } else {
                         copy.roles[group] = role;
                     }
-                    copy = SIS.UTIL_TO_V1(copy);
                     userManager.getById(u2.name).done(function(o1) {
                         userManager.update(u2.name, copy, { user : u1 }).nodeify(function(err, obj) {
                             if (pass) {

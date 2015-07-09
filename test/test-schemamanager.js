@@ -190,7 +190,7 @@ describe('SchemaManager', function() {
             "definition" : schemaDef
         };
         before(function(done) {
-            schemaManager.add(fullSchema, {version : "v1"}).nodeify(function(err, entity) {
+            schemaManager.add(fullSchema).nodeify(function(err, entity) {
                 if (err) {
                     done(err);
                     return;
