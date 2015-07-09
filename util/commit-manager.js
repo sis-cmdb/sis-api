@@ -58,7 +58,7 @@ function CommitManager(schemaManager) {
                 var right = docToPojo(newDoc);
                 doc.commit_data = differ.diff(left, right);
                 var mod_date = newDoc[SIS.FIELD_SIS_META][SIS.FIELD_UPDATED_AT];
-                var hasChanged = Object.keys(doc.commit_data).some(function(k) {
+                var hasChanged = doc.commit_data && Object.keys(doc.commit_data).some(function(k) {
                     return k[0] != '_';
                 });
                 if (!hasChanged) {

@@ -351,34 +351,15 @@ module.exports = {
     SIS_META_TO_V1 : SIS_META_TO_V1,
 
     UTIL_FROM_V1 : function(obj) {
-        if (obj[FIELD_SIS_META]) {
-            // done
+        if (!obj) {
             return obj;
         }
-        if (typeof obj.toObject === "function") {
-            obj = obj.toObject();
+        obj[FIELD_SIS_META] = obj[FIELD_SIS_META] || {};
+        var sisMeta = obj[FIELD_SIS_META];
+        if (!sisMeta[FIELD_SIS_VERSION]) {
+            sisMeta[FIELD_SIS_VERSION] = CURRENT_VERSION;
         }
-        // returns a shallow copy
-        var result = { };
-        var sisMeta = obj[FIELD_SIS_META] || { };
-        for (var k in obj) {
-            if (!(k in V1_TO_SIS_META) &&
-                k != '__v') {
-                result[k] = obj[k];
-            }
-        }
-        for (k in V1_TO_SIS_META) {
-            if (k in obj) {
-                sisMeta[V1_TO_SIS_META[k]] = obj[k];
-            }
-        }
-        sisMeta[FIELD_SIS_VERSION] = CURRENT_VERSION;
-        // convert __v to _v
-        if ('__v' in obj) {
-            result[FIELD_VERS] = obj.__v;
-        }
-        result[FIELD_SIS_META] = sisMeta;
-        return result;
+        return obj;
     },
 
     UTIL_TO_V1 : function(obj) {

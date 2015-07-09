@@ -551,11 +551,7 @@ SchemaManager.prototype.getEntityModel = function(sisSchema, isInternal) {
     if (!sisSchema || !sisSchema.name || !sisSchema.definition) {
         return null;
     }
-    if (sisSchema[SIS.FIELD_CREATED_AT] ||
-        !sisSchema[SIS.FIELD_SIS_META]) {
-        // convert it
-        sisSchema = SIS.UTIL_FROM_V1(sisSchema);
-    }
+
     var name = sisSchema.name;
     var sisMeta = sisSchema[SIS.FIELD_SIS_META] || {};
     var schemaTime = sisMeta[SIS.FIELD_UPDATED_AT] || Date.now();

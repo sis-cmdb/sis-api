@@ -3,7 +3,7 @@ describe('Readonly API ', function() {
     var nconf = require("nconf");
     var schema = {
         "name":"test_entity",
-        "owner" : "test",
+        _sis : { "owner" : ["test"] },
         "definition": {
             "str":   "String",
             "num":   "Number",
@@ -29,7 +29,7 @@ describe('Readonly API ', function() {
         ApiServer.start(function(err, sd) {
             if (err) { return done(err); }
             app = sd.app;
-            var options = { user : sd.superUser, version : "v1" };
+            var options = { user : sd.superUser, version : "v1.1" };
             sd.schemaManager.delete(schema.name, options).nodeify(function() {
                 sd.schemaManager.add(schema, options).nodeify(done);
             });

@@ -6,6 +6,11 @@ var SIS = require('./constants');
 var jsondiffpatch = require("jsondiffpatch");
 var hat = require('hat');
 var _ = require("lodash");
+var logger = require("./logger");
+
+var LOGGER = logger.createLogger({
+    name : "Manager"
+});
 
 // Constructor for a Manager base
 // A manager is responsible for communicating with
@@ -54,15 +59,29 @@ Manager.prototype.objectRemoved = function(obj) {
 Manager.prototype._getDefaultOptions = function(options) {
     options = options || { };
     if (!('version' in options)) {
-        options.version = "v1";
+        options.version = "v1.1";
     }
     return options;
+};
+
+Manager.prototype._getFindOptions = function(options) {
+    var result = {};
+    if (!options) {
+        return result;
+    }
+    var opts = ['skip','limit','sort','lean','populate', 'read'];
+    opts.forEach(function(o) {
+        if (o in options) {
+            result[o] = options[o];
+        }
+    });
+    return result;
 };
 
 /** Common methods - rare to override these **/
 // Get a single object that has certain properties.
 Manager.prototype.getSingleByCondition = function(condition, name, options) {
-    return this.model.findOneAsync(condition, null, options)
+    return this.model.findOneAsync(condition, null, this._getFindOptions(options))
     .bind(this).then(function(result) {
         if (!result) {
             return BPromise.reject(SIS.ERR_NOT_FOUND(this.type, name));
@@ -90,11 +109,14 @@ Manager.prototype.getById = function(id, options) {
 
 // get all the objects belonging to the model.
 Manager.prototype.getAll = function(condition, options, fields) {
-    return this.model.findAsync(condition, fields, options);
+    return this.model.findAsync(condition, fields, this._getFindOptions(options));
 };
 
 // Count the number of objects specified by the query
 Manager.prototype.count = function(condition, callback) {
+    if (!Object.keys(condition)) {
+        condition = undefined;
+    }
     return this.model.countAsync(condition).bind(this)
         .then(function(count) {
             return [count, condition, this];
@@ -358,25 +380,15 @@ Manager.prototype._update = function(id, obj, options, saveFunc) {
             err = SIS.ERR_BAD_REQ(this.idField + " cannot be changed.");
             return BPromise.reject(err);
         }
-
+        return [found, null];
+    }).spread(function(converted, old) {
         // init the mongoose doc - must use .init per comment in mongoose
         // otherwise there are problems like _id mod errors from mongo
         // reference the old raw document
-        if (!found[SIS.FIELD_SIS_META] ||
-            found[SIS.FIELD_CREATED_AT]) {
-            // v1 - need to convert to v1.1
-            return this._convertToV11(found);
-        } else {
-            return [found, null];
-        }
-    }).spread(function(converted, old) {
         var found = new this.model();
         found.init(converted, { });
         found.isNew = false;
-        // need to save found's old state
-        // HACK - see
-        // https://github.com/LearnBoost/mongoose/pull/1981
-        found.$__error(null);
+
         var oldV11 = found.toObject();
         var user = options.user;
 
@@ -410,26 +422,6 @@ Manager.prototype._update = function(id, obj, options, saveFunc) {
     });
 };
 
-Manager.prototype._convertToV11 = function(found) {
-    var id = found._id;
-    var rename = { };
-    for (var k in SIS.V1_TO_SIS_META) {
-        rename[k] = SIS.FIELD_SIS_META + "." + SIS.V1_TO_SIS_META[k];
-    }
-    // also __v to v
-    rename.__v = '_v';
-    var query = { _id : id };
-    var op = { $rename : rename };
-    var collection = BPromise.promisifyAll(this.model.collection);
-    return collection.updateAsync(query, op).bind(this)
-    .then(function(numAffected) {
-        return collection.findOneAsync(query)
-        .then(function(obj) {
-            return [obj, found];
-        });
-    });
-};
-
 Manager.prototype.finishUpdate = function(old, updated) {
     return BPromise.resolve(updated);
 };
@@ -444,7 +436,7 @@ Manager.prototype._getCasSave = function(obj, cas) {
             // find and update
             // need to add the update time
             this.applyPreSaveFields(obj);
-            return this.model.findOneAndUpdateAsync(cas, obj)
+            return this.model.findOneAndUpdateAsync(cas, obj, { 'new' : true })
             .then(function(doc) {
                 if (!doc) {
                     // cas update failed
@@ -822,19 +814,6 @@ Manager.prototype._merge = function(doc, update) {
 
 Manager.prototype.applyPreSaveFields = function(obj) {
     obj[SIS.FIELD_SIS_META][SIS.FIELD_UPDATED_AT] = Date.now();
-};
-
-Manager.prototype._upgradeFromV1 = function(item) {
-    // unset keys
-    var unsetObj = Object.keys(SIS.V1_TO_SIS_META)
-        .reduce(function(ret, k) {
-            ret[k] = "";
-            return ret;
-        }, { });
-    return this.model.updateAsync({ _id : item._id }, { $unset : unsetObj}, { safe : true, strict : false })
-        .then(function() {
-            return item;
-        });
 };
 
 // return a promise that returns

@@ -333,9 +333,6 @@ ApiController.prototype.update = function(req, res) {
             // invalid query
             return this.sendError(res, SIS.ERR_BAD_REQ("CAS condition must be an object."));
         }
-        if (req.params.version == "v1") {
-            cas = SIS.UTIL_QUERY_FROM_V1(cas);
-        }
         options.cas = cas;
     }
     if (upsert) {
