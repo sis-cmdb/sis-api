@@ -73,10 +73,6 @@ var startServer = function(callback) {
             process.exit(1);
         }
 
-        mongoose.connection.on('error', function(err) {
-            LOGGER.error({ err : err }, "A connection error occurred.");
-        });
-
         // express app settings
         var appConfig = nconf.get('app') || {};
         for (var k in appConfig) {
@@ -127,13 +123,6 @@ var startServer = function(callback) {
 };
 
 function main() {
-    var setupCloseHandlers = function(app, server) {
-        process.on("SIGINT", function() {
-            server.close(function() {
-                process.exit(0);
-            });
-        });
-    };
     nconf.env('__')
         .argv()
         .file("config.json.local", __dirname + "/conf/config.json.local")
@@ -142,6 +131,21 @@ function main() {
     var LOGGER = logger.createLogger({
         name : "SISMain"
     });
+
+    var setupCloseHandlers = function(app, server) {
+        mongoose.connection.on('error', function(err) {
+            LOGGER.error({ err : err }, "A connection error occurred.");
+            server.close(function() {
+                process.exit(1);
+            });
+        });
+
+        process.on("SIGINT", function() {
+            server.close(function() {
+                process.exit(0);
+            });
+        });
+    };
 
     if (nconf.get("app:use_cluster")) {
         var cluster = require("cluster");

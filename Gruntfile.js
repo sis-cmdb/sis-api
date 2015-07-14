@@ -37,12 +37,14 @@ module.exports = function(grunt) {
       }
     },
     jshint: {
-      files: distFiles.concat(["test/**/*.js"]),
-      options: {
-        newcap: false,
-        node : true
-      },
-      dist: distFiles.map(function(f) { return "dist/" + f; })
+        files: distFiles.concat(["test/**/*.js"]).concat(["!test/fixtures/scripts/*.js"]),
+        options: {
+            newcap: false,
+            node : true,
+            // slowly...
+            esnext: true
+        },
+        dist: distFiles.map(function(f) { return "dist/" + f; })
     },
     // Empties folders to start fresh
     clean: {

@@ -6,15 +6,24 @@ var nconf = require('nconf');
 var config = require('../config');
 var BPromise = require("bluebird");
 var mongoose = BPromise.promisifyAll(require("mongoose"));
-
 var SIS = require("../util/constants");
 
-nconf.defaults(config);
+if (process.env.TESTING) {
+    nconf.env("__")
+        .argv()
+        .file("config.test.json", __dirname + "/../test/fixtures/config.test.json");
+} else {
+    nconf.env('__')
+        .argv()
+        .file("config.json.local", __dirname + "/../conf/config.json.local")
+        .file("config.json", __dirname + "/../conf/config.json");
+}
+
 
 function sendResponse(res) {
     process.send({
-    type : SIS.EP_DONE,
-    data : res
+        type : SIS.EP_DONE,
+        data : res
     });
 }
 
@@ -40,8 +49,13 @@ mongoose.connectAsync(nconf.get('db').url, opts)
             .then(function(res) {
                 sendResponse(res);
             }).catch(function(err) {
+                var status = err.status || 500;
+                if (Array.isArray(err)) {
+                    status = err[0];
+                    err = err[1];
+                }
                 var res = {
-                    status : err.status || 500,
+                    status : status,
                     data : JSON.stringify(err),
                     headers : { "Content-Type" : "application/json" }
                 };

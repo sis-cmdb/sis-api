@@ -1,6 +1,7 @@
 "use strict";
 var BPromise = require("bluebird");
 var csv = require("csv");
+var yaml = require("js-yaml");
 
 function Response(holder) {
     var headers = {};
@@ -38,6 +39,12 @@ function Response(holder) {
                     .send(output);
             }
         }.bind(this));
+    };
+    this.yaml = function(data, options) {
+        data = data || {};
+        var result = yaml.safeDump(data, options);
+        this.set("Content-Type", "application/x-yaml")
+            .send(result);
     };
 }
 

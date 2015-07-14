@@ -244,14 +244,18 @@ Manager.prototype.add = function(obj, options) {
 
 Manager.prototype.bulkAdd = function(items, options) {
     options = this._getDefaultOptions(options);
+    var collection = this.model.collection;
     var user = options.user;
     var allOrNone = options.allOrNone;
     var memo = { success: [], errors: [] };
     var self = this;
     var toAdd = [];
+    var batch = collection.initializeUnorderedBulkOp();
+    var numToAdd = 0;
     var transactionId = hat(64) + Date.now();
     var transactionCond = { };
     transactionCond[SIS.FIELD_SIS_META + "." + SIS.FIELD_TRANSACTION_ID + ".id"] = transactionId;
+    var transactionIdxField = [SIS.FIELD_SIS_META, SIS.FIELD_TRANSACTION_ID, 'idx'].join(".");
     var authorized = [];
     var authPromises = items.map(function(item, idx) {
         var err = this.validate(item, null, options);
@@ -299,6 +303,7 @@ Manager.prototype.bulkAdd = function(items, options) {
                         idx : idx
                     };
                     toAdd.push(res);
+                    batch.insert(res);
                 }
                 d.resolve(memo);
             }.bind(this));
@@ -308,59 +313,85 @@ Manager.prototype.bulkAdd = function(items, options) {
             return memo;
         });
     });
-    // helper for the insert
-    var handleInsertFailed = function(inserted) {
+
+    // helper for the insert failure case
+    var handleInsertFailed = function(bulkResult, err) {
         // some things failed..
         // find the ones that failed
-        var successIds = inserted.reduce(function(ret, i) {
-            var idx = i[SIS.FIELD_SIS_META][SIS.FIELD_TRANSACTION_ID].idx;
-            ret[idx] = true;
-            return ret;
-        }, { });
-        toAdd.forEach(function(item) {
-            if (!(item[SIS.FIELD_SIS_META][SIS.FIELD_TRANSACTION_ID].idx in successIds)) {
-                memo.errors.push({
-                    value : item,
-                    err : SIS.ERR_BAD_REQ("Insert failed.")
-                });
-            }
-        });
-        if (!allOrNone) {
-            // done
-            memo.success = inserted;
-            return memo;
+        if (err) {
+            memo.internalErr = SIS.ERR_INTERNAL(err);
         }
-        // nuke the ones that have our transaction
-        return this.model.removeAsync(transactionCond).then(function(deleted) {
-            // finito
-            return memo;
-        }).catch(function(e) {
-            // oof something very bad happened.
-            var msg = "Error deleting entries per allOrNone: " + SIS.FIELD_TRANSACTION_ID + ".id = " + transactionId;
-            return SIS.ERR_INTERNAL(msg);
+        // populate errors
+        return this.getAll(transactionCond, {lean: true}).bind(this).then(function(added) {
+            var success = [];
+            var addedIndexes = added.reduce(function(ret, item) {
+                ret[item[SIS.FIELD_SIS_META][SIS.FIELD_TRANSACTION_ID].idx] = item;
+                return ret;
+            }, {});
+            var insertFail = SIS.ERR_BAD_REQ("Insert failed");
+            toAdd.forEach(function(item, idx) {
+                if (!(idx in addedIndexes)) {
+                    // failed
+                    memo.errors.push({
+                        value : item,
+                        err : insertFail
+                    });
+                } else {
+                    // success
+                    success.push(item);
+                }
+            });
+            if (!allOrNone) {
+                memo.success = success;
+                return memo;
+            }
+            // nuke the ones that have our transaction
+            return this.model.removeAsync(transactionCond).then(function() {
+                return memo;
+            }).catch(function(e) {
+                // sigh
+                var msg = "Error deleting entries per allOrNone: " + SIS.FIELD_TRANSACTION_ID + ".id = " + transactionId;
+                return BPromise.reject(SIS.ERR_INTERNAL(msg));
+            });
         });
     }.bind(this);
+
     // do the insert
     return insertPromise.bind(this).then(function() {
         if ((allOrNone && memo.errors.length) || !toAdd.length) {
             // bail - nothing inserted yet or nothing to insert
             return memo;
         }
-        // do the insert
-        var insert = BPromise.promisify(this.model.collection.insert, this.model.collection);
-        return insert(toAdd).bind(this).then(function(inserted) {
-            if (inserted.length === toAdd.length) {
-                // g2g - everything we wanted to add was added
-                memo.success = inserted;
-                return memo;
+        // do the bulk insert
+        var defer = BPromise.pending();
+        // not promisifying because err might still have a valid bulkResult
+        batch.execute(function(err, bulkResult) {
+            if (!bulkResult) {
+                defer.reject(SIS.ERR_INTERNAL(err));
+                return;
             }
-            return handleInsertFailed(inserted);
-        }).catch(function(err) {
-            // get the ones that belong to this transaction
-            return this.getAll(transactionCond, { lean : true}).then(function(inserted) {
-                return handleInsertFailed(inserted);
+            // LOGGER.debug({ br: bulkResult });
+            if (bulkResult.ok &&
+                bulkResult.nInserted === toAdd.length) {
+                var ids = bulkResult.getInsertedIds();
+                // g2g - everything we wanted to add was added
+                // fetch them..
+                ids.forEach(function(id, idx) {
+                    toAdd[idx]._id = id._id;
+                });
+                memo.success = toAdd;
+                defer.resolve(memo);
+                return;
+            }
+            handleInsertFailed(bulkResult, err).then(function(memo) {
+                defer.resolve(memo);
+            }).catch(function (err) {
+                defer.reject(err);
             });
         });
+
+        return defer.promise;
+
     });
 };
 

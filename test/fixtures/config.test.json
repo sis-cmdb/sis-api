@@ -22,7 +22,8 @@
     },
     "app" : {
         "auth" : true,
-        "scripts_enabled" : true
+        "scripts_enabled" : true,
+        "test" : true
     },
     "logger" : {
         "options" : {

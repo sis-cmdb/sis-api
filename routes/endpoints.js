@@ -40,9 +40,14 @@ EndpointWorker.prototype.create = function() {
     if (this.childState !== DEAD) {
         return BPromise.reject({ error: "Process is in invalid state: " + this.childState });
     }
+    var args = [];
+    var env = {};
+    if (nconf.get("app:test")) {
+        env.TESTING = true;
+    }
     var createDefer = BPromise.pending();
     this.childState = SPAWNING;
-    this.child = ChildProcess.fork(__dirname + "/../endpoints/main.js");
+    this.child = ChildProcess.fork(__dirname + "/../endpoints/main.js", args, { env : env });
     // set a timeout - no message back in 5 seconds is bad
     var timer = setTimeout(function() {
         this.childState = ERROR;
@@ -69,6 +74,7 @@ EndpointWorker.prototype.create = function() {
             createDefer.resolve(this);
             LOGGER.debug({pid : this.child.pid}, "Spawned worker process");
         } else {
+            // SIS.EP_ERROR
             // unexpected state
             WORKER_LOGGER.error({ message: "Received unexpected message.",
                                   data: msg,
@@ -149,7 +155,7 @@ function EndpointController(config) {
                 callback(null, worker);
             }).catch(function(err) {
                 LOGGER.error(err);
-                callback(err);
+                callback(err, null);
             });
         },
         destroy : function(worker) {

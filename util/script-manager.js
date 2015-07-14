@@ -7,6 +7,7 @@ var http = require('http');
 // simplified http req
 var request = require('request');
 var nconf = require('nconf');
+var vm = require("vm");
 
 var SIS = require('./constants');
 var Manager = require("./manager");
@@ -35,6 +36,12 @@ ScriptManager.prototype.validate = function(modelObj, toUpdate, options) {
     }
     if(!modelObj.script) {
         return "Script has no content.";
+    }
+    // try to compile it
+    try {
+        new vm.Script(modelObj.script, { filename: "__test__.js" });
+    } catch(ex) {
+        return "Script does not compile";
     }
     return this.validateOwner(modelObj, options);
 };

@@ -5,6 +5,10 @@ var BPromise = require("bluebird");
 var vm = require("vm");
 var SIS = require("../util/constants");
 var clone = require("clone");
+var LOGGER = require("../util/logger").createLogger({
+    name : "ScriptRunner"
+});
+
 
 function ScriptRunner(schemaManager) {
     this.schemaManager = schemaManager;
@@ -17,11 +21,12 @@ ScriptRunner.prototype._getScript = function(name) {
     return this.manager.getById(name, { lean : true })
     .bind(this).then(function(scriptObj) {
         var scriptText = scriptObj.script;
+        LOGGER.info("have script", { script: scriptText });
         var cached = this.scriptCache[name];
         var scriptTime = scriptObj._sis._updated_at;
         var compiled = null;
         if (!cached) {
-            compiled = vm.createScript(scriptText, name);
+            compiled = new vm.Script(scriptText, { filename: name });
             this.scriptCache[name] = {
                 script : compiled,
                 time : scriptTime
@@ -29,7 +34,7 @@ ScriptRunner.prototype._getScript = function(name) {
             return compiled;
         } else {
             if (scriptObj._sis._updated_at > cached.time) {
-                compiled = vm.createScript(scriptText, name);
+                compiled = new vm.Script(scriptText, { filename: name });
                 cached.script = compiled;
                 cached.time = scriptTime;
             }
@@ -53,13 +58,33 @@ ResponseHolder.prototype.setResponse = function(response) {
     this.defer.resolve(this);
 };
 
+// helper function to run a generator of promises
+function async(gen) {
+    // result = IteratorResult
+    function handleResult(result) {
+        if (result.done) { return result.value; }
+        // wait for the promise to resolve before continuing
+        return result.value.then(function(promiseResult) {
+            // pass the promise result to the caller (doThing)
+            return handleResult(gen.next(promiseResult));
+        }, function(error) {
+            // allows for try catch in the caller!
+            return handleResult(gen.throw(error));
+        });
+    }
+    return handleResult(gen.next());
+}
+
+
 ScriptRunner.prototype._createContext = function(holder, req) {
     var ctx = {
         client : new ApiClient(this.schemaManager, this.hieraManager),
         res : new ApiResponse(holder),
         req : req,
         BPromise : BPromise,
-        csv : require('csv')
+        csv : require('csv'),
+        yaml : require('js-yaml'),
+        async : async
     };
     return vm.createContext(clone(ctx));
 };
@@ -78,11 +103,15 @@ ScriptRunner.prototype.handleRequest = function(req) {
         return holder.response;
     })
     .catch(function(err) {
+        if (Array.isArray(err)) {
+            return BPromise.reject(err);
+        }
         var str = err + "";
         if (err.stack) {
             str += " : " + err.stack;
         }
-        return BPromise.reject({ err : str, status : 500 });
+        err = SIS.ERR_INTERNAL(str);
+        return BPromise.reject(err);
     });
 };
 
