@@ -44,6 +44,8 @@ describe("@API @V1.1API - Scripts API", function() {
         });
     });
 
+    let script_type = "application/javascript";
+
     describe("Error cases", function() {
         it("Should fail if script doesn't exist", function(done) {
             ApiServer.get("/api/v1.1/scripts/foo").expect(404, errHandler(done));
@@ -53,7 +55,7 @@ describe("@API @V1.1API - Scripts API", function() {
         });
         let validObject = {
             name: "valid",
-            script_type: "application/javascript",
+            script_type,
             script: loadScript("timeout"),
             _sis : {
                 owner : ["test"]
@@ -83,7 +85,6 @@ describe("@API @V1.1API - Scripts API", function() {
 
     describe("Script params", function() {
         let name = "params";
-        let script_type = "application/javascript";
         it("should load the script", function(done) {
             let script = {
                 name,
@@ -123,7 +124,67 @@ describe("@API @V1.1API - Scripts API", function() {
 
     describe("Output formats", function() {
         let csv = require("csv");
-        let yml = require("js-yaml");
+        let yaml = require("js-yaml");
 
+        before(function(done) {
+            let name = 'formats';
+            let script = {
+                name,
+                script_type,
+                script: loadScript(name),
+                _sis : {
+                    owner : ["test"]
+                }
+            };
+            ApiServer.post("/api/v1.1/scripts")
+                .send(script).expect(201, function(err, res) {
+                    if (err) { console.log(err); console.log(res.body); }
+                    done(err);
+                });
+        });
+
+        let expectedData  = [
+            {"name":"hello", "value":"world" },
+            {"name":"foo", "value":"bar" }
+        ];
+        let csvData = [
+            ['hello','world'],
+            ['foo','bar']
+        ];
+
+        let baseUri = "/api/v1.1/endpoints/formats";
+
+        it("Should return csv", function(done) {
+            let uri = `${baseUri}/csv`;
+            ApiServer.get(uri).expect(200, function(err, res) {
+                should.not.exist(err);
+                let body = res.text;
+                csv.parse(body, function(e, result) {
+                    should.not.exist(e);
+                    result.should.eql(csvData);
+                    done();
+                });
+            });
+        });
+
+        it("Should return yaml", function(done) {
+            let uri = `${baseUri}/yaml`;
+            ApiServer.get(uri).expect(200, function(err, res) {
+                should.not.exist(err);
+                let body = res.text;
+                let data = yaml.safeLoad(body);
+                data.should.eql(expectedData);
+                done();
+            });
+        });
+
+        it("Should return json", function(done) {
+            let uri = `${baseUri}/json`;
+            ApiServer.get(uri).expect(200, function(err, res) {
+                should.not.exist(err);
+                res.body.should.eql(expectedData);
+                done();
+            });
+        });
     });
 });

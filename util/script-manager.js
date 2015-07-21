@@ -41,7 +41,7 @@ ScriptManager.prototype.validate = function(modelObj, toUpdate, options) {
     try {
         new vm.Script(modelObj.script, { filename: "__test__.js" });
     } catch(ex) {
-        return "Script does not compile";
+        return "Script does not compile " + ex;
     }
     return this.validateOwner(modelObj, options);
 };
