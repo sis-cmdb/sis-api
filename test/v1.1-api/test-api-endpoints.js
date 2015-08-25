@@ -85,6 +85,10 @@ describe("@API @V1.1API - Scripts API", function() {
 
     describe("Script params", function() {
         let name = "params";
+        // nuke it if it exists
+        before(function(done) {
+            deleteScript(name, done);
+        });
         it("should load the script", function(done) {
             let script = {
                 name,
@@ -125,9 +129,11 @@ describe("@API @V1.1API - Scripts API", function() {
     describe("Output formats", function() {
         let csv = require("csv");
         let yaml = require("js-yaml");
-
+        let name = 'formats';
         before(function(done) {
-            let name = 'formats';
+            deleteScript(name, done);
+        });
+        it("Should load the script", function(done) {
             let script = {
                 name,
                 script_type,

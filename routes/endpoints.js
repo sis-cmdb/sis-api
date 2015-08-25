@@ -208,7 +208,7 @@ EndpointController.prototype._runNext = function() {
     var self = this;
     this.workerPool.acquire(function(err, worker) {
         if (err) {
-            res.status(500).json({ error : "Unable to run script.  Internal error", status : 500 });
+            res.status(500).json({ error : "Unable to run script.  Internal error", e: err, status : 500 });
             self.workerPool.destroy(worker);
         } else {
             var p = worker.handleRequest(req);

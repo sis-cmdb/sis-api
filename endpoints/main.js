@@ -3,7 +3,6 @@
 'use strict';
 
 var nconf = require('nconf');
-var config = require('../config');
 var BPromise = require("bluebird");
 var mongoose = BPromise.promisifyAll(require("mongoose"));
 var SIS = require("../util/constants");
