@@ -29,6 +29,7 @@ function HookManager(sm, opts) {
     if (hookRequestDefaults) {
         request = request.defaults(hookRequestDefaults);
     }
+    this.sm = sm;
 }
 
 require('util').inherits(HookManager, Manager);
@@ -135,6 +136,27 @@ HookManager.prototype.dispatchHooks = function(entity, entity_type, event, isBul
                 callback(null, res);
             }).catch(callback);
         }
+    });
+};
+
+// force trigger
+HookManager.prototype.triggerHooks = function(entityType, entityId, opts) {
+    opts = opts || { };
+    return this.sm.getEntityManager(entityType).bind(this)
+    .then(function(mgr) {
+        // get the entity by ID
+        opts.lean = mgr.model.schema._sis_defaultpaths.length === 0;
+        return mgr.getById(entityId);
+    }).then(function(entity) {
+        // trigger an update - which is an array of length 2
+        // for old and new
+        var obj = [entity, entity];
+        this.dispatchHooks(obj, entityType, SIS.EVENT_UPDATE, false);
+        return {
+            message: "Hooks triggered successfully",
+            type: entityType,
+            entity: entity
+        };
     });
 };
 
