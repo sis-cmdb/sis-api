@@ -197,15 +197,13 @@ describe('@API @V1.1API - Entity API', function() {
         };
         before(function(done) {
             ApiServer.del("/api/v1.1/schemas/" + schema.name)
-                .end(function() {
+            .end(function() {
                 ApiServer.post('/api/v1.1/schemas')
-                    .send(schema).expect(201, function(err, result) {
+                .send(schema).expect(201, function(err, result) {
                     if (err) { done(err, result); return; }
                     ApiServer.post("/api/v1.1/entities/test_nested_entity")
-                        .set("Content-Type", "application/json")
-                        .send(entity)
-                        .expect(201, function(err, res) {
-
+                    .set("Content-Type", "application/json")
+                    .send(entity).expect(201, function(err, res) {
                         entity = res.body;
                         should.exist(entity);
                         should.exist(entity.nested_obj);
@@ -602,4 +600,83 @@ describe('@API @V1.1API - Entity API', function() {
 
     });
 
+    describe("Forced Mixed Object updates", function() {
+        var schema = {
+            name: "test_force_mixed",
+            _sis: { owner: ["sistest"] },
+            definition: {
+                name: "String",
+                mixed: "Mixed"
+            }
+        };
+
+        var entity = {
+            name: "Test Forced",
+            mixed: {
+                key1: "val1",
+                key2: 2
+            }
+        };
+        before(function(done) {
+            ApiServer.del("/api/v1.1/schemas/" + schema.name)
+            .end(function() {
+                ApiServer.post('/api/v1.1/schemas')
+                .send(schema).expect(201, function(err, result) {
+                    if (err) { done(err, result); return; }
+                    ApiServer.post("/api/v1.1/entities/test_force_mixed")
+                    .set("Content-Type", "application/json")
+                    .send(entity).expect(201, function(err, res) {
+                        entity = res.body;
+                        should.exist(entity);
+                        should.exist(entity.mixed);
+                        should.exist(entity.mixed.key1);
+                        should.exist(entity.mixed.key2);
+                        done(err, result);
+                    });
+                });
+            });
+        });
+
+        after(function(done) {
+            ApiServer.del("/api/v1.1/schemas/" + schema.name)
+                      .expect(200, done);
+        });
+
+        it("Should not remove key1 and key2, but set key3", function(done) {
+            var mixed = {
+                key3: { force_mixed: "not set" }
+            };
+            ApiServer.put("/api/v1.1/entities/test_force_mixed/" + entity._id)
+            .set("Content-Type", "application/json")
+            .send({ mixed : mixed })
+            .expect(200, function(err, result) {
+                result = result.body;
+                delete entity._sis;
+                delete result._sis;
+                should.exist(result.mixed.key1);
+                should.exist(result.mixed.key2);
+                should.exist(result.mixed.key3);
+                result.mixed.key3.should.eql(mixed.key3);
+                entity = result;
+                done(err, result);
+            });
+        });
+
+        it("Should remove key1, key2 and only set key3", function(done) {
+            entity.mixed = {
+                key3: { force_mixed_set: true }
+            };
+            ApiServer.put("/api/v1.1/entities/test_force_mixed/" + entity._id)
+            .set("Content-Type", "application/json")
+            .query({forceMixed: true})
+            .send({mixed : entity.mixed })
+            .expect(200, function(err, result) {
+                result = result.body;
+                delete entity._sis;
+                delete result._sis;
+                result.should.eql(entity);
+                done(err, result);
+            });
+        });
+    });
 });

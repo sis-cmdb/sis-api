@@ -318,6 +318,7 @@ ApiController.prototype.update = function(req, res) {
     var p = null;
     var options = this._getReqOptions(req);
     var cas;
+    options.forceMixed = req.query.forceMixed;
     if ('cas' in req.query) {
         cas = req.query.cas;
         try {

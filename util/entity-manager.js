@@ -242,7 +242,7 @@ EntityManager.prototype.canInsertWithId = function(id, obj) {
 };
 
 
-EntityManager.prototype.applyUpdate = function(result, entity) {
+EntityManager.prototype.applyUpdate = function(result, entity, options) {
     // save old mixed paths
     var oldMixed = this.mixedTypes.reduce(function(ret, p) {
         ret[p] = result.get(p);
@@ -267,6 +267,8 @@ EntityManager.prototype.applyUpdate = function(result, entity) {
         return obj;
     };
 
+    var forceMixed = options && options.forceMixed;
+
     // restore mixed objects w/ merge
     this.mixedTypes.forEach(function(p) {
         var old = oldMixed[p];
@@ -274,7 +276,11 @@ EntityManager.prototype.applyUpdate = function(result, entity) {
         if (entityVal === undefined) {
             return;
         }
-        old = this.applyPartial(old, entityVal);
+        if (!forceMixed) {
+            old = this.applyPartial(old, entityVal);
+        } else {
+            old = entityVal;
+        }
         result.set(p, old);
         result.markModified(p);
     }.bind(this));

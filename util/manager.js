@@ -437,7 +437,8 @@ Manager.prototype._update = function(id, obj, options, saveFunc) {
             }
         });
 
-        return this._merge(found, obj).bind(this).then(function(merged) {
+        return this._merge(found, obj, options).bind(this)
+        .then(function(merged) {
             return this.authorize(SIS.EVENT_UPDATE, oldV11, user, merged);
         })
         .then(this._addByFields(user, SIS.EVENT_UPDATE))
@@ -837,8 +838,8 @@ Manager.prototype._getFieldsFromPopulateObject = function(refToPaths, subList) {
 
 // returns a promise function that accepts a document from
 // find and applies the update
-Manager.prototype._merge = function(doc, update) {
-    return BPromise.resolve(this.applyUpdate(doc, update));
+Manager.prototype._merge = function(doc, update, options) {
+    return BPromise.resolve(this.applyUpdate(doc, update, options));
 };
 
 Manager.prototype.applyPreSaveFields = function(obj) {
