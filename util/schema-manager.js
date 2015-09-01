@@ -12,6 +12,7 @@ var Manager = require("./manager");
 var BPromise = require("bluebird");
 var jsondiffpatch = require("jsondiffpatch");
 var logger = require("./logger");
+var createEntityManager = require("./entity-manager");
 
 var LOGGER = logger.createLogger({
     name : "SchemaManager"
@@ -99,6 +100,7 @@ function SchemaManager(mongoose, opts) {
         this.tokenFetcher = require("./token-manager")(this, null);
     }
     patchMongoose(mongoose);
+    this.managerCache = { };
 }
 
 require('util').inherits(SchemaManager, Manager);
@@ -696,6 +698,33 @@ SchemaManager.prototype.getTokenManagerForUser = function(username) {
         return null;
     }
     return require("./token-manager")(this, username);
+};
+
+
+SchemaManager.prototype._createEntityManager = function(schema, opts) {
+    var name = schema.name;
+    var schemaTs = schema[SIS.FIELD_SIS_META] ? schema[SIS.FIELD_SIS_META][SIS.FIELD_UPDATED_AT]
+                                              : schema[SIS.FIELD_UPDATED_AT];
+    var cached = this.managerCache[name];
+    if (cached && cached.ts === schemaTs) {
+        return cached.manager;
+    }
+    var model = this.getEntityModel(schema);
+    cached = {
+        ts : schemaTs,
+        manager : createEntityManager(model, schema, opts)
+    };
+    this.managerCache[name] = cached;
+    return cached.manager;
+};
+
+
+SchemaManager.prototype.getEntityManager = function(schemaName, opts) {
+    return this.getById(schemaName, { lean : true })
+    .then(function(schema) {
+        var manager = this._createEntityManager(schema, opts);
+        return manager;
+    }.bind(this));
 };
 
 // export

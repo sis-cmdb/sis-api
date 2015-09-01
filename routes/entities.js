@@ -5,7 +5,6 @@
 var ApiController = require("./apicontroller");
 var SIS = require("../util/constants");
 var BPromise = require("bluebird");
-var createEntityManager = require("../util/entity-manager");
 
 //////////
 // Entity controller
@@ -18,7 +17,6 @@ function EntityController(config) {
     SIS.UTIL_MERGE_SHALLOW(opts, config);
     this.opts = opts;
     ApiController.call(this, this.opts);
-    this.managerCache = { };
 }
 
 // inherit
@@ -29,29 +27,12 @@ require('util').inherits(EntityController, ApiController);
 EntityController.prototype.getManager = function(req) {
     // Get the latest
     var name = this.getType(req);
-    return this.sm.getById(name, { lean : true }).then(function(schema) {
-        var manager = this._createManager(schema);
+    return this.sm.getEntityManager(name, this.opts)
+    .then(function(manager) {
         req.sisManager = manager;
         req.useLean = manager.model.schema._sis_defaultpaths.length === 0;
         return manager;
-    }.bind(this));
-};
-
-EntityController.prototype._createManager = function(schema) {
-    var name = schema.name;
-    var schemaTs = schema[SIS.FIELD_SIS_META] ? schema[SIS.FIELD_SIS_META][SIS.FIELD_UPDATED_AT]
-                                              : schema[SIS.FIELD_UPDATED_AT];
-    var cached = this.managerCache[name];
-    if (cached && cached.ts === schemaTs) {
-        return cached.manager;
-    }
-    var model = this.sm.getEntityModel(schema);
-    cached = {
-        ts : schemaTs,
-        manager : createEntityManager(model, schema, this.opts)
-    };
-    this.managerCache[name] = cached;
-    return cached.manager;
+    });
 };
 
 EntityController.prototype.convertToResponseObject = function(req, obj) {
