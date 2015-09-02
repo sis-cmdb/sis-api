@@ -27,7 +27,6 @@ UserController.prototype.attach = function(app, prefix) {
     app.post(this.auth_token_path, function(req, res) {
         // cors support
         res.set('Access-Control-Allow-Credentials', true);
-        res.set("WWW-Authenticate", 'Basic realm="Users"');
         req.isAuthTokenReq = true;
         var p = this.authenticate(req, res, 'basic')
             .then(this.manager.createTempToken.bind(this.manager));
