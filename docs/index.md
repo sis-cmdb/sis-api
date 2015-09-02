@@ -6,9 +6,7 @@ Table of Contents
     - [HTTP Headers](#http-headers)
     - [Errors](#errors)
     - [SIS Resources](#sis-resources)
-        - [SIS Fields](#sis-fields)
-    - [Changes in V1.1](#changes-in-v11)
-        - [Transitioning](#transitioning)
+    - [SIS Fields](#sis-fields)
 - [Endpoint API](#endpoint-api)
     - [List retrieval options](#list-retrieval-options)
         - [Pagination](#pagination)
@@ -92,9 +90,10 @@ Additionally, the API provides a means to view commits for resources in SIS via 
 
 All SIS objects can be referenced by some id that is unique within their type.
 
-### SIS Fields
+## SIS Fields
 
-The SIS backend adds the following JSON fields to all resources:
+As of the v1.1 API, the SIS backend adds the following JSON fields to all
+resources inside the `_sis` field:
 
 * _id - persistent ID of the object - ObjectId
 * __v - version of the object, primarily used by mongoose - Number
@@ -102,46 +101,13 @@ The SIS backend adds the following JSON fields to all resources:
 * _created_by - username of entity creator - String
 * _updated_at - a UTC timestamp of when the object was last updated - Number
 * _updated_by - username of last user who updated the entity - String
-
-Additionally, SIS provides the following fields on all objects that authorized users may modify:
-
-* sis_locked - indicates whether the object can be deleted - Boolean
-* sis_immutable - indicates whether the object can be changed - Boolean
-* sis_tags - an indexed array of Strings for arbitrary tagging - [String]
+* locked - indicates whether the object can be deleted - Boolean
+* immutable - indicates whether the object can be changed - Boolean
+* tags - an indexed array of Strings for arbitrary tagging - [String]
 * owner - a list of groups that can modify or remove the object.
 
-With the exception of `owner`, all SIS fields are prefixed with `_` or `sis_`.
-
-## Changes in V1.1
-
-In the V1 API, all SIS fields are in the top level of the object.  For instance, the following entity may
-exist in V1:
-
-```javascript
-{
-    // SIS fields
-    "_id" : "some_id",
-    "__v" : 0,
-    "_created_at" : 1,
-    "_updated_at" : 2,
-    "_updated_by" : "user2",
-    "_created_by" : "user1",
-    "sis_locked" : false,
-    "sis_immutable" : true,
-    "sis_tags" : ['tag1'],
-    "owner" : ['sis_documentation'],
-
-    // entity fields
-    "name" : "some_name",
-    "number" : 10,
-    "bool" : false
-    // etc..
-}
-```
-
-The embedding of fields in the top level can be problematic for client parsers and also clutters objects
-as new SIS fields are added.  In V1.1, all SIS fields *except* _id and __v are moved into a `_sis` sub object.
-For instance, the following represents the v1.1 representation of the above object:
+Below is an example object meant to illustrate the `_sis` subdocument and
+SIS specific fields.
 
 ```javascript
 {
@@ -188,16 +154,6 @@ In other words, it looks like any other update request.
 Additionally, the v1.1 API no longer requires owner to be present on POST requests for non super users.
 The `_sis.owner` will be automatically inferred from the roles of the user.
 
-### Transitioning
-
-While V1.1 is new, SIS will continue to support the V1 API for the near future.  Clients should move all code
-to use the V1.1 API if possible.
-
-While V1 is supported, the SIS backend will return objects in th expected format.  Additionally, queries against SIS
-fields are converted to look at both V1 and V1.1 objects.
-
-Objects are stored in the backing database in V1.1 format on all inserts.  When issuing an update to a V1 object,
-the object is converted to V1.1.  All of this should be transparent to V1 clients.
 
 # Endpoint API
 

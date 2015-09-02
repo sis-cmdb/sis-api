@@ -167,7 +167,7 @@ Error cases:
 * Any errors from create
 * The name in the payload does not match the name in the path.
 * The hook does not exist
-* `sis_immutable` is true
+* `_sis.immutable` is true
 
 ## Deleting a hook
 
@@ -179,7 +179,7 @@ The response is the deleted hook.
 
 Error cases:
 
-* `sis_locked` is true
+* `_sis.locked` is true
 * The hook does not exist
 * Authorization failure
 

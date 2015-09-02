@@ -111,20 +111,20 @@ Error cases:
 
 * All errors from the create section
 * The object does not exist
-* `sis_immutable` is true
+* `_sis.immutable` is true
 
 
 ## Deleting an entity
 
 * `DELETE /api/v1.1/entities/:schema_name/:id`
 
-Removes the entity belonging to the schema with name `schema_name` that has the `_id` specified by the `id` path parameter.  This method fails if `sis_locked` is set to true.
+Removes the entity belonging to the schema with name `schema_name` that has the `_id` specified by the `id` path parameter.  This method fails if `_sis.locked` is set to true.
 
 The response is the deleted entity.
 
 Error cases:
 
-* `sis_locked` is true
+* `_sis.locked` is true
 * The schema does not exist
 * Authorization failure
 

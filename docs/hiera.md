@@ -93,7 +93,7 @@ Error cases:
 * The name in the payload does not match the name in the path.
 * The entry does not exist
 * Authorization failure
-* `sis_immutable` is true
+* `_sis.immutable` is true
 
 ## Deleting a hiera entry
 
@@ -107,4 +107,4 @@ Error cases:
 
 * The entry does not exist
 * Authorization failure
-* `sis_locked` is true
+* `_sis.locked` is true

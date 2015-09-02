@@ -14,11 +14,11 @@ Table of Contents
       - [client](#client)
     - [Libraries](#libraries)
     - [Sample](#sample)
-- [Invoking Scripts](#invoking-scripts)
+- [Invoking Endpoints](#invoking-endpoints)
 
 # Scripts API
 
-Scripts are pieces of custom code users can write to define their own [custom endpoints](#custom-endpoints).  Scripts are able to query SIS data and manipulate results for customized output.
+Scripts are pieces of custom code users can write to define their own [custom endpoints](#invoking-endpoints).  Scripts are able to query SIS data and manipulate results for customized output.
 
 ## Script Objects
 
@@ -100,7 +100,7 @@ The response is the deleted script.
 
 Error cases:
 
-* `sis_locked` is true
+* `_sis.locked` is true
 * The script does not exist
 * Authorization failure
 
@@ -130,7 +130,7 @@ The `res` object available to the script represents the HTTP response.  The scri
   - res.status(code) - set the status code.  returns res for chaining
   - res.send(data) - send the data - this should be the last action a script takes.  Data should be a string.
   - res.json(obj) - send the object as JSON back.  An alias for `res.set("Content-Type","application/json").send(JSON.stringify(obj));`
-  
+
 As an example, `res.set("Content-Type","text/plain").status(200).send("Hello World")` will send a 200 OK back to the client with Hello World as plain text.
 
 ### client
@@ -201,7 +201,7 @@ if (req.path === "/echo") {
 
 ```
 
-# Invoking Scripts
+# Invoking Endpoints
 
 After creating a Script object within SIS, clients can invoke them by using `/api/v1.1/endpoints/:script_name`.  For example, if a script was created with name "foo", clients can issue requests against: `/api/v1.1/endpoints/foo`.
 
@@ -211,4 +211,3 @@ If the script content was the same as the sample above, then the following reque
  - `/api/v1.1/endpoints/foo/sis` - responds with the result of `querySis()`
 
 All other requests against `/api/v1.1/endpoints/foo` would result in "Hello World".
-
