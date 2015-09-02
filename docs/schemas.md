@@ -175,7 +175,7 @@ Error cases:
 
 * Any errors from create
 * The schema does not exist
-* `sis_immutable` is true
+* `_sis.immutable` is true
 
 ## Deleting a schema
 
@@ -187,6 +187,6 @@ The response is the deleted object.
 
 Error cases:
 
-* `sis_locked` is true
+* `_sis.locked` is true
 * The schema does not exist
 * Authorization failure

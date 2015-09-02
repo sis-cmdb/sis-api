@@ -92,37 +92,35 @@ All SIS objects can be referenced by some id that is unique within their type.
 
 ## SIS Fields
 
-As of the v1.1 API, the SIS backend adds the following JSON fields to all
-resources inside the `_sis` field:
+As of the v1.1 API, the following fields reside on the top level object and are
+SIS internal fields.
 
 * _id - persistent ID of the object - ObjectId
-* __v - version of the object, primarily used by mongoose - Number
-* _created_at - a UTC timestamp of when the object was created - Number
-* _created_by - username of entity creator - String
-* _updated_at - a UTC timestamp of when the object was last updated - Number
-* _updated_by - username of last user who updated the entity - String
-* locked - indicates whether the object can be deleted - Boolean
-* immutable - indicates whether the object can be changed - Boolean
-* tags - an indexed array of Strings for arbitrary tagging - [String]
-* owner - a list of groups that can modify or remove the object.
+* _v - version of the object, primarily used by mongoose - Number
+* _sis - a subdocument with additional metadata and state.  It contains:
+  * _created_at - a UTC timestamp of when the object was created - Number
+  * _created_by - username of entity creator - String
+  * _updated_at - a UTC timestamp of when the object was last updated - Number
+  * _updated_by - username of last user who updated the entity - String
+  * locked - indicates whether the object can be deleted - Boolean
+  * immutable - indicates whether the object can be changed - Boolean
+  * tags - an indexed array of Strings for arbitrary tagging - [String]
+  * owner - a list of groups that can modify or remove the object.
 
-Below is an example object meant to illustrate the `_sis` subdocument and
-SIS specific fields.
+Below is an example object meant to illustrate the internal fields, especially
+the `_sis` subdocument.
 
 ```javascript
 {
     // SIS fields
     "_id" : "some_id",
-    // __v has been renamed to _v
     "_v" : 0,
-    // all sis fields have been moved into _sis
     "_sis" : {
         // immutable SIS metadata fields start with _
         "_created_at" : 1,
         "_updated_at" : 2,
         "_updated_by" : "user2",
         "_created_by" : "user1",
-        // sis_ fields have been renamed
         // all mutable fields below
         "locked" : false,
         "immutable" : true,
@@ -169,11 +167,11 @@ See [List retrieval options](#list-retrieval-options) for options.
 * GET <endpoint>/<resource id> - retrieve a single resource by id.
 * POST <endpoint> - create a new resource, or multiple resources via [bulk insert](#bulk-insert).
 * PUT <endpoint>/<resource id> - update a resource with the specified id.  [CAS operations](#cas-support) are also supported.
-    * Note this operation will fail if `sis_immutable` is `true` for the resource.
+    * Note this operation will fail if `_sis.immutable` is `true` for the resource.
     * Upsert is also
 * DELETE <endpoint> - delete multiple resources via [bulk delete](#bulk-delete).
 * DELETE <endpoint>/<resource id> - delete a single resource with the specified id.
-    * Note this operation will fail if `sis_locked` is `true` for the resource.
+    * Note this operation will fail if `_sis.locked` is `true` for the resource.
 
 Endpoints paths and id fields are documented in the resource specific documentation.
 

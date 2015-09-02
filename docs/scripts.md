@@ -88,7 +88,7 @@ Error cases:
 * Any errors from create
 * The name in the payload does not match the name in the path.
 * The script does not exist
-* `sis_immutable` is true
+* `_sis.immutable` is true
 
 ## Deleting a script
 
