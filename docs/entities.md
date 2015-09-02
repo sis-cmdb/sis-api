@@ -101,6 +101,10 @@ Error cases:
 The request body must be a valid entity object that adheres to the schema definition of of the schema with name `schema_name`.  The `_id` in the entity object must match the id in the path parameter.
 Partial updates are supported.
 
+If updating an entity with mixed objects, the mixed object data is partially
+merged together.  In order to override this behavior and have the mixed data
+apply exactly as the payload is sending, specify `forceMixed=true` in the URL.
+
 The response is the updated entity object.
 
 Error cases:

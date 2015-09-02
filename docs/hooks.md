@@ -182,3 +182,12 @@ Error cases:
 * `sis_locked` is true
 * The hook does not exist
 * Authorization failure
+
+## Forcing Hooks to Trigger
+
+* `POST /api/v1.1/hooks/trigger/:schema/:entity
+
+This will fire all hooks that would have been fired if the object with id
+`:entity` with schema named `:schema` would have been updated.  The hook
+payload is sent with event `update` and the old value matches the data
+value.
