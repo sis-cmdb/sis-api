@@ -37,8 +37,9 @@ module.exports = function(grunt) {
       }
     },
     jshint: {
-        files: distFiles.concat(["test/**/*.js"]).concat(["!test/fixtures/scripts/*.js"]),
+        files: distFiles.concat(["test/**/*.js"]).concat(["!test/fixtures/scripts/*.js"]).concat(["!tools/*.mongo.js"]),
         options: {
+            strict: "global",
             newcap: false,
             node : true,
             // slowly...

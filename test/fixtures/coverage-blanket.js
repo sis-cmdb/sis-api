@@ -1,3 +1,4 @@
+"use strict";
 // used for code coverage
 var path = require('path');
 var mainFile = path.join(__dirname, '..', '..', 'server.js');

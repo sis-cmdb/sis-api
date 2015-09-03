@@ -1,3 +1,4 @@
+"use strict";
 // logger middleware
 var bunyan = require('bunyan');
 var uuid = require('node-uuid');

@@ -1,3 +1,4 @@
+"use strict";
 
 var express = require('express');
 var mongoose = require('mongoose');
@@ -25,8 +26,6 @@ if (process.env.SIS_DEBUG) {
 }
 
 var startServer = function(callback) {
-    'use strict';
-
     var SIS = require("./util/constants");
     var LOGGER = logger.createLogger({
         name : "SISServer"
