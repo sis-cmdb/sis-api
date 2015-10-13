@@ -185,7 +185,7 @@ All list responses contain the `x-total-count` header which contains the total n
 
 All lists retrieved are actually pages.  The following query parameters are used in pagination:
 
-* limit - the number of items to fetch.  200 by default.  At most 200 items can be retrieved in a single call.
+* limit - the maximum number of items to fetch in a single call; defaults to MAX_RESULTS defined in util/types/constants.js, currently 10,000.
 * offset - the number of items to skip before fetching.  0 based.
 
 For instance, `GET /api/v1.1/schemas?limit=3&offset=4` retrieves the schemas at positions 3, 4, and 5.
