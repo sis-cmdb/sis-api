@@ -1,9 +1,17 @@
+  // templatize this for the env
+mongo_host = 'localhost';
+mongo_port = 27017;
+if (process.env.MONGO_HOST) {
+  mongo_host = process.env.MONGO_HOST;
+}
+if (process.env.MONGO_PORT) {
+  mongo_port = process.env.MONGO_PORT;
+}
 
-// templatize this for the env
 module.exports =
 {
     db: {
-        url : "mongodb://localhost/sis",
+        url : 'mongodb://'+mongo_host+':'+mongo_port+'/sis',
         opts : {
                 "server": {
                     "auto_reconnect": true,"socketOptions": {"keepAlive": 1}, "poolSize": 5
