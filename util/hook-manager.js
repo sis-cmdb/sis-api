@@ -68,23 +68,23 @@ var sendRequest = function(options, retry_count, delay, d) {
         LOGGER.debug({ options: options, res: res, err: err});
 
         if(err) {
-            LOGGER.error({ options: options, err: err }, "Error Response from Outbound Hook Request");
+            LOGGER.error({ options: options, res: res, err: err }, "Error Response from Outbound Hook Request");
         }
         if (err || !res || res.statusCode >= 300) {
             if (retry_count <= 0) {
                 // done with error
-                LOGGER.error({options: options, err: err},"Exhausted retries");
+                LOGGER.error({options: options, res: res, err: err},"Exhausted retries");
                 return d.reject(SIS.ERR_INTERNAL(err));
             } else {
                 // retry
-                LOGGER.info({options: options, retry_count: retry_count, delay: delay},"Hook being retried");
+                LOGGER.info({options: options, res: res, retry_count: retry_count, delay: delay},"Hook being retried");
                 setTimeout(function() {
                     sendRequest(options, retry_count - 1, delay, d);
                 }, delay * 1000);
             }
         } else {
             // success!
-            LOGGER.info({options: options, code: res.statusCode},"Hook call successful");
+            LOGGER.info({options: options, res: res, code: res.statusCode},"Hook call successful");
             return d.resolve(res.body);
         }
     });
