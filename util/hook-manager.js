@@ -65,7 +65,7 @@ HookManager.prototype.validate = function(modelObj, toUpdate, options) {
 
 var sendRequest = function(options, retry_count, delay, d) {
     request(options, function(err, res) {
-        LOGGER.info({ options: options, res: res, err: err, retry_count: retry_count, delay: delay},"Logging all request details"));
+        LOGGER.info({ options: options, res: res, err: err, retry_count: retry_count, delay: delay},"Logging all request details");
 
         if(err) {
             LOGGER.error({ err: err }, "Error Response from Outbound Hook Request");
