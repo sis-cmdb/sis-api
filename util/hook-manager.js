@@ -65,34 +65,36 @@ HookManager.prototype.validate = function(modelObj, toUpdate, options) {
 
 var sendRequest = function(options, retry_count, delay, d) {
     request(options, function(err, res) {
-        LOGGER.debug({ options: options, res: res, err: err});
+        LOGGER.info({ options: options, res: res, err: err, retry_count: retry_count, delay: delay},"Logging all request details"));
 
         if(err) {
-            LOGGER.error({ options: options, res: res, err: err }, "Error Response from Outbound Hook Request");
+            LOGGER.error({ err: err }, "Error Response from Outbound Hook Request");
         }
         if (err || !res || res.statusCode >= 300) {
             if (retry_count <= 0) {
                 // done with error
-                LOGGER.error({options: options, res: res, err: err},"Exhausted retries");
+                LOGGER.error({err: err},"Exhausted retries");
                 return d.reject(SIS.ERR_INTERNAL(err));
             } else {
                 // retry
-                LOGGER.info({options: options, res: res, retry_count: retry_count, delay: delay},"Hook being retried");
+                LOGGER.info({retry_count: retry_count, delay: delay},"Hook being retried");
                 setTimeout(function() {
                     sendRequest(options, retry_count - 1, delay, d);
                 }, delay * 1000);
             }
         } else {
             // success!
-            LOGGER.info({options: options, res: res, code: res.statusCode},"Hook call successful");
+            LOGGER.info({res: res, code: res.statusCode},"Hook call successful");
             return d.resolve(res.body);
         }
     });
 };
 
 var dispatchHook = function(hook, entity, event, isBulk) {
+    // This check will never be true
     if (typeof entity.toObject === 'function') {
         entity = entity.toObject();
+        LOGGER.error({entity:entity},"Got a function instead of an entity");
     }
     var data = {
         'hook' : hook.name,
@@ -115,6 +117,7 @@ var dispatchHook = function(hook, entity, event, isBulk) {
         options.qs = {'data' : data};
     } else {
         options.json = data;
+        LOGGER.info({payload: options.json},"Hook payload: ");
     }
     var d = BPromise.pending();
     sendRequest(options, hook.retry_count || 0, hook.retry_delay || 1, d);
@@ -158,6 +161,10 @@ HookManager.prototype.triggerHooks = function(entityType, entityId, opts) {
     }).then(function(entity) {
         // trigger an update - which is an array of length 2
         // for old and new
+        // Log entity, for giggles
+        // -----------------------
+        LOGGER.info({entity: entity},"Dispatching hooks for "+entityType+" with id "+entityId);
+
         var obj = [entity, entity];
         this.dispatchHooks(obj, entityType, SIS.EVENT_UPDATE, false);
         return {
