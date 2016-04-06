@@ -65,7 +65,7 @@ HookManager.prototype.validate = function(modelObj, toUpdate, options) {
 
 var sendRequest = function(options, retry_count, delay, d) {
     request(options, function(err, res) {
-        LOGGER.info({ options: options, res: res, err: err, retry_count: retry_count, delay: delay},"Logging all request details");
+        //LOGGER.info({ options: options, res: res, err: err, retry_count: retry_count, delay: delay},"Logging all request details");
 
         if(err) {
             LOGGER.error({ err: err }, "Error Response from Outbound Hook Request");
@@ -77,14 +77,14 @@ var sendRequest = function(options, retry_count, delay, d) {
                 return d.reject(SIS.ERR_INTERNAL(err));
             } else {
                 // retry
-                LOGGER.info({retry_count: retry_count, delay: delay},"Hook being retried");
+                //LOGGER.info({retry_count: retry_count, delay: delay},"Hook being retried");
                 setTimeout(function() {
                     sendRequest(options, retry_count - 1, delay, d);
                 }, delay * 1000);
             }
         } else {
             // success!
-            LOGGER.info({res: res, code: res.statusCode},"Hook call successful");
+            //LOGGER.info({res: res, code: res.statusCode},"Hook call successful");
             return d.resolve(res.body);
         }
     });
@@ -94,7 +94,7 @@ var dispatchHook = function(hook, entity, event, isBulk) {
     // This check will never be true
     if (typeof entity.toObject === 'function') {
         entity = entity.toObject();
-        LOGGER.error({entity:entity},"Got a function instead of an entity");
+        //LOGGER.error({entity:entity},"Got a function instead of an entity");
     }
     var data = {
         'hook' : hook.name,
@@ -161,9 +161,7 @@ HookManager.prototype.triggerHooks = function(entityType, entityId, opts) {
     }).then(function(entity) {
         // trigger an update - which is an array of length 2
         // for old and new
-        // Log entity, for giggles
-        // -----------------------
-        LOGGER.info({entity: entity},"Dispatching hooks for "+entityType+" with id "+entityId);
+        //LOGGER.info({entity: entity},"Dispatching hooks for "+entityType+" with id "+entityId);
 
         var obj = [entity, entity];
         this.dispatchHooks(obj, entityType, SIS.EVENT_UPDATE, false);
