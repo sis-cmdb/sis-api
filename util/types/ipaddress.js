@@ -6,8 +6,8 @@ module.exports = exports = function IpAddr(mongoose) {
     var SchemaType = mongoose.SchemaType;
     var Types = mongoose.Types;
     var mongo = mongoose.mongo;
-    var v6 = require("ipv6").v6;
-    var v4 = require("ipv6").v4;
+    var Address6 = require("ip-address").Address6;
+    var Address4 = require("ip-address").Address4;
 
       /**
        * Long constructor
@@ -46,8 +46,8 @@ module.exports = exports = function IpAddr(mongoose) {
      * @param {Boolean} [init]
      * @return {mongo.Long|null}
      */
-    var MAX_V6 = new v6.Address("ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff").bigInteger();
-    var MAX_V4 = new v4.Address("255.255.255.255").bigInteger();
+    var MAX_V6 = new Address6("ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff").bigInteger();
+    var MAX_V4 = new Address4("255.255.255.255").bigInteger();
 
     var FIELDS = [
         'ip_address',
@@ -67,9 +67,9 @@ module.exports = exports = function IpAddr(mongoose) {
         var net = startBi.xor(endBi);
         var netAddr = null;
         if (version == 'v6') {
-            netAddr = v6.Address.fromBigInteger(net.xor(MAX_V6));
+            netAddr = Address6.fromBigInteger(net.xor(MAX_V6));
         } else {
-            netAddr = v4.Address.fromBigInteger(net.xor(MAX_V4));
+            netAddr = Address4.fromBigInteger(net.xor(MAX_V4));
         }
 
         var result = {
@@ -92,10 +92,10 @@ module.exports = exports = function IpAddr(mongoose) {
             var addr = null;
             var version = null;
             if (val.indexOf(':') != -1) {
-                addr = new v6.Address(val);
+                addr = new Address6(val);
                 version = 'v6';
             } else {
-                addr = new v4.Address(val);
+                addr = new Address4(val);
                 version = 'v4';
             }
             if (!addr.isValid()) {
