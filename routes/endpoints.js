@@ -52,9 +52,9 @@ EndpointWorker.prototype.create = function() {
     var timer = setTimeout(function() {
         this.childState = ERROR;
         this.destroy();
-        LOGGER.error("setTimeout: Failed to spawn child within 5 seconds");
-        createDefer.reject({ error : "setTimeout: Failed to spawn within 5 seconds" });
-    }.bind(this), 7500);
+        LOGGER.error("setTimeout: Failed to spawn child within 12 seconds");
+        createDefer.reject({ error : "setTimeout: Failed to spawn within 12 seconds" });
+    }.bind(this), 12000);
     this.child.on("message", function(msg) {
         var type = msg.type;
         var data = msg.data;
@@ -85,7 +85,7 @@ EndpointWorker.prototype.create = function() {
             if (state === SPAWNING) {
                 clearTimeout(timer);
                 this.destroy();
-                createDefer.reject({ error : "Failed to spawn within 5 seconds" });
+                createDefer.reject({ error : "Failed to spawn within 12 seconds" });
             } else if (state === BUSY) {
                 WORKER_LOGGER.error("Unexpected message while busy");
                 // message during a request

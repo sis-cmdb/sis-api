@@ -7,6 +7,10 @@ var BPromise = require("bluebird");
 var mongoose = require("mongoose");
 var SIS = require("../util/constants");
 mongoose.Promise = BPromise;
+process.send = process.send || console.log;
+process.on = process.on || function(m,f) {
+  console.log("process.on: "+m+" handled");
+};
 
 if (process.env.TESTING) {
     nconf.env("__")
