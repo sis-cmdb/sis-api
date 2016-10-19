@@ -8,6 +8,8 @@ var logger = require('./util/logger');
 var nconf = require("nconf");
 var app = null;
 
+mongoose.Promise = BPromise;
+
 // routes we want to include
 var routes = [
     'schemas',
@@ -65,6 +67,7 @@ var startServer = function(callback) {
     app.enable('trust proxy');
 
     var opts = nconf.get('db').opts || { };
+    opts.promiseLibrary = BPromise;
 
     mongoose.connect(nconf.get('db').url, opts, function(err) {
         if (err) {

@@ -52,9 +52,9 @@ EndpointWorker.prototype.create = function() {
     var timer = setTimeout(function() {
         this.childState = ERROR;
         this.destroy();
-        LOGGER.error("Failed to spawn child within 5 seconds");
-        createDefer.reject({ error : "Failed to spawn within 5 seconds" });
-    }.bind(this), 5000);
+        LOGGER.error("setTimeout: Failed to spawn child within 5 seconds");
+        createDefer.reject({ error : "setTimeout: Failed to spawn within 5 seconds" });
+    }.bind(this), 7500);
     this.child.on("message", function(msg) {
         var type = msg.type;
         var data = msg.data;

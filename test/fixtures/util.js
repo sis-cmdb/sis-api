@@ -182,6 +182,7 @@ function LocalTest() {
         }
         loadConfig();
         var mongoose = require('mongoose');
+        mongoose.Promise = BPromise;
         mongoose.connect(nconf.get('db').url);
         mongoose.connection.once('open', function() {
             dbData = {

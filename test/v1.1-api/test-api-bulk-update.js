@@ -23,7 +23,7 @@ describe('@API @V1.1API - Bulk Update API', function() {
     var createItems = function(start, num) {
         var result = [];
         for (var i = start; i < (start + num); ++i) {
-            result.push({ num: i, str : "s_" + i });
+            result.push({ "num": i, str : "s_" + i });
         }
         return result;
     };

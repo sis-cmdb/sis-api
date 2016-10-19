@@ -460,7 +460,7 @@ Manager.prototype.finishUpdate = function(old, updated) {
 
 Manager.prototype._getCasSave = function(obj, cas) {
     return function(doc) {
-        var validate = BPromise.promisify(doc.validate, doc);
+        var validate = BPromise.promisify(doc.validate, { context: doc });
         return validate().bind(this).then(function() {
             // set the ID on the id field
             cas[this.idField] = doc[this.idField];

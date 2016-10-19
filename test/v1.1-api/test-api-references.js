@@ -334,6 +334,7 @@ describe('@API @V1.1API - Entity References', function() {
     describe("Subdocs and arrays", function() {
 
         var mongoose = require('mongoose');
+        mongoose.Promise = BPromise;
         // need to test arrays of sub docs, arrays of object ids
         // and arrays of object ids -> sub array field
         var leaf_schema = {
@@ -466,6 +467,7 @@ describe('@API @V1.1API - Entity References', function() {
     describe("Bulk operations", function() {
 
         var mongoose = require('mongoose');
+        mongoose.Promise = BPromise;
         // need to test arrays of sub docs, arrays of object ids
         // and arrays of object ids -> sub array field
         var leaf_schema = {

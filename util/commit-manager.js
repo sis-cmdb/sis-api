@@ -104,7 +104,7 @@ function CommitManager(schemaManager) {
         }
 
         // do a bulk insert directly
-        var insert = BPromise.promisify(self.model.collection.insert, self.model.collection);
+        var insert = BPromise.promisify(self.model.collection.insert, {context: self.model.collection });
         return insert(commits).then(function() {
             return items;
         });
