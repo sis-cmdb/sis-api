@@ -4,8 +4,9 @@
 
 var nconf = require('nconf');
 var BPromise = require("bluebird");
-var mongoose = BPromise.promisifyAll(require("mongoose"));
+var mongoose = require("mongoose");
 var SIS = require("../util/constants");
+mongoose.Promise = BPromise;
 
 if (process.env.TESTING) {
     nconf.env("__")
@@ -27,7 +28,8 @@ function sendResponse(res) {
 }
 
 var opts = nconf.get('db').opts || { };
-mongoose.connectAsync(nconf.get('db').url, opts)
+
+mongoose.connect(nconf.get('db').url, opts)
 .then(function() {
     var appConfig = nconf.get('app') || { };
     var schemaManager = require('../util/schema-manager')(mongoose, appConfig);
