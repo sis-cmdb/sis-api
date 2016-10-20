@@ -72,17 +72,6 @@ module.exports = function(grunt) {
         },
         src: ['test/init-tests.js', 'test/test-tokenmanager.js', 'test/test-*.js',
               'test/v1.1-api/test-*']
-      },
-      coverage: {
-        options: {
-          reporter: 'html-cov',
-          // use the quiet flag to suppress the mocha console output
-          quiet: true,
-          // specify a destination file to capture the mocha
-          // output (the quiet option does not suppress this)
-          captureFile: grunt.option('coverage_out') || '_reports/coverage.html'
-        },
-        src: ['test/init-tests.js', 'test/test-*.js', 'test/v1-api/*', 'test/v1.1-api/*']
       }
     }
   });
@@ -108,7 +97,7 @@ module.exports = function(grunt) {
     }
   });
 
-  grunt.registerTask('localtest', ['mochaTest:test', 'mochaTest:coverage']);
+  grunt.registerTask('localtest', ['mochaTest:test']);
 
   grunt.registerTask('dist', [
     'env:dist',

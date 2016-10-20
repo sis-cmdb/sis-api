@@ -1,6 +1,6 @@
 // IPAddress type
+'use strict';
 module.exports = exports = function IpAddr(mongoose) {
-    'use strict';
 
     var Schema = mongoose.Schema;
     var SchemaType = mongoose.SchemaType;
