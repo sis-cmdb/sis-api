@@ -73,6 +73,7 @@ var createHiera = function() {
 };
 
 var getUpsertFunc = function(ApiServer, items, endpointUrl) {
+    console.log("generating upsert for "+endpointUrl);
     function upsert(item ,callback) {
         ApiServer.get(endpointUrl)
             .query({ q : { name : item.name } })
