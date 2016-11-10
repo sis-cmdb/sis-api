@@ -3,6 +3,7 @@ describe('Init Seed Data', function() {
 
     var replUtil = require('../fixtures/repl-util');
     var servers = replUtil.loadReplicationServers();
+
     console.log("Servers are: ",JSON.stringify(servers));
 
     it("should seed the data", function(done) {
