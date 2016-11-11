@@ -159,12 +159,17 @@ function TestServer() {
         if (!serverData) {
             return callback("server not started.");
         }
+        console.log("getTempToken username: "+username);
+        console.log("getTempToken password: "+password);
         var req = this.post("/api/v1.1/users/auth_token")
                                     .auth(username, password)
                                     .send("auth");
         req.set('Content-Type', null);
         req.expect(201, function(err, res) {
-            if (err) { return callback(err); }
+            if (err) { 
+                console.log('Error: '+err);
+                return callback(err); 
+            }
             return callback(null, res.body);
         });
     };
