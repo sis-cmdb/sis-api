@@ -12,7 +12,7 @@ function TestServer() {
     var serverData = null;
 
     this.setupRemote = function(url, username, password) {
-        console.log("Remote URL: "+url);
+        //console.log("Remote URL: "+url);
         serverData = {
             request : require('supertest')(url),
             username : username,
@@ -160,16 +160,17 @@ function TestServer() {
         if (!serverData) {
             return callback("server not started.");
         }
-        console.log("getTempToken username: "+username);
-        console.log("getTempToken password: "+password);
+        //console.log("getTempToken username: "+username);
+        //console.log("getTempToken password: "+password);
         // This is a supertest object, promisified
         var req = this.post("/api/v1.1/users/auth_token")
                                     .auth(username, password)
                                     .send("auth");
         req.set('Content-Type', null);
         req.expect(201, function(err, res) {
+            console.log("getTempToken Data: "+JSON.stringify(res));
             if (err) { 
-                console.log('Error: '+err);
+                console.log('getTempToken failed: '+err);
                 return callback(err); 
             }
             return callback(null, res.body);
