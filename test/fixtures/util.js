@@ -126,7 +126,7 @@ function TestServer() {
             result.set("x-auth-token", this.authToken);
         }
         result.set('Accept', 'application/json');
-        return BPromise.promisifyAll(result,{ multiArgs: true });
+        return result;//BPromise.promisifyAll(result,{ multiArgs: true });
     };
 
     this.stop = function(callback) {
