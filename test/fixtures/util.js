@@ -127,7 +127,7 @@ function TestServer() {
             result.set("x-auth-token", this.authToken);
         }
         result.set('Accept', 'application/json');
-        return result;//BPromise.promisifyAll(result,{ multiArgs: true });
+        return BPromise.promisifyAll(result,{ multiArgs: true });
     };
 
     this.stop = function(callback) {
@@ -168,9 +168,9 @@ function TestServer() {
                                     .send("auth");
         req.set('Content-Type', null);
         req.expect(201, function(err, res) {
-            console.log("getTempToken Data: "+JSON.stringify(res));
+            //console.log("getTempToken Data: "+JSON.stringify(res));
             if (err) { 
-                console.log('getTempToken failed: '+err);
+                //console.log('getTempToken failed: '+err);
                 return callback(err); 
             }
             return callback(null, res.body);
