@@ -126,7 +126,7 @@ function TestServer() {
             result.set("x-auth-token", this.authToken);
         }
         result.set('Accept', 'application/json');
-        return BPromise.promisifyAll(result);
+        return BPromise.promisifyAll(result,{ multiArgs: true });
     };
 
     this.stop = function(callback) {
@@ -161,6 +161,7 @@ function TestServer() {
         }
         console.log("getTempToken username: "+username);
         console.log("getTempToken password: "+password);
+        // This is a supertest object, promisified
         var req = this.post("/api/v1.1/users/auth_token")
                                     .auth(username, password)
                                     .send("auth");
