@@ -12,6 +12,7 @@ function TestServer() {
     var serverData = null;
 
     this.setupRemote = function(url, username, password) {
+        console.log("Remote URL: "+url);
         serverData = {
             request : require('supertest')(url),
             username : username,
