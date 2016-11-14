@@ -79,10 +79,13 @@ describe('@API @V1.1API - Entity Join API', function() {
             BPromise.map(schemas, addSchema).then(function(res) {
                 // join_ent_2_2 will have ref_1 = join_ent_1_2 and ref_0 = join_ent_0_2
                 var createEntities = function(i) {
+                    console.log("createEntities: entities = "+JSON.stringify(entities));
+                    console.log("createEntities: i = "+i);
                     if (i >= entities.length) {
                         return BPromise.resolve("success");
                     }
                     var entities2Add = entities[i];
+                    console.log("createEntities: entities2Add = "+JSON.stringify(entities2Add));
                     if (i > 0) {
                         var j = i - 1;
                         while (j >= 0) {
