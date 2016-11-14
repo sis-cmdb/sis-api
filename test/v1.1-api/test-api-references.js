@@ -609,7 +609,7 @@ describe('@API @V1.1API - Entity References', function() {
 
             ApiServer.post(ANC_URL).send(items).expectAsync(200)
             .then(function(res) {
-                var result = res.body;
+                var result = JSON.parse(res[0].text);
                 should.exist(result.success);
                 result.success.length.should.eql(items.length);
                 done();
@@ -640,7 +640,7 @@ describe('@API @V1.1API - Entity References', function() {
 
             ApiServer.post(ANC_URL).send(items).expectAsync(200)
             .then(function(res) {
-                var result = res.body;
+                var result = JSON.parse(res[0].text);
                 should.exist(result.success);
                 result.success.length.should.eql(items.length / 2);
                 result.errors.length.should.eql(items.length / 2);

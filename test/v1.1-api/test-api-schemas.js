@@ -179,7 +179,8 @@ describe('@API @V1.1API - Schema API', function() {
             ApiServer.post("/api/v1.1/schemas")
                 .set('Content-Type', 'application/json')
                 .send(jsData)
-                .expect(201, function(e, r) {
+                .expect(201)
+                .end(function(e, r) {
                     if (e) {
                         console.log(r.body);
                     }
