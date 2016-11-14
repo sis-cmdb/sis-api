@@ -88,6 +88,7 @@ describe('@API @V1.1API - Entity Join API', function() {
                         while (j >= 0) {
                             var j_ents = entities[j];
                             for (var k = 0; k < j_ents.length; ++k) {
+                                console.log("before createEntities: j_ents["+k+"]: "+JSON.stringify(j_ents[k]));
                                 var ref_ent = j_ents[k];
                                 var ent = entities2Add[k];
                                 ent['ref_' + j] = ref_ent._id;
