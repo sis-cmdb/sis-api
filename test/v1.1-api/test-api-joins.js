@@ -105,7 +105,7 @@ describe('@API @V1.1API - Entity Join API', function() {
                             .set("Content-Type", "application/json")
                             .query("populate=false")
                             .send(entity)
-                            .expect(201).end(function(err,res) {
+                            .expectAsync(201).then(function(res) {
                                 console.log("BPromise.map: result: "+JSON.stringify(res.body));
                                 return res.body;
                             });
