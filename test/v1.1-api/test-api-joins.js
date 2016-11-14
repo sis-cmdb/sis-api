@@ -106,8 +106,8 @@ describe('@API @V1.1API - Entity Join API', function() {
                             .query("populate=false")
                             .send(entity)
                             .expectAsync(201).then(function(res) {
-                                console.log("BPromise.map: result: "+JSON.stringify(res.body));
-                                return res.body;
+                                console.log("BPromise.map: result: "+JSON.stringify(res[0]));
+                                return JSON.parse(res[0].text);//.body;
                             });
                     }).then(function(result) {
                         entities[i] = result;
