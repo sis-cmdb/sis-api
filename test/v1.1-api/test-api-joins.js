@@ -79,19 +79,15 @@ describe('@API @V1.1API - Entity Join API', function() {
             BPromise.map(schemas, addSchema).then(function(res) {
                 // join_ent_2_2 will have ref_1 = join_ent_1_2 and ref_0 = join_ent_0_2
                 var createEntities = function(i) {
-                    console.log("createEntities: entities = "+JSON.stringify(entities));
-                    console.log("createEntities: i = "+i);
                     if (i >= entities.length) {
                         return BPromise.resolve("success");
                     }
                     var entities2Add = entities[i];
-                    console.log("createEntities: entities2Add = "+JSON.stringify(entities2Add));
                     if (i > 0) {
                         var j = i - 1;
                         while (j >= 0) {
                             var j_ents = entities[j];
                             for (var k = 0; k < j_ents.length; ++k) {
-                                console.log("before createEntities: j_ents["+k+"]: "+JSON.stringify(j_ents[k]));
                                 var ref_ent = j_ents[k];
                                 var ent = entities2Add[k];
                                 ent['ref_' + j] = ref_ent._id;
@@ -106,7 +102,6 @@ describe('@API @V1.1API - Entity Join API', function() {
                             .query("populate=false")
                             .send(entity)
                             .expectAsync(201).then(function(res) {
-                                console.log("BPromise.map: result: "+JSON.stringify(res[0]));
                                 return JSON.parse(res[0].text);//.body;
                             });
                     }).then(function(result) {
