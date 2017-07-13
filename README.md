@@ -44,7 +44,7 @@ The following are required to build and run SIS:
 
 # Building and Testing
 
-[Grunt](http://gruntjs.com/) is used to build SIS.  [Mocha](http://visionmedia.github.io/mocha/) is used for testing.
+[Grunt](http://gruntjs.com/) is used to build SIS.  [Mocha](http://mochajs.org/) is used for testing.
 
 1. Ensure a local mongodb instance is running on port 27017.
     - `mongod --dbpath=/data --port 27017` will launch a mongo server listening on 27017 and writing data to `/data`
