@@ -2,7 +2,6 @@
 
 var SIS = require("../util/constants");
 var P = require("../util/promises");
-var passport = require("passport");
 var webUtil = require("./webutil");
 var nconf = require("nconf");
 var _ = require("lodash");
@@ -15,6 +14,8 @@ var _ = require("lodash");
 // opts is a dictionary w/ the following keys
 // - schema_manager - the schema manager across the system
 // - auth - boolean (default true) indicating if auth is enabled
+// - auth_reads - boolean (default false) indicating if GET requests
+//       also require a valid token
 // - type - optional string indicating the type for hooks/commits
 // - log_commits - boolean indicating if this controller should
 //       log creates/update/deletions
@@ -22,6 +23,7 @@ var _ = require("lodash");
 function ApiController(opts) {
     this.sm = opts[SIS.OPT_SCHEMA_MGR];
     this.auth = SIS.OPT_USE_AUTH in opts ? opts[SIS.OPT_USE_AUTH] : SIS.DEFAULT_OPT_USE_AUTH;
+    this.authReads = SIS.OPT_AUTH_READS in opts ? !!opts[SIS.OPT_AUTH_READS] : SIS.DEFAULT_OPT_AUTH_READS;
     opts = opts || { };
     if (opts[SIS.OPT_TYPE]) {
         this.type = opts[SIS.OPT_TYPE];
@@ -395,8 +397,8 @@ ApiController.prototype.attach = function(app, prefix) {
     // an app.param('version', ...) guard registered in server.js.
     prefix = "/api/:version" + prefix;
     this.apiPrefix = prefix;
-    app.get(prefix, this.getAll.bind(this));
-    app.get(prefix + "/:id", this.get.bind(this));
+    app.get(prefix, this._wrapReadAuth(this.getAll));
+    app.get(prefix + "/:id", this._wrapReadAuth(this.get));
     if (!app.get(SIS.OPT_READONLY)) {
         // wrap authorization around modification calls
         app.put(prefix + "/:id", this._wrapAuth(this.update));
@@ -417,19 +419,7 @@ ApiController.prototype.attach = function(app, prefix) {
 // The type specifies which kind of authentication to use
 // and should have already been registered with passport
 ApiController.prototype.authenticate = function(req, res, type) {
-    var d = P.defer();
-    var self = this;
-    passport.authenticate(type, {session : false}, function(err, user) {
-        if (err) {
-            d.reject(err);
-        } else if (!user) {
-            d.reject(SIS.ERR_BAD_CREDS("Invalid credentials"));
-        } else {
-            req.user = user;
-            d.resolve(user);
-        }
-    })(req, res);
-    return d.promise;
+    return webUtil.authenticate(req, res, type);
 };
 
 // "private"
@@ -452,11 +442,20 @@ ApiController.prototype._wrapAuth = function(func) {
     }.bind(this);
 };
 
+// Wrap a read (GET) handler.  Reads only require a token when
+// auth_reads is enabled.
+ApiController.prototype._wrapReadAuth = function(func) {
+    if (this.authReads) {
+        return this._wrapAuth(func);
+    }
+    return func.bind(this);
+};
+
 // Enable the commit API endpoints
 ApiController.prototype._enableCommitApi = function(app, prefix) {
     // all history
     var self = this;
-    app.get(prefix + "/:id/commits", function(req, res) {
+    app.get(prefix + "/:id/commits", this._wrapReadAuth(function(req, res) {
         req.params.isCommitApi = true;
         var type = this.getType(req);
         var id = req.params.id;
@@ -482,10 +481,10 @@ ApiController.prototype._enableCommitApi = function(app, prefix) {
             res.setHeader("x-total-count", 0);
             self.sendObject(res, 200, []);
         });
-    }.bind(this));
+    }));
 
     // specific entry by history id
-    app.get(prefix + "/:id/commits/:hid", function(req, res) {
+    app.get(prefix + "/:id/commits/:hid", this._wrapReadAuth(function(req, res) {
         var type = this.getType(req);
         var id = req.params.id;
         var hid = req.params.hid;
@@ -498,9 +497,9 @@ ApiController.prototype._enableCommitApi = function(app, prefix) {
                 self.sendObject(res, 200, result);
             }
         });
-    }.bind(this));
+    }));
 
-    app.get(prefix + "/:id/revision/:utc", function(req, res) {
+    app.get(prefix + "/:id/revision/:utc", this._wrapReadAuth(function(req, res) {
         var type = this.getType(req);
         var id = req.params.id;
         var utc = req.params.utc;
@@ -514,7 +513,7 @@ ApiController.prototype._enableCommitApi = function(app, prefix) {
             }
         });
 
-    }.bind(this));
+    }));
 };
 
 ApiController.prototype._convertToResponseObject = function(req, obj) {

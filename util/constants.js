@@ -110,6 +110,8 @@ module.exports = {
     OPT_ID_FIELD : "id_field",
     OPT_TYPE : "type",
     OPT_USE_AUTH : "auth",
+    // require a valid token on read (GET) requests too
+    OPT_AUTH_READS : "auth_reads",
     OPT_AUTH_CONFIG : "auth_config",
 
     // supported versions
@@ -129,6 +131,7 @@ module.exports = {
     PERMISSION_NONE : "none",
 
     DEFAULT_OPT_USE_AUTH : true,
+    DEFAULT_OPT_AUTH_READS : false,
 
     // endpoint message types
     EP_READY : "ready",

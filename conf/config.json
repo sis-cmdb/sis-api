@@ -12,6 +12,7 @@
     },
     "app" : {
         "auth" : true,
+        "auth_reads" : false,
         "auth_config" : {
             "type" : "sis"
         },
