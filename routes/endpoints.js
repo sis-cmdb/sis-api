@@ -11,6 +11,7 @@ var WORKER_LOGGER = logger.createLogger({ name:"EndpointWorker" });
 var LOGGER = logger.createLogger({ name : "EndpointController" });
 
 var SIS = require("../util/constants");
+var webUtil = require("./webutil");
 // child states
 var IDLE = 0,
     DEAD = 1,
@@ -144,6 +145,7 @@ EndpointWorker.prototype.destroy = function() {
 // - Note that this runs in the main process
 function EndpointController(config) {
     this.requestQueue = [];
+    this.authReads = !!config[SIS.OPT_AUTH_READS];
     var self = this;
     function errHandler(worker) {
         self.workerPool.destroy(worker);
@@ -178,6 +180,10 @@ EndpointController.prototype.attach = function(app, base) {
     this.base = base;
     // ensure the request is handled with a slash
     var router = express.Router({ strict : true });
+    if (this.authReads) {
+        // endpoint scripts can read any data, so they need a token too
+        router.use(webUtil.requireToken);
+    }
     router.use("/:id/", this.handler.bind(this));
     app.use(base, router);
     var self = this;

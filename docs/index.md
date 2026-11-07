@@ -57,6 +57,14 @@ documentation on [Role Based Access Control](./rbac.md) for more information.
   - `Authorization` - for retrieving an API token via credentials.
   - `x-auth-token` - contains the API token
 
+By default only modification requests (POST, PUT, DELETE) require an
+`x-auth-token`; reads (GET) are open to anyone.  When the server is configured
+with `app.auth_reads` set to `true`, every read also requires a valid
+`x-auth-token`.  That covers all resource GETs, commit history, users, and
+script endpoints.  `GET /api/v1.1/info`, `HEAD /`, and
+`POST /api/v1.1/users/auth_token` stay open so health checks and token
+retrieval keep working.
+
 ### Errors
 
 All errors returned by SIS are JSON objects that look like:

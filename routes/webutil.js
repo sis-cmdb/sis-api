@@ -97,6 +97,13 @@ var _verifySisToken = function(token, done) {
             }
         }
         return userManager.getById(t[SIS.FIELD_USERNAME], {lean : true});
+    }).catch(function(err) {
+        // an unknown token (or one whose user is gone) is bad credentials,
+        // not a missing resource
+        if (err instanceof Array && err[0] === 404) {
+            return Promise.reject(SIS.ERR_BAD_CREDS("Invalid token."));
+        }
+        return Promise.reject(err);
     });
     return P.nodeify(p, done);
 };
@@ -148,6 +155,35 @@ SisTokenStrategy.prototype.authenticate = function(req) {
 
 module.exports.createTokenStrategy = function(sm) {
     return new SisTokenStrategy(sm);
+};
+
+// Returns a promise that authenticates a request using the passport
+// strategy registered under type.  Sets req.user on success.
+module.exports.authenticate = function(req, res, type) {
+    return new Promise(function(resolve, reject) {
+        passport.authenticate(type, { session : false }, function(err, user) {
+            if (err) {
+                reject(err);
+            } else if (!user) {
+                reject(SIS.ERR_BAD_CREDS("Invalid credentials"));
+            } else {
+                req.user = user;
+                resolve(user);
+            }
+        })(req, res);
+    });
+};
+
+// Express middleware that rejects requests without a valid x-auth-token
+module.exports.requireToken = function(req, res, next) {
+    module.exports.authenticate(req, res, SIS.SCHEMA_TOKENS).then(function() {
+        next();
+    }, function(err) {
+        if (!(err instanceof Array) || err.length < 2) {
+            err = SIS.ERR_INTERNAL("Authentication failed : " + err);
+        }
+        res.status(err[0]).send(err[1]);
+    });
 };
 
 var stripOutId = function(idObj) {

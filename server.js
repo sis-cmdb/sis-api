@@ -19,6 +19,16 @@ var routes = [
     'endpoints'
 ];
 
+// Throws if the app config has settings that cannot work together
+var validateAppConfig = function(appConfig) {
+    var SIS = require("./util/constants");
+    appConfig = appConfig || { };
+    if (appConfig[SIS.OPT_AUTH_READS] && !appConfig[SIS.OPT_USE_AUTH]) {
+        throw new Error("app." + SIS.OPT_AUTH_READS + " requires app." +
+                        SIS.OPT_USE_AUTH + " to be enabled");
+    }
+};
+
 var startServer = function(callback) {
     var SIS = require("./util/constants");
     var LOGGER = logger.createLogger({
@@ -73,6 +83,9 @@ var startServer = function(callback) {
     // query parsing (e.g. q[...] objects), which needs the 'extended' (qs) parser.
     app.set('query parser', 'extended');
 
+    // fail fast on invalid settings before touching the database
+    validateAppConfig(nconf.get('app'));
+
     var opts = nconf.get('db').opts || { };
 
     mongoose.connect(nconf.get('db').url, opts).then(function() {
@@ -96,6 +109,7 @@ var startServer = function(callback) {
             var cfg = { };
             cfg[SIS.OPT_SCHEMA_MGR] = schemaManager;
             cfg[SIS.OPT_USE_AUTH] = app.get(SIS.OPT_USE_AUTH);
+            cfg[SIS.OPT_AUTH_READS] = !!app.get(SIS.OPT_AUTH_READS);
             app.set(SIS.OPT_SCHEMA_MGR, schemaManager);
 
             // Validate the API :version param (Express 5 dropped inline route
@@ -195,6 +209,7 @@ if (!module.parent) {
 
 module.exports.mongoose = mongoose;
 module.exports.startServer = startServer;
+module.exports.validateAppConfig = validateAppConfig;
 module.exports.stopServer = function(server, callback) {
     server.close(callback);
 };

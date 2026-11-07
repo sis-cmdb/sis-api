@@ -118,7 +118,10 @@ An annotated `config.json` looks like:
     // application specific settings
     "app" : {
         // whether Role Based Access Control is enabled.  Defaults to true
-        "auth" : true
+        "auth" : true,
+        // whether read (GET) requests also require a valid x-auth-token.
+        // Requires "auth" to be true.  Defaults to false (reads are public)
+        "auth_reads" : false,
         // authentication backend config.  See below
         // defaults to a sis backend.
         "auth_config" : {
