@@ -13,6 +13,23 @@ var _verifyUserPass = function(user, pass, done) {
     P.nodeify(userManager.getVerifiedUser(user, pass), done);
 };
 
+// Escape a value so it is safe to embed as an RDN attribute value in a DN
+// (RFC 4514). Prevents a crafted username from altering the bind DN.
+var escapeDNValue = function(value) {
+    return String(value)
+        .replace(/\\/g, '\\\\')
+        .replace(/"/g, '\\"')
+        .replace(/\+/g, '\\+')
+        .replace(/,/g, '\\,')
+        .replace(/;/g, '\\;')
+        .replace(/</g, '\\<')
+        .replace(/>/g, '\\>')
+        .replace(/=/g, '\\=')
+        .replace(/^ /, '\\ ')
+        .replace(/ $/, '\\ ')
+        .replace(/^#/, '\\#');
+};
+
 var getLdapVerificationFunc = function(sm, auth_config) {
     if (!auth_config) {
         throw new Error("LDAP authentication requires configuration.");
@@ -21,8 +38,15 @@ var getLdapVerificationFunc = function(sm, auth_config) {
     var url = auth_config.url;
     var ud = auth_config.user_domain;
     var ed = auth_config.email_domain;
-    if (!url || !ud || !ed) {
-        throw new Error("LDAP authentication requires url, user_domain, and email_domain");
+    // Optional full-DN bind template (e.g. "cn=%u,ou=users,dc=example,dc=org")
+    // for directories that bind by DN rather than an AD userPrincipalName. When
+    // unset, SIS keeps binding as "<user>@<user_domain>" (Active Directory).
+    var bindTemplate = auth_config.bind_dn_template;
+    if (!url || !ed) {
+        throw new Error("LDAP authentication requires url and email_domain");
+    }
+    if (!ud && !bindTemplate) {
+        throw new Error("LDAP authentication requires either user_domain or bind_dn_template");
     }
     var client_opts = auth_config.client_opts || { };
     client_opts.url = url;
@@ -35,7 +59,9 @@ var getLdapVerificationFunc = function(sm, auth_config) {
         super_user : true
     };
     return function(user, pass, done) {
-        var ldapUser = user + '@' + ud;
+        var ldapUser = bindTemplate ?
+            bindTemplate.replace(/%u/g, escapeDNValue(user)) :
+            (user + '@' + ud);
         // ldapts is ESM-only, so load it lazily via dynamic import.
         import('ldapts').then(function(ldapts) {
             var client = new ldapts.Client(client_opts);

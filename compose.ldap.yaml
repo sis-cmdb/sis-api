@@ -1,0 +1,64 @@
+# Optional overlay that adds a throwaway OpenLDAP server and switches sis-api to
+# the LDAP auth backend. Kept separate so the default `podman compose up` stays
+# on the built-in `sis` auth backend.
+#
+# Usage:
+#   podman compose -f compose.yaml -f compose.ldap.yaml up -d --build
+#
+# Then mint a token as the seeded directory user (user1 / pass1):
+#   curl -u user1:pass1 -X POST http://localhost:3000/api/v1.1/users/auth_token
+#
+# NOTE: bitnamilegacy is Bitnami's frozen image namespace; it is pinned here and
+# is intended for local development/testing only, not production.
+services:
+  ldap:
+    image: docker.io/bitnamilegacy/openldap:2.6.10
+    restart: unless-stopped
+    environment:
+      LDAP_ROOT: "dc=example,dc=org"
+      LDAP_ADMIN_USERNAME: "admin"
+      LDAP_ADMIN_PASSWORD: "adminpassword"
+      # Seed directory users as "<user>,<password>" (comma-separated lists).
+      LDAP_USERS: "user1"
+      LDAP_PASSWORDS: "pass1"
+    volumes:
+      - ldap_data:/bitnami/openldap
+    # Not published to the host by default; only sis-api reaches it over the
+    # internal network (the server listens on 1389). Uncomment to inspect it:
+    # ports:
+    #   - "1389:1389"
+    healthcheck:
+      test:
+        - "CMD"
+        - "ldapsearch"
+        - "-x"
+        - "-H"
+        - "ldap://127.0.0.1:1389"
+        - "-b"
+        - "dc=example,dc=org"
+        - "-D"
+        - "cn=admin,dc=example,dc=org"
+        - "-w"
+        - "adminpassword"
+        - "-s"
+        - "base"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  sis-api:
+    environment:
+      # Switch the auth backend to LDAP and point it at the ldap service. These
+      # merge with the base sis-api environment (nconf '__' = nested-key sep).
+      app__auth_config__type: "ldap"
+      app__auth_config__url: "ldap://ldap:1389"
+      app__auth_config__email_domain: "example.org"
+      # Full bind DN for the seeded user; %u is replaced with the login name.
+      app__auth_config__bind_dn_template: "cn=%u,ou=users,dc=example,dc=org"
+    depends_on:
+      ldap:
+        condition: service_healthy
+
+volumes:
+  ldap_data:

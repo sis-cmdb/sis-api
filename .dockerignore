@@ -1,0 +1,38 @@
+# Dependencies are reinstalled inside the image
+node_modules
+npm-debug.log
+
+# VCS / tooling
+.git
+.gitignore
+.github
+.travis.yml
+
+# Local-only config and build artifacts (regenerated in the image)
+*.local
+conf/config.json.local
+build.json
+
+# Tests, coverage, reports - not needed at runtime
+test
+coverage
+coverage.html
+_reports
+
+# Docs / samples - not needed at runtime
+docs
+samples
+
+# Container + host helper files
+Dockerfile
+.dockerignore
+compose.yaml
+compose.ldap.yaml
+docker-compose.yml
+startmongo.sh
+
+# Editor / OS cruft
+.DS_Store
+*.swp
+*~
+*.log

@@ -140,7 +140,7 @@ var startServer = function(callback) {
 };
 
 function main() {
-    nconf.env('__')
+    nconf.env({ separator : '__', parseValues : true })
         .argv()
         .file("config.json.local", __dirname + "/conf/config.json.local")
         .file("config.json", __dirname + "/conf/config.json");
