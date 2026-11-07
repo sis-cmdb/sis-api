@@ -2,8 +2,6 @@
 
 var express = require('express');
 var mongoose = require('mongoose');
-var bodyParser = require('body-parser');
-var BPromise = require("bluebird");
 var logger = require('./util/logger');
 var nconf = require("nconf");
 var app = null;
@@ -20,10 +18,6 @@ var routes = [
     'scripts',
     'endpoints'
 ];
-
-if (process.env.SIS_DEBUG) {
-    BPromise.longStackTraces();
-}
 
 var startServer = function(callback) {
     var SIS = require("./util/constants");
@@ -46,31 +40,42 @@ var startServer = function(callback) {
 
     app.use(logger.loggingMiddleware());
 
-    //app.use(webUtil.json());
-    app.use(bodyParser.json({
+    app.use(express.json({
         // set byte limit
         limit : SIS.MAX_BODY_SIZE_BYTES
     }));
+    // Express 5 makes req.query a getter that re-parses on every access, so
+    // mutations (e.g. applyDefaults setting populate) would be lost.  Replace it
+    // with a concrete, mutable own-property parsed once per request.
+    app.use(function(req, res, next) {
+        var parsed = req.query;
+        Object.defineProperty(req, 'query', {
+            value : parsed,
+            writable : true,
+            configurable : true,
+            enumerable : true
+        });
+        next();
+    });
     app.use(allowCrossDomain);
 
     // Setup global options
     // --------------------
     app.head('/',function(req,res) {
-        res.send(200);
+        res.sendStatus(200);
     });
     app.options('/',function(req,res) {
-        res.send(200);
+        res.sendStatus(200);
     });
     app.disable('etag');
     app.enable('trust proxy');
+    // Express 5 defaults the query parser to 'simple'; SIS relies on nested
+    // query parsing (e.g. q[...] objects), which needs the 'extended' (qs) parser.
+    app.set('query parser', 'extended');
 
     var opts = nconf.get('db').opts || { };
 
-    mongoose.connect(nconf.get('db').url, opts, function(err) {
-        if (err) {
-            LOGGER.error({ err : err }, "Error connecting");
-            process.exit(1);
-        }
+    mongoose.connect(nconf.get('db').url, opts).then(function() {
 
         // express app settings
         var appConfig = nconf.get('app') || {};
@@ -92,6 +97,16 @@ var startServer = function(callback) {
             cfg[SIS.OPT_SCHEMA_MGR] = schemaManager;
             cfg[SIS.OPT_USE_AUTH] = app.get(SIS.OPT_USE_AUTH);
             app.set(SIS.OPT_SCHEMA_MGR, schemaManager);
+
+            // Validate the API :version param (Express 5 dropped inline route
+            // regex that previously restricted it to SUPPORTED_VERSIONS).
+            app.param('version', function(req, res, next, version) {
+                if (SIS.SUPPORTED_VERSIONS.indexOf(version) === -1) {
+                    var verr = SIS.ERR_NOT_FOUND('version', version);
+                    return res.status(verr[0]).send(verr[1]);
+                }
+                next();
+            });
 
             // setup the routes
             routes.map(function(routeName) {
@@ -118,6 +133,9 @@ var startServer = function(callback) {
                 }
             });
         });
+    }).catch(function(err) {
+        LOGGER.error({ err : err }, "Error connecting");
+        process.exit(1);
     });
 };
 

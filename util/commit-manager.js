@@ -6,7 +6,7 @@
 
 var jsondiff = require('jsondiffpatch');
 var SIS = require('./constants');
-var BPromise = require("bluebird");
+var P = require("./promises");
 
 var docToPojo = function(doc) {
     if (typeof doc.toObject === 'function') {
@@ -100,12 +100,11 @@ function CommitManager(schemaManager) {
             return new self.model(c).toObject();
         });
         if (!commits.length) {
-            return BPromise.resolve(items);
+            return Promise.resolve(items);
         }
 
         // do a bulk insert directly
-        var insert = BPromise.promisify(self.model.collection.insert, self.model.collection);
-        return insert(commits).then(function() {
+        return Promise.resolve(self.model.collection.insertMany(commits)).then(function() {
             return items;
         });
     };
@@ -118,8 +117,10 @@ function CommitManager(schemaManager) {
             return;
         }
         var entry = new self.model(doc);
-        entry.save(function(err, res) {
-            callback(SIS.ERR_INTERNAL(err), res);
+        Promise.resolve(entry.save()).then(function(res) {
+            callback(null, res);
+        }, function(err) {
+            callback(SIS.ERR_INTERNAL(err), null);
         });
     };
 
@@ -156,11 +157,11 @@ function CommitManager(schemaManager) {
         var sort = { date_modified : -1 };
         var commits = [];
         // result promise
-        var d = BPromise.pending();
+        var d = P.defer();
         // find the first commit
         var query = self.model.findOne(condition).select(fields).sort(sort);
-        query.exec(function(err, first) {
-            if (err || !first) {
+        Promise.resolve(query.exec()).then(function(first) {
+            if (!first) {
                 return d.resolve([]);
             }
             var start_date = first.date_modified;
@@ -169,10 +170,12 @@ function CommitManager(schemaManager) {
             condition.date_modified = { $lte : timestamp, $gte : start_date };
             fields = 'commit_data action entity_oid';
             sort.date_modified = 1;
-            self.model.find(condition).select(fields).sort(sort).exec(function(e, commits) {
-                commits = commits || [];
-                d.resolve(commits);
+            return Promise.resolve(self.model.find(condition).select(fields).sort(sort).exec())
+            .then(function(commits) {
+                d.resolve(commits || []);
             });
+        }).catch(function(err) {
+            d.resolve([]);
         });
 
         return d.promise;
@@ -194,24 +197,24 @@ function CommitManager(schemaManager) {
     };
 
     this.getVersionById = function(type, id, hid, callback) {
-        self.model.findOne({'_id' : hid}).exec(function(err, result) {
-            if (err || !result) {
-                callback(err, null);
-            } else {
-                if (type != result.type ||
-                    id != result.entity_id) {
-                    callback(SIS.ERR_NOT_FOUND("commit", hid), null);
-                } else {
-                    self.applyDiff(result, function(err, obj) {
-                        if (err) {
-                            return callback(err, null);
-                        }
-                        result = result.toObject();
-                        result.value_at = obj;
-                        callback(null, result);
-                    });
-                }
+        Promise.resolve(self.model.findOne({'_id' : hid}).exec()).then(function(result) {
+            if (!result) {
+                return callback(null, null);
             }
+            if (type != result.type ||
+                id != result.entity_id) {
+                return callback(SIS.ERR_NOT_FOUND("commit", hid), null);
+            }
+            self.applyDiff(result, function(err, obj) {
+                if (err) {
+                    return callback(err, null);
+                }
+                result = result.toObject();
+                result.value_at = obj;
+                callback(null, result);
+            });
+        }, function(err) {
+            callback(err, null);
         });
     };
 

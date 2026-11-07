@@ -3,7 +3,7 @@
 var ChildProcess = require("child_process");
 var express = require("express");
 var Pool = require("generic-pool");
-var BPromise = require("bluebird");
+var P = require("../util/promises");
 var nconf = require("nconf");
 var logger = require("../util/logger");
 
@@ -38,14 +38,16 @@ function EndpointWorker(errHandler) {
 // called when a worker needs to be created
 EndpointWorker.prototype.create = function() {
     if (this.childState !== DEAD) {
-        return BPromise.reject({ error: "Process is in invalid state: " + this.childState });
+        return Promise.reject({ error: "Process is in invalid state: " + this.childState });
     }
     var args = [];
-    var env = {};
+    // inherit the parent environment so db/config overrides (e.g. db__url)
+    // propagate to the worker; flag test runs so it loads the test config.
+    var env = Object.assign({}, process.env);
     if (nconf.get("app:test")) {
         env.TESTING = true;
     }
-    var createDefer = BPromise.pending();
+    var createDefer = P.defer();
     this.childState = SPAWNING;
     this.child = ChildProcess.fork(__dirname + "/../endpoints/main.js", args, { env : env });
     // set a timeout - no message back in 5 seconds is bad
@@ -102,10 +104,10 @@ EndpointWorker.prototype.create = function() {
 
 EndpointWorker.prototype.handleRequest = function(request) {
     if (this.childState !== IDLE) {
-        return BPromise.reject({ error : "Worker is busy", status : 500 });
+        return Promise.reject({ error : "Worker is busy", status : 500 });
     }
     this.currentReq = request;
-    this.defer = BPromise.pending();
+    this.defer = P.defer();
     this.childState = BUSY;
     var req = this.currentReq.req;
     var message = {
@@ -146,35 +148,28 @@ function EndpointController(config) {
     function errHandler(worker) {
         self.workerPool.destroy(worker);
     }
-    // create the pool of workers
-    this.workerPool = Pool.Pool({
-        name : "EndpointWorkers",
-        create : function(callback) {
+    // create the pool of workers.  generic-pool v3 uses a promise-based
+    // factory + createPool() rather than the v2 callback style.
+    var factory = {
+        create : function() {
             var worker = new EndpointWorker(errHandler);
-            return worker.create().then(function(worker) {
-                callback(null, worker);
-            }).catch(function(err) {
-                LOGGER.error(err);
-                callback(err, null);
-            });
+            return worker.create();
         },
         destroy : function(worker) {
-            if (!worker.destroy) {
-                LOGGER.error(worker);
-            } else {
+            if (worker && worker.destroy) {
                 worker.destroy();
             }
-        },
+            return Promise.resolve();
+        }
+    };
+    this.workerPool = Pool.createPool(factory, {
         min : nconf.get("app:scripts_min") || 1,
         max : nconf.get("app:scripts_max") || 2,
-        idleTimeoutMillis : nconf.get("app:script_worker_idle_time_ms") || 300000,
-        log : function(msg, level) {
-            // level is one of 'verbose', 'warn', 'info', 'error'
-            if (level === 'verbose') { level = 'trace'; }
-            if (typeof LOGGER[level] === 'function') {
-                LOGGER[level](msg);
-            }
-        }
+        idleTimeoutMillis : nconf.get("app:script_worker_idle_time_ms") || 300000
+    });
+    // v3 surfaces factory create failures via this event
+    this.workerPool.on('factoryCreateError', function(err) {
+        LOGGER.error(err);
     });
 }
 
@@ -188,8 +183,8 @@ EndpointController.prototype.attach = function(app, base) {
     var self = this;
     app.locals.closeListeners.push(function() {
         LOGGER.info("Draining pool");
-        self.workerPool.drain(function() {
-            self.workerPool.destroyAllNow();
+        self.workerPool.drain().then(function() {
+            return self.workerPool.clear();
         });
     });
 };
@@ -206,32 +201,29 @@ EndpointController.prototype._runNext = function() {
     var req = this.requestQueue.pop();
     var res = req.res;
     var self = this;
-    this.workerPool.acquire(function(err, worker) {
-        if (err) {
-            res.status(500).json({ error : "Unable to run script.  Internal error", e: err, status : 500 });
+    this.workerPool.acquire().then(function(worker) {
+        var p = worker.handleRequest(req);
+        return p.then(function(data) {
+            res.status(data.status);
+            res.set(data.headers);
+            res.send(data.data);
+            self.workerPool.release(worker);
+        }).catch(function(err) {
+            if (err instanceof Error) {
+                LOGGER.error({ err: err }, "Endpoint caught an error");
+                err = {
+                    status : 500,
+                    error : err + ": " + err.stack
+                };
+            }
+            // timeout or exception
+            // errors from the script should be sent properly
+            res.status(500).json(err);
+            // always destroy badness - let the pool spin up another
             self.workerPool.destroy(worker);
-        } else {
-            var p = worker.handleRequest(req);
-            p.then(function(data) {
-                res.status(data.status);
-                res.set(data.headers);
-                res.send(data.data);
-                self.workerPool.release(worker);
-            }).catch(function(err) {
-                if (err instanceof Error) {
-                    LOGGER.error({ err: err }, "Endpoint caught an error");
-                    err = {
-                        status : 500,
-                        error : err + ": " + err.stack
-                    };
-                }
-                // timeout or exception
-                // errors from the script should be sent properly
-                res.status(500).json(err);
-                // always destroy badness - let the pool spin up another
-                self.workerPool.destroy(worker);
-            });
-        }
+        });
+    }).catch(function(err) {
+        res.status(500).json({ error : "Unable to run script.  Internal error", e: err, status : 500 });
     });
 };
 

@@ -3,6 +3,14 @@
 
 var SIS = require('./constants');
 
+// mongoose <5 treated `required` on an array as "must be non-empty"; mongoose
+// 5+ considers an empty array to satisfy `required`.  SIS relies on owners
+// being non-empty, so enforce it explicitly.
+var OWNER_NON_EMPTY = {
+    validator : function(v) { return Array.isArray(v) && v.length > 0; },
+    message : 'owner is required.'
+};
+
 var sisMetaDef = { };
 sisMetaDef[SIS.FIELD_CREATED_AT] = { "type" : "Number" };
 sisMetaDef[SIS.FIELD_UPDATED_AT] = { "type" : "Number" };
@@ -34,7 +42,7 @@ module.exports.schemas = [
             any_owner_can_modify : { type : "Boolean", default : false },
             // sis meta
             _sis : {
-                owner : { type : ["String"], required : true },
+                owner : { type : ["String"], required : true, validate : OWNER_NON_EMPTY },
                 _references : ["String"]
             }
         }
@@ -44,12 +52,11 @@ module.exports.schemas = [
         name : SIS.SCHEMA_HOOKS,
         definition : {
             name : { type : "String", required : true, unique : true, match : /^[a-z0-9_]+$/ },
+            // defined as a plain nested object (not a { type: {...} } single
+            // nested subdocument) so mongoose 8 does not attach an _id to it.
             target : {
-                    type : {
-                        url : { type : "String", required : true },
-                        action : { type : "String", required : true, enum : ["GET", "POST", "PUT"]}
-                    },
-                    required : true
+                url : { type : "String", required : true },
+                action : { type : "String", required : true, enum : ["GET", "POST", "PUT"]}
             },
             retry_count : { type : "Number", min : 0, max : 20, "default" : 0 },
             retry_delay : { type : "Number", min : 1, max : 60, "default" : 1 },
@@ -57,7 +64,7 @@ module.exports.schemas = [
             entity_type : { type: "String", required: true },
             // sis meta
             _sis : {
-                owner : { type : ["String"], required : true }
+                owner : { type : ["String"], required : true, validate : OWNER_NON_EMPTY }
             }
         }
     },
@@ -69,7 +76,7 @@ module.exports.schemas = [
             hieradata : { type : {}, required : true },
             // sis meta
             _sis : {
-                owner : { type : ["String"], required : true }
+                owner : { type : ["String"], required : true, validate : OWNER_NON_EMPTY }
             }
         }
     },
@@ -128,7 +135,7 @@ module.exports.schemas = [
             script : { type: "String", required: true, code : true, code_type_field : "script_type" },
             // sis meta
             _sis : {
-                owner : { type : ["String"], required : true }
+                owner : { type : ["String"], required : true, validate : OWNER_NON_EMPTY }
             }
         }
     }

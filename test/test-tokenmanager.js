@@ -31,10 +31,9 @@ describe('Token Manager', function() {
                 var superUser = users.superman;
                 var admin = users.admin1;
                 var tokenManager = schemaManager.tokenFetcher;
-                tokenManager.model.ensureIndexes(function(e) {
-                    if (e) { return done(e); }
+                tokenManager.model.ensureIndexes().then(function() {
                     userManager.add(admin, { user : superUser }).nodeify(done);
-                });
+                }, done);
             });
             after(function(done) {
                 SIS.AUTH_EXPIRATION_TIME = 1000 * 60 * 60 * 8;

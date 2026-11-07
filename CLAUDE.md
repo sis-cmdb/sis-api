@@ -7,36 +7,45 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 SIS (Service Information System) is a CMDB alternative: a REST-over-HTTP API where
 clients define their own object types (`schemas`) and then CRUD instances of them
 (`entities`), with change history (`commits`), webhooks (`hooks`), key/value config
-(`hiera`), RBAC, and optional custom server-side `scripts`. It is an Express app
-(Node 0.12.x / io.js era) backed by MongoDB via Mongoose.
+(`hiera`), RBAC, and optional custom server-side `scripts`. It is an Express 5 app
+on modern Node (LTS, `engines: node >=20`) backed by MongoDB via Mongoose 8.
 
 ## Commands
 
 Prereq: a local MongoDB on `localhost:27017` must be running for the server and the
-full test suite (`mongod --dbpath=/data --port 27017`).
+full test suite. The test suite connects to `mongodb://localhost/sis-test`; override
+with the `db__url` env var (nconf reads `__` as the nested-key separator), e.g.
+`db__url="mongodb://localhost:27018/sis-test" npm test`.
 
-- `npm install` - install deps (pinned via `npm-shrinkwrap.json`).
+- `npm install` - install deps (lockfile: `package-lock.json`).
 - `npm start` / `node server.js` - run the server.
-- `grunt` (a.k.a. `npm test`) - default task: `newer:jshint` then jshint + buildjson + tests.
-- `grunt build` - jshint + tests without producing `dist/`.
-- `grunt dist` - clean build into `dist/` (runs tests, jshint, copies files).
-- `grunt jshint` - lint only. Lint config is inline in `Gruntfile.js` (`esnext`, `strict: global`, `node: true`), not `.jshintrc`.
+- `npm test` - run the mocha suite (config in `.mocharc.yml`).
+- `npm run lint` - run eslint (flat config in `eslint.config.js`).
+- `npm run coverage` - mocha under `c8`.
+- `npm run build` - generate `build.json` (consumed by the `/info` endpoint).
+
+The build/test tooling was migrated off the obsolete grunt + jshint + blanket stack
+to npm scripts + `mocha` + `eslint` + `c8`. `.mocharc.yml` wires in two preload
+modules: `scripts/gen-build-info.js` (writes `build.json`) and
+`test/fixtures/promise-compat.js` (a test-only `Promise.prototype.nodeify`/`.done`
+shim - the managers used to return bluebird promises; this keeps the existing
+callback-bridge assertions working without touching production code).
 
 ### Running a single test
 
-Tests use Mocha + `should` + `supertest`. There is no grunt target for a single
-file; call mocha directly. `test/init-tests.js` MUST be listed first because it
-starts the shared local server (via `test/fixtures/util.js` → `server.startServer`)
-and seeds a `sistest_super` superuser; other specs reuse that running server.
+Tests use Mocha + `should` + `supertest`. `test/init-tests.js` should be listed first
+because it starts the shared local server (via `test/fixtures/util.js` →
+`server.startServer`) and seeds a `sistest_super` superuser; other specs reuse it.
 
 ```
-./node_modules/.bin/mocha --timeout 60000 test/init-tests.js test/v1.1-api/test-api-entities.js
+db__url="mongodb://localhost/sis-test" ./node_modules/.bin/mocha --timeout 60000 \
+  test/init-tests.js test/v1.1-api/test-api-entities.js
 ```
 
 Relevant env vars:
-- `SIS_RUN_LONG_TESTS=true` - enables the longer/replication suites (set by `grunt`).
+- `SIS_RUN_LONG_TESTS=true` - enables the longer/replication suites.
 - `SIS_REMOTE_URL` - point the suite at a remote SIS instead of spawning a local server.
-- `SIS_DEBUG` - enable Bluebird long stack traces.
+- `db__url` - override the MongoDB connection string for a run.
 
 ## Architecture
 
@@ -109,8 +118,21 @@ bootstrap the first superuser, since the REST API requires an existing privilege
 
 ## Conventions
 
-- Promises are **Bluebird** (`require("bluebird")`), not native, throughout - note idioms
-  like `.bind(this)`, `.spread`, `.tap`, `.call('method', ...)`, and `BPromise.pending()`.
-- `lodash` v3 and `async` v0.9 are the utility libs in use; match the existing (ES5-era)
-  style - this is an old Node codebase, keep `"use strict"` at the top of each module.
+- Promises are **native** (`Promise`). The small `util/promises.js` helper provides the
+  idioms the code still leans on: `defer()` (replaces the old `BPromise.pending()`),
+  `nodeify(promise, cb)`, `spread(fn)` (use `.then(P.spread(fn))`), and `tap(fn)`
+  (`.then(P.tap(fn))`). When a promise chain needs `this`, capture `var self = this;`
+  and reference `self` inside callbacks (there is no bluebird `.bind(this)` anymore);
+  bare method references passed to `.then` must be `.bind(self)`.
+- Mongoose 8 notes that bit during the upgrade and are worth remembering: query/model
+  methods return promises (no callbacks); `ObjectId` instance strings are `"ObjectId"`;
+  `strictQuery` is set to `false` (see `schema-manager.js`) so non-schema query paths
+  (e.g. custom-type subpaths, join paths) are not stripped; `doc.set(obj, undefined,
+  { merge: true })` is used so nested updates deep-merge; empty arrays satisfy
+  `required`, so owner arrays use an explicit non-empty validator (`util/sis-schemas.js`).
+- Express 5 notes: `req.query` is a re-parsing getter, so `server.js` snapshots it into a
+  mutable own-property; the query parser is forced to `extended`; routes can't use inline
+  regex or optional `:id?` (the `:version` param is validated via `app.param`).
+- `lodash` v4 and `async` v3 are the utility libs; keep `"use strict"` at the top of each
+  module and match the surrounding ES5-style code.
 - API docs live in `docs/*.md`; `samples/` holds example schema/entity/hook JSON payloads.

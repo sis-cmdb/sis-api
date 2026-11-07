@@ -3,7 +3,7 @@ describe('@API @V1.1API - Entity References', function() {
 
     var should = require('should');
     var async = require('async');
-    var BPromise = require('bluebird');
+    var P = require("../../util/promises");
 
     var SIS = require("../../util/constants");
 
@@ -375,7 +375,7 @@ describe('@API @V1.1API - Entity References', function() {
                     num : i
                 });
             }
-            var d = BPromise.pending();
+            var d = P.defer();
             ApiServer.post("/api/v1.1/entities/" + leaf_schema.name)
             .send(items).expect(200, function(err, res) {
                 if (err) { return d.reject(err); }
@@ -391,7 +391,7 @@ describe('@API @V1.1API - Entity References', function() {
         before(function(done) {
             // delete/create all the schemas
             var promises = [leaf_schema, ancestor_schema].map(function(schema) {
-                var d = BPromise.pending();
+                var d = P.defer();
                 var url = "/api/v1.1/schemas";
                 ApiServer.del(url + '/' + schema.name).end(function() {
                     ApiServer.post(url).send(schema).expect(201, function(err, res) {
@@ -401,20 +401,20 @@ describe('@API @V1.1API - Entity References', function() {
                 });
                 return d.promise;
             });
-            BPromise.all(promises).then(function() {
+            Promise.all(promises).then(function() {
                 return createLeaves();
             }).then(function() { done(); }).catch(done);
         });
 
         var getDneObjectId = function() {
-            var dneObjId = mongoose.Types.ObjectId();
+            var dneObjId = new mongoose.Types.ObjectId();
             var hasObjId = function(id) {
                 return LEAVES.filter(function(l) {
                     return l._id == dneObjId;
                 }).length > 0;
             };
             while (hasObjId(dneObjId)) {
-                dneObjId = mongoose.Types.ObjectId();
+                dneObjId = new mongoose.Types.ObjectId();
             }
             return dneObjId;
         };
@@ -517,7 +517,7 @@ describe('@API @V1.1API - Entity References', function() {
                     num : i
                 });
             }
-            var d = BPromise.pending();
+            var d = P.defer();
             ApiServer.post("/api/v1.1/entities/" + schemaName)
             .send(items).expect(200, function(err, res) {
                 if (err) { return d.reject(err); }
@@ -533,7 +533,7 @@ describe('@API @V1.1API - Entity References', function() {
         before(function(done) {
             // delete/create all the schemas
             var promises = [leaf_schema, leaf_schema_2, ancestor_schema].map(function(schema) {
-                var d = BPromise.pending();
+                var d = P.defer();
                 var url = "/api/v1.1/schemas";
                 ApiServer.del(url + '/' + schema.name).end(function() {
                     ApiServer.post(url).send(schema).expect(201, function(err, res) {
@@ -543,8 +543,8 @@ describe('@API @V1.1API - Entity References', function() {
                 });
                 return d.promise;
             });
-            BPromise.all(promises).then(function() {
-                return BPromise.all([
+            Promise.all(promises).then(function() {
+                return Promise.all([
                     createLeaves(leaf_schema.name),
                     createLeaves(leaf_schema_2.name)
                 ]).then(function(results) {
@@ -556,14 +556,14 @@ describe('@API @V1.1API - Entity References', function() {
         });
 
         var getDneObjectId = function(coll) {
-            var dneObjId = mongoose.Types.ObjectId();
+            var dneObjId = new mongoose.Types.ObjectId();
             var hasObjId = function(id) {
                 return coll.filter(function(l) {
                     return l._id == dneObjId;
                 }).length > 0;
             };
             while (hasObjId(dneObjId)) {
-                dneObjId = mongoose.Types.ObjectId();
+                dneObjId = new mongoose.Types.ObjectId();
             }
             return dneObjId;
         };

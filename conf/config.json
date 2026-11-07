@@ -2,18 +2,9 @@
     "db" : {
         "url"  : "mongodb://localhost/sis",
         "opts" : {
-            "server" : {
-                "auto_reconnect" : true,
-                "poolSize" : 10,
-                "socketOptions" : {
-                    "keepAlive" : 1,
-                    "socketTimeoutMS": 0
-                }
-            },
-            "db" : {
-                "w" : 1,
-                "j" : true
-            }
+            "maxPoolSize" : 10,
+            "socketTimeoutMS" : 0,
+            "writeConcern" : { "w" : 1, "j" : true }
         }
     },
     "server" : {

@@ -1,7 +1,7 @@
 'use strict';
 
 var nconf = require('nconf');
-var BPromise = require("bluebird");
+var P = require("../util/promises");
 var vm = require("vm");
 var SIS = require("../util/constants");
 var clone = require("clone");
@@ -18,16 +18,17 @@ function ScriptRunner(schemaManager) {
 }
 
 ScriptRunner.prototype._getScript = function(name) {
+    var self = this;
     return this.manager.getById(name, { lean : true })
-    .bind(this).then(function(scriptObj) {
+    .then(function(scriptObj) {
         var scriptText = scriptObj.script;
         LOGGER.info("have script", { script: scriptText });
-        var cached = this.scriptCache[name];
+        var cached = self.scriptCache[name];
         var scriptTime = scriptObj._sis._updated_at;
         var compiled = null;
         if (!cached) {
             compiled = new vm.Script(scriptText, { filename: name });
-            this.scriptCache[name] = {
+            self.scriptCache[name] = {
                 script : compiled,
                 time : scriptTime
             };
@@ -81,8 +82,9 @@ ScriptRunner.prototype._createContext = function(holder, req) {
         client : new ApiClient(this.schemaManager, this.hieraManager),
         res : new ApiResponse(holder),
         req : req,
-        BPromise : BPromise,
-        csv : require('csv'),
+        Promise : Promise,
+        // keep the csv.stringify shape that user scripts expect
+        csv : { stringify : require('csv-stringify') },
         yaml : require('js-yaml'),
         async : async
     };
@@ -90,12 +92,13 @@ ScriptRunner.prototype._createContext = function(holder, req) {
 };
 
 ScriptRunner.prototype.handleRequest = function(req) {
+    var self = this;
     var endpoint = req.endpoint;
-    return this._getScript(endpoint).bind(this)
+    return this._getScript(endpoint)
     .then(function(script) {
-        var defer = BPromise.pending();
+        var defer = P.defer();
         var holder = new ResponseHolder(defer);
-        var ctx = this._createContext(holder, req);
+        var ctx = self._createContext(holder, req);
         script.runInNewContext(ctx);
         return defer.promise;
     })
@@ -104,14 +107,14 @@ ScriptRunner.prototype.handleRequest = function(req) {
     })
     .catch(function(err) {
         if (Array.isArray(err)) {
-            return BPromise.reject(err);
+            return Promise.reject(err);
         }
         var str = err + "";
         if (err.stack) {
             str += " : " + err.stack;
         }
         err = SIS.ERR_INTERNAL(str);
-        return BPromise.reject(err);
+        return Promise.reject(err);
     });
 };
 

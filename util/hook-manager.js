@@ -2,20 +2,20 @@
 // A class used to manage the SIS Hooks defined by the /hooks api
 'use strict';
 
-// node http lib
-var http = require('http');
-// simplified http req
-var request = require('request');
+var qs = require('qs');
 var nconf = require('nconf');
 var logger = require("./logger");
 
 var SIS = require('./constants');
 var Manager = require("./manager");
-var BPromise = require("bluebird");
+var P = require("./promises");
 
 var LOGGER = logger.createLogger({
     name : "HookManager"
 });
+
+// Defaults merged into every outbound hook request (was request.defaults(...)).
+var requestDefaults = { };
 
 
 /////////////////////////////////
@@ -27,7 +27,7 @@ function HookManager(sm, opts) {
     Manager.call(this, model, opts);
     var hookRequestDefaults = nconf.get('hooks:request_defaults');
     if (hookRequestDefaults) {
-        request = request.defaults(hookRequestDefaults);
+        requestDefaults = hookRequestDefaults;
     }
     this.sm = sm;
 }
@@ -64,29 +64,33 @@ HookManager.prototype.validate = function(modelObj, toUpdate, options) {
 /////////////////////////////////
 
 var sendRequest = function(options, retry_count, delay, d) {
-    request(options, function(err, res) {
-        //LOGGER.info({ options: options, res: res, err: err, retry_count: retry_count, delay: delay},"Logging all request details");
-
-        if(err) {
-            LOGGER.error({ err: err }, "Error Response from Outbound Hook Request");
+    var fetchOpts = Object.assign({ }, requestDefaults, { method: options.method });
+    fetchOpts.headers = Object.assign({ }, requestDefaults.headers, options.headers);
+    if (options.body !== undefined) {
+        fetchOpts.body = options.body;
+    }
+    fetch(options.url, fetchOpts).then(function(res) {
+        if (res.status >= 300) {
+            // non 2xx - treat as an error so the retry logic kicks in
+            var httpErr = new Error("Hook target responded with status " + res.status);
+            httpErr.statusCode = res.status;
+            throw httpErr;
         }
-        if (err || !res || res.statusCode >= 300) {
-            if (retry_count <= 0) {
-                // done with error
-                LOGGER.error({err: err},"Exhausted retries");
-                return d.reject(SIS.ERR_INTERNAL(err));
-            } else {
-                // retry
-                //LOGGER.info({retry_count: retry_count, delay: delay},"Hook being retried");
-                setTimeout(function() {
-                    sendRequest(options, retry_count - 1, delay, d);
-                }, delay * 1000);
-            }
-        } else {
-            // success!
-            //LOGGER.info({res: res, code: res.statusCode},"Hook call successful");
-            return d.resolve(res.body);
+        return res.text();
+    }).then(function(body) {
+        // success!
+        d.resolve(body);
+    }).catch(function(err) {
+        LOGGER.error({ err: err }, "Error Response from Outbound Hook Request");
+        if (retry_count <= 0) {
+            // done with error
+            LOGGER.error({ err: err }, "Exhausted retries");
+            return d.reject(SIS.ERR_INTERNAL(err));
         }
+        // retry
+        setTimeout(function() {
+            sendRequest(options, retry_count - 1, delay, d);
+        }, delay * 1000);
     });
 };
 
@@ -109,17 +113,21 @@ var dispatchHook = function(hook, entity, event, isBulk) {
         data.old_value = entity[0];
     }
     var options = {
-        "uri" : hook.target.url,
+        "url" : hook.target.url,
         "method" : hook.target.action
     };
     if (options.method == 'GET') {
         data.data = JSON.stringify(entity);
-        options.qs = {'data' : data};
+        // serialize with qs so the nested object round-trips through the
+        // receiver's query parser (which also uses qs), e.g. data[entity_type]=...
+        var query = qs.stringify({ 'data' : data });
+        options.url += (options.url.indexOf('?') === -1 ? '?' : '&') + query;
     } else {
-        options.json = data;
-        LOGGER.info({payload: options.json},"Hook payload: ");
+        options.headers = { 'content-type' : 'application/json' };
+        options.body = JSON.stringify(data);
+        LOGGER.info({ payload: data }, "Hook payload: ");
     }
-    var d = BPromise.pending();
+    var d = P.defer();
     sendRequest(options, hook.retry_count || 0, hook.retry_delay || 1, d);
     return d.promise;
 };
@@ -136,24 +144,24 @@ HookManager.prototype.dispatchHooks = function(entity, entity_type, event, isBul
     // find hooks that have the entity_type w/ the
     // event
     var query = {"entity_type" : entity_type, "events" :  event };
-    this.model.find(query, null, { lean : true }, function(err, hooks) {
-        if (err) {
-            callback(SIS.ERR_NOT_FOUND(err), null);
-        } else {
-            var promises = hooks.map(function(hook) {
-                return dispatchHook(hook, entity, event, isBulk);
-            });
-            BPromise.all(promises).then(function(res) {
-                callback(null, res);
-            }).catch(callback);
-        }
+    Promise.resolve(this.model.find(query, null, { lean : true }).exec())
+    .then(function(hooks) {
+        var promises = hooks.map(function(hook) {
+            return dispatchHook(hook, entity, event, isBulk);
+        });
+        return Promise.all(promises).then(function(res) {
+            callback(null, res);
+        });
+    }).catch(function(err) {
+        callback(SIS.ERR_NOT_FOUND(err), null);
     });
 };
 
 // force trigger
 HookManager.prototype.triggerHooks = function(entityType, entityId, opts) {
+    var self = this;
     opts = opts || { };
-    return this.sm.getEntityManager(entityType).bind(this)
+    return self.sm.getEntityManager(entityType)
     .then(function(mgr) {
         // get the entity by ID
         opts.lean = mgr.model.schema._sis_defaultpaths.length === 0;
@@ -164,7 +172,7 @@ HookManager.prototype.triggerHooks = function(entityType, entityId, opts) {
         //LOGGER.info({entity: entity},"Dispatching hooks for "+entityType+" with id "+entityId);
 
         var obj = [entity, entity];
-        this.dispatchHooks(obj, entityType, SIS.EVENT_UPDATE, false);
+        self.dispatchHooks(obj, entityType, SIS.EVENT_UPDATE, false);
         return {
             message: "Hooks triggered successfully",
             type: entityType,

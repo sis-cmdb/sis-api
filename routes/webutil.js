@@ -3,21 +3,20 @@
 var passport = require('passport');
 var BasicStrategy = require('passport-http').BasicStrategy;
 var SIS = require("../util/constants");
-var BPromise = require("bluebird");
+var P = require("../util/promises");
 var util = require("util");
 var _ = require("lodash");
 
 // authorization using user and pass via the user manager
 var _verifyUserPass = function(user, pass, done) {
     var userManager = this.auth[SIS.SCHEMA_USERS];
-    userManager.getVerifiedUser(user, pass).nodeify(done);
+    P.nodeify(userManager.getVerifiedUser(user, pass), done);
 };
 
 var getLdapVerificationFunc = function(sm, auth_config) {
     if (!auth_config) {
         throw new Error("LDAP authentication requires configuration.");
     }
-    var ldap = require('ldapjs');
     var userManager = sm.auth[SIS.SCHEMA_USERS];
     var url = auth_config.url;
     var ud = auth_config.user_domain;
@@ -36,19 +35,24 @@ var getLdapVerificationFunc = function(sm, auth_config) {
         super_user : true
     };
     return function(user, pass, done) {
-        var client = ldap.createClient(client_opts);
         var ldapUser = user + '@' + ud;
-        client.bind(ldapUser, pass, function(err) {
-            // unbind - don't wait around.
-            client.unbind(function() { });
-            if (err) {
+        // ldapts is ESM-only, so load it lazily via dynamic import.
+        import('ldapts').then(function(ldapts) {
+            var client = new ldapts.Client(client_opts);
+            return client.bind(ldapUser, pass).then(function() {
+                // unbind - don't wait around / ignore unbind errors
+                client.unbind().catch(function() { });
+                var userObj = {
+                    name : user,
+                    email : user + '@' + ed
+                };
+                return P.nodeify(userManager.getOrCreateEmptyUser(userObj, ldapSisUser), done);
+            }, function(err) {
+                client.unbind().catch(function() { });
                 return done(SIS.ERR_BAD_CREDS("LDAP authentication failed : " + err), null);
-            }
-            var userObj = {
-                name : user,
-                email : user + '@' + ed
-            };
-            return userManager.getOrCreateEmptyUser(userObj, ldapSisUser).nodeify(done);
+            });
+        }).catch(function(err) {
+            return done(SIS.ERR_INTERNAL("Unable to load LDAP client : " + err), null);
         });
     };
 };
@@ -63,12 +67,12 @@ var _verifySisToken = function(token, done) {
             var timeLeft = expires.getTime() - Date.now();
             if (timeLeft <= 0) {
                 // no good
-                return BPromise.reject(SIS.ERR_BAD_CREDS("Token has expired."));
+                return Promise.reject(SIS.ERR_BAD_CREDS("Token has expired."));
             }
         }
         return userManager.getById(t[SIS.FIELD_USERNAME], {lean : true});
     });
-    return p.nodeify(done);
+    return P.nodeify(p, done);
 };
 
 var getAuthType = function(config) {
@@ -156,7 +160,7 @@ var getObjectIds = function(schemaRef, condition, remainingPath,
     var optRef = schemaRef.ref;
     if (!optRef) {
         // just return an empty array
-        return BPromise.resolve([]);
+        return Promise.resolve([]);
     }
     return sm.getEntityModelAsync(optRef).then(function(sisModel){
         // need to check if the remainingPath is another reference
@@ -164,7 +168,7 @@ var getObjectIds = function(schemaRef, condition, remainingPath,
         var path = sisModel.schema.path(remainingPath);
         if (path) {
             // we can query this since it is a property of the model
-            return sisModel.findAsync(getFindCond(remainingPath, condition), '_id')
+            return Promise.resolve(sisModel.find(getFindCond(remainingPath, condition), '_id').exec())
                 .then(mapIds);
         } else {
             // need to see if we're looking to join another set of object ids
@@ -172,7 +176,7 @@ var getObjectIds = function(schemaRef, condition, remainingPath,
             if (!references.length) {
                 // no object ids referenced by this nested model, so the
                 // path is invalid.. bail
-                return BPromise.resolve([]);
+                return Promise.resolve([]);
             } else {
                 // find out which reference matches the remainingPath
                 var found = false;
@@ -189,8 +193,8 @@ var getObjectIds = function(schemaRef, condition, remainingPath,
                 if (found) {
                     // if it's path._id then we can just query this
                     if (remainingPath == path + "_id") {
-                        return sisModel.findAsync(getFindCond(remainingPath, condition), '_id',
-                                                  { lean : true }).then(mapIds);
+                        return Promise.resolve(sisModel.find(getFindCond(remainingPath, condition), '_id',
+                                                  { lean : true }).exec()).then(mapIds);
                     } else {
                         // nested so we need to get the ids and then
                         // issue an $in query for this path
@@ -198,24 +202,24 @@ var getObjectIds = function(schemaRef, condition, remainingPath,
                         return getObjectIds(references[i], condition, nestedRemain,
                                             sm, sisModel).then(function(ids) {
                             if (!ids || !ids.length) {
-                                return BPromise.resolve([]);
+                                return Promise.resolve([]);
                             }
                             var findCond = ids.length == 1 ? getFindCond(ref, ids[0]) : getFindCond(ref, { "$in" : ids});
-                            return sisModel.findAsync(findCond, '_id', {lean : true}).then(mapIds);
+                            return Promise.resolve(sisModel.find(findCond, '_id', {lean : true}).exec()).then(mapIds);
                         });
                     }
                 } else {
                     // path is invalid.  just return empty
-                    return BPromise.resolve([]);
+                    return Promise.resolve([]);
                 }
             }
         }
     })
     .catch(function(err) {
         if (err instanceof Array) {
-            return BPromise.reject(err);
+            return Promise.reject(err);
         }
-        return BPromise.reject(SIS.ERR_INTERNAL(err));
+        return Promise.reject(SIS.ERR_INTERNAL(err));
     });
 };
 
@@ -272,11 +276,11 @@ module.exports.flattenCondition = function(condition, schemaManager, mgr) {
     var references = mgr.getReferences();
     if (!condition || typeof condition !== 'object' ||
         !references || !references.length) {
-        return BPromise.resolve([condition, mgr]);
+        return Promise.resolve([condition, mgr]);
     }
     var keys = getValidKeys(condition);
     if (!keys) {
-        return BPromise.resolve([condition, mgr]);
+        return Promise.resolve([condition, mgr]);
     }
     var paths = references.map(function(ref) {
         return ref;
@@ -296,7 +300,7 @@ module.exports.flattenCondition = function(condition, schemaManager, mgr) {
     // deal with $or and $and and $nor
     OR_AND_NOR.forEach(function(key) {
         if (condition[key]) {
-            var promise = BPromise.map(condition[key], mapInnerCondition)
+            var promise = Promise.all((condition[key]).map(mapInnerCondition))
                 .then(function(flatResults) {
                     // flatResults is an array of arrays where
                     // each array is a flattend condition, manager tuple
@@ -345,10 +349,10 @@ module.exports.flattenCondition = function(condition, schemaManager, mgr) {
             return getObjectIds(schemaPath, cond, remainingPath,
                                 schemaManager, mgr.model);
         });
-        var resultPromise = BPromise.resolve([flattened, mgr]);
+        var resultPromise = Promise.resolve([flattened, mgr]);
         if (promises.length) {
-            resultPromise = resultPromise.spread(function(flattened, mgr) {
-                return BPromise.all(promises).then(function(results) {
+            resultPromise = resultPromise.then(P.spread(function(flattened, mgr) {
+                return Promise.all(promises).then(function(results) {
                     var refConds = {};
                     for (var i = 0; i < results.length; ++i) {
                         var key = fieldKeys[i];
@@ -364,24 +368,24 @@ module.exports.flattenCondition = function(condition, schemaManager, mgr) {
                             flattened[k] = v;
                         }
                     }
-                    return BPromise.resolve([flattened, mgr]);
+                    return Promise.resolve([flattened, mgr]);
                 });
-            });
+            }));
         }
         if (orAndNorPromises.length) {
-            resultPromise = resultPromise.spread(function(flattened, mgr) {
-                return BPromise.all(orAndNorPromises).then(function(results) {
+            resultPromise = resultPromise.then(P.spread(function(flattened, mgr) {
+                return Promise.all(orAndNorPromises).then(function(results) {
                     results.forEach(function(res) {
                         // res is tuple of key => flattened conditions
                         flattened[res[0]] = res[1];
                     });
-                    return BPromise.resolve([flattened, mgr]);
+                    return Promise.resolve([flattened, mgr]);
                 });
-            });
+            }));
         }
         return resultPromise;
     } else {
-        return BPromise.resolve([condition, mgr]);
+        return Promise.resolve([condition, mgr]);
     }
 };
 

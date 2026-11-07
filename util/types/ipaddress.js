@@ -6,8 +6,10 @@ module.exports = exports = function IpAddr(mongoose) {
     var SchemaType = mongoose.SchemaType;
     var Types = mongoose.Types;
     var mongo = mongoose.mongo;
-    var v6 = require("ipv6").v6;
-    var v4 = require("ipv6").v4;
+    var CastError = mongoose.Error.CastError;
+    var ipAddress = require("ip-address");
+    var Address4 = ipAddress.Address4;
+    var Address6 = ipAddress.Address6;
 
       /**
        * Long constructor
@@ -46,8 +48,8 @@ module.exports = exports = function IpAddr(mongoose) {
      * @param {Boolean} [init]
      * @return {mongo.Long|null}
      */
-    var MAX_V6 = new v6.Address("ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff").bigInteger();
-    var MAX_V4 = new v4.Address("255.255.255.255").bigInteger();
+    var MAX_V6 = new Address6("ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff").bigInt();
+    var MAX_V4 = new Address4("255.255.255.255").bigInt();
 
     var FIELDS = [
         'ip_address',
@@ -61,15 +63,15 @@ module.exports = exports = function IpAddr(mongoose) {
     var toObject = function(addr, version) {
         var end = addr.endAddress();
         var start = addr.startAddress();
-        var endBi = end.bigInteger();
-        var startBi = start.bigInteger();
+        var endBi = end.bigInt();
+        var startBi = start.bigInt();
 
-        var net = startBi.xor(endBi);
+        var net = startBi ^ endBi;
         var netAddr = null;
         if (version == 'v6') {
-            netAddr = v6.Address.fromBigInteger(net.xor(MAX_V6));
+            netAddr = Address6.fromBigInt(net ^ MAX_V6);
         } else {
-            netAddr = v4.Address.fromBigInteger(net.xor(MAX_V4));
+            netAddr = Address4.fromBigInt(net ^ MAX_V4);
         }
 
         var result = {
@@ -91,15 +93,17 @@ module.exports = exports = function IpAddr(mongoose) {
             // ugly..
             var addr = null;
             var version = null;
-            if (val.indexOf(':') != -1) {
-                addr = new v6.Address(val);
-                version = 'v6';
-            } else {
-                addr = new v4.Address(val);
-                version = 'v4';
-            }
-            if (!addr.isValid()) {
-                throw new SchemaType.CastError('IpAddress', addr.error);
+            try {
+                if (val.indexOf(':') != -1) {
+                    addr = new Address6(val);
+                    version = 'v6';
+                } else {
+                    addr = new Address4(val);
+                    version = 'v4';
+                }
+            } catch (err) {
+                // ip-address throws AddressError on invalid input
+                throw new CastError('IpAddress', val, this.path);
             }
             return toObject(addr, version);
         } else if (typeof val == 'object') {
@@ -115,7 +119,7 @@ module.exports = exports = function IpAddr(mongoose) {
             }
         }
 
-        throw new SchemaType.CastError('IpAddress', val);
+        throw new CastError('IpAddress', val, this.path);
     };
 
       /*!

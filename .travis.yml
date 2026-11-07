@@ -1,11 +1,15 @@
 language: node_js
-sudo: false
 services:
   - mongodb
-env: SIS_RUN_LONG_TESTS=true
-before_install:
-  - npm install -g grunt-cli
-  # per http://docs.travis-ci.com/user/database-setup/#MongoDB
-  - sleep 15
+env:
+  - SIS_RUN_LONG_TESTS=true
 node_js:
-  - "iojs"
+  - "20"
+  - "22"
+  - "24"
+before_install:
+  # give mongodb a moment to come up
+  - sleep 15
+script:
+  - npm run lint
+  - npm test

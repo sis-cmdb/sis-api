@@ -9,7 +9,6 @@
 
 var SIS = require("./constants");
 var Manager = require("./manager");
-var BPromise = require("bluebird");
 var jsondiffpatch = require("jsondiffpatch");
 var logger = require("./logger");
 var createEntityManager = require("./entity-manager");
@@ -46,6 +45,9 @@ var toRegex = function(str) {
 // mongoose to barf.  I.e. string field changed to
 // document
 var patchMongoose = function(mongoose) {
+    // mongoose 4 allowed querying arbitrary (non-schema) paths such as the
+    // sub-paths of custom types (e.g. ip.ip_address).  Preserve that behavior.
+    mongoose.set('strictQuery', false);
     var Document = mongoose.Document;
     var oldInit = Document.prototype.init;
     Document.prototype.init = function(doc, opts, fn) {
@@ -172,8 +174,11 @@ SchemaManager.prototype.validate = function(modelObj, toUpdate, options) {
 };
 
 SchemaManager.prototype._invalidateSchema = function(name) {
-    delete this.mongoose.modelSchemas[name];
-    delete this.mongoose.models[name];
+    // mongoose 5+ removed direct access to modelSchemas/models for removal;
+    // deleteModel cleans up the compiled model and its cached schema.
+    if (this.mongoose.models[name]) {
+        this.mongoose.deleteModel(name);
+    }
     delete this.entitySchemaToUpdateTime[name];
 };
 
@@ -241,7 +246,7 @@ SchemaManager.prototype.finishUpdate = function(oldSchema, updatedSchema) {
     if (!defChanged) {
         // definition didn't change so we don't need to delete any models
         // or anything
-        return BPromise.resolve(updatedSchema);
+        return Promise.resolve(updatedSchema);
     }
 
     // see if any paths changed that require index changes
@@ -263,9 +268,9 @@ SchemaManager.prototype.finishUpdate = function(oldSchema, updatedSchema) {
     this._invalidateSchema(name);
 
     var currentMongooseModel = self.getEntityModel(updatedSchema);
-    var collection = BPromise.promisifyAll(currentMongooseModel.collection);
+    var collection = currentMongooseModel.collection;
 
-    var resultPromise = BPromise.resolve(updatedSchema);
+    var resultPromise = Promise.resolve(updatedSchema);
     if (pathsWithIndecesToRemove.length) {
         // build up the index objects to remove
         var toRemove = [];
@@ -279,14 +284,14 @@ SchemaManager.prototype.finishUpdate = function(oldSchema, updatedSchema) {
         if (toRemove.length) {
             resultPromise = resultPromise.then(function() {
                 var promises = toRemove.map(function(r) {
-                    return collection.dropIndexAsync(r[0], r[1])
+                    return Promise.resolve(collection.dropIndex(r[0], r[1]))
                     .then(function(res) {
                         return r;
                     }).catch(function(e) {
                         return r;
                     });
                 });
-                return BPromise.all(promises);
+                return Promise.all(promises);
             });
         }
     }
@@ -320,14 +325,14 @@ SchemaManager.prototype.finishUpdate = function(oldSchema, updatedSchema) {
         });
         if (toRemove.length) {
             var promises = toRemove.map(function(r) {
-                return collection.dropIndexAsync(r[0], r[1])
+                return Promise.resolve(collection.dropIndex(r[0], r[1]))
                 .then(function(res) {
                     return r;
                 }).catch(function(e) {
                     return r;
                 });
             });
-            return BPromise.all(promises).then(function() {
+            return Promise.all(promises).then(function() {
                 return currSchema;
             });
         } else {
@@ -337,7 +342,7 @@ SchemaManager.prototype.finishUpdate = function(oldSchema, updatedSchema) {
 
     if (pathsToDelete.length) {
         resultPromise = resultPromise.then(function(currSchema) {
-            return currentMongooseModel.updateAsync({},{ $unset : pathsObj}, {multi: true, safe : true, strict: false})
+            return Promise.resolve(currentMongooseModel.updateMany({}, { $unset : pathsObj}, { strict: false }).exec())
             .then(function() {
                 return updatedSchema;
             });
@@ -388,24 +393,24 @@ SchemaManager.prototype.applyUpdate = function(currentSchema, updatedSchema) {
     if (!defChanged) {
         // definition didn't change so we don't need to delete any models
         // or anything
-        return BPromise.resolve(currentSchema);
+        return Promise.resolve(currentSchema);
     }
 
     // find all paths that need to be unset/deleted
     var pathsToDelete = diff[1].map(function(p) { return p[0]; });
     if (!pathsToDelete.length) {
-        return BPromise.resolve(currentSchema);
+        return Promise.resolve(currentSchema);
     }
 
     var lockedFields = currentSchema[SIS.FIELD_LOCKED_FIELDS] || [];
     for (var i = 0; i < pathsToDelete.length; ++i) {
         var path = pathsToDelete[i];
         if (lockedFields.indexOf(path) != -1) {
-            return BPromise.reject(SIS.ERR_BAD_REQ("Cannot remove field " + path));
+            return Promise.reject(SIS.ERR_BAD_REQ("Cannot remove field " + path));
         }
     }
 
-    return BPromise.resolve(currentSchema);
+    return Promise.resolve(currentSchema);
 };
 
 SchemaManager.prototype.objectRemoved = function(schema) {
@@ -418,19 +423,18 @@ SchemaManager.prototype.objectRemoved = function(schema) {
     this._invalidateSchema(name);
     // TODO: handle the error when the collection is busy
     // i.e. index being created
-    var d = BPromise.pending();
-    model.collection.drop(function(err, reply) {
-        // mongoose throws an error if the collection isn't found..
-        if (err && err.message != 'ns not found') {
+    return Promise.resolve(collection.drop()).then(function() {
+        return schema;
+    }).catch(function(err) {
+        // the driver errors if the collection isn't found (ns not found / code 26)
+        if (err && err.message != 'ns not found' && err.code !== 26) {
             // at this point we're in a bad state.. we deleted the instance
             // but still have documents
             // TODO: handle this
-            d.reject(SIS.ERR_INTERNAL(err));
-        } else {
-            d.resolve(schema);
+            return Promise.reject(SIS.ERR_INTERNAL(err));
         }
+        return schema;
     });
-    return d.promise;
 };
 
 // additional methods
@@ -439,33 +443,35 @@ SchemaManager.prototype.getSisModel = function(name) {
 };
 
 SchemaManager.prototype.getEntityModelAsync = function(name) {
-    return this.model.findOneAsync({name: name}, null, { lean : true }).bind(this)
+    var self = this;
+    return Promise.resolve(self.model.findOne({name: name}, null, { lean : true }).exec())
     .then(function(schema) {
-        var model = this.getEntityModel(schema);
+        var model = self.getEntityModel(schema);
         if (!model) {
-            return BPromise.reject(SIS.ERR_BAD_REQ("Invalid schema found with name " + name));
+            return Promise.reject(SIS.ERR_BAD_REQ("Invalid schema found with name " + name));
         } else {
             return model;
         }
     }).catch(function(err) {
         if (err instanceof Array) {
-            return BPromise.reject(err);
+            return Promise.reject(err);
         }
-        return BPromise.reject(SIS.ERR_BAD_REQ("Schema not found with name " + name));
+        return Promise.reject(SIS.ERR_BAD_REQ("Schema not found with name " + name));
     });
 };
 
 // Bootstrap mongoose by setting up entity models
 SchemaManager.prototype.bootstrapEntitySchemas = function(callback) {
     var self = this;
-    this.model.find({}, null, { lean : true }, function(err, schemas) {
-        if (err) { return callback(err); }
+    this.model.find({}, null, { lean : true }).exec().then(function(schemas) {
         for (var i = 0; i < schemas.length; ++i) {
             if (!self.getEntityModel(schemas[i])) {
                 return callback(SIS.ERR_INTERNAL("Error building schema " + JSON.stringify(schemas[i])));
             }
         }
         callback(null);
+    }, function(err) {
+        callback(err);
     });
 };
 
@@ -496,7 +502,7 @@ SchemaManager.prototype._getMongooseSchema = function(sisSchema, isInternal) {
 
     definition[SIS.FIELD_SIS_META] = thisMetaDef;
 
-    return this.mongoose.Schema(definition, { collection : sisSchema.name, versionKey : SIS.FIELD_VERS });
+    return new this.mongoose.Schema(definition, { collection : sisSchema.name, versionKey : SIS.FIELD_VERS });
 };
 
 function withCounts(options) {
@@ -506,40 +512,41 @@ function withCounts(options) {
 
 // wrap this so we can handle the error case
 SchemaManager.prototype.getById = function(id, options) {
-    return Manager.prototype.getById.call(this, id, options)
-    .bind(this).then(function(schema) {
+    var self = this;
+    return Manager.prototype.getById.call(self, id, options)
+    .then(function(schema) {
         // check for with_counts
         if (!withCounts(options)) {
             // early exit
             return schema;
         }
         // get the number of items in the schema
-        var entityModel = this.getEntityModel(schema);
-        return entityModel.countAsync({}).then(function(count) {
+        var entityModel = self.getEntityModel(schema);
+        return Promise.resolve(entityModel.countDocuments({}).exec()).then(function(count) {
             schema[SIS.FIELD_ENTITY_COUNT] = count;
             return schema;
         });
     }).catch(function(err) {
-        this._invalidateSchema(id);
-        return BPromise.reject(err);
+        self._invalidateSchema(id);
+        return Promise.reject(err);
     });
 };
 
 // handle the with_counts in get all also
 SchemaManager.prototype.getAll = function(condition, options, fields) {
-    var p = Manager.prototype.getAll.call(this, condition, options, fields);
-    return p.bind(this).then(function(schemas) {
+    var self = this;
+    var p = Manager.prototype.getAll.call(self, condition, options, fields);
+    return p.then(function(schemas) {
         if (!withCounts(options)) {
             return schemas;
         }
-        var self = this;
-        return BPromise.map(schemas, function(schema) {
+        return Promise.all((schemas).map(function(schema) {
             var entityModel = self.getEntityModel(schema);
-            return entityModel.countAsync({}).then(function(count) {
+            return Promise.resolve(entityModel.countDocuments({}).exec()).then(function(count) {
                 schema[SIS.FIELD_ENTITY_COUNT] = count;
                 return schema;
             });
-        });
+        }));
     });
 };
 
@@ -592,14 +599,11 @@ SchemaManager.prototype.getEntityModel = function(sisSchema, isInternal) {
                 schema.index(sisSchema.indexes[i]);
             }
             if (sisSchema.indexes.length) {
-                result.ensureIndexes();
+                result.createIndexes();
             }
         }
 
         this.entitySchemaToUpdateTime[name] = schemaTime;
-        this.mongoose.models[name] = result;
-        // promisify the mongoose model
-        BPromise.promisifyAll(result);
         return result;
     } catch (ex) {
         LOGGER.error({ err : ex }, "Error getting entity model");
@@ -636,7 +640,7 @@ SchemaManager.prototype._preSave = function(obj) {
         return ref.ref;
     });
     obj[SIS.FIELD_SIS_META][SIS.FIELD_REFERENCES] = refs;
-    return BPromise.resolve(obj);
+    return Promise.resolve(obj);
 };
 
 SchemaManager.prototype.preAdd = function(obj) {
@@ -664,32 +668,32 @@ SchemaManager.prototype.preAdd = function(obj) {
             }
         }
     }
-    return BPromise.resolve(obj);
+    return Promise.resolve(obj);
 };
 
 SchemaManager.prototype.authorize = function(evt, doc, user, mergedDoc) {
     var commonErr = this._commonAuth(evt, doc, user, mergedDoc);
     if (commonErr) {
-        return BPromise.reject(commonErr);
+        return Promise.reject(commonErr);
     }
     // get the permissions on the doc being added/updated/deleted
     var permission = this.getPermissionsForObject(doc, user);
     var canOperateOnDoc = permission == SIS.PERMISSION_ADMIN ||
         (doc[SIS.FIELD_ANY_ADMIN_MOD] && this._isPartialAdmin(doc, user));
     if (!canOperateOnDoc) {
-        return BPromise.reject(SIS.ERR_BAD_CREDS("Insufficient permissions."));
+        return Promise.reject(SIS.ERR_BAD_CREDS("Insufficient permissions."));
     } else if (evt != SIS.EVENT_UPDATE) {
         // insert / delete and user is an admin
-        return BPromise.resolve(doc);
+        return Promise.resolve(doc);
     }
 
     permission = this.getPermissionsForObject(mergedDoc, user);
     canOperateOnDoc = permission == SIS.PERMISSION_ADMIN ||
         (mergedDoc[SIS.FIELD_ANY_ADMIN_MOD] && this._isPartialAdmin(mergedDoc, user));
     if (!canOperateOnDoc) {
-        return BPromise.reject(SIS.ERR_BAD_CREDS("Insufficient permissions."));
+        return Promise.reject(SIS.ERR_BAD_CREDS("Insufficient permissions."));
     }
-    return BPromise.resolve(mergedDoc);
+    return Promise.resolve(mergedDoc);
 };
 
 // get a token manager for the particular user
@@ -720,11 +724,12 @@ SchemaManager.prototype._createEntityManager = function(schema, opts) {
 
 
 SchemaManager.prototype.getEntityManager = function(schemaName, opts) {
-    return this.getById(schemaName, { lean : true })
+    var self = this;
+    return self.getById(schemaName, { lean : true })
     .then(function(schema) {
-        var manager = this._createEntityManager(schema, opts);
+        var manager = self._createEntityManager(schema, opts);
         return manager;
-    }.bind(this));
+    });
 };
 
 // export

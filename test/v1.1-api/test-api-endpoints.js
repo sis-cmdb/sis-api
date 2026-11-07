@@ -127,7 +127,7 @@ describe("@API @V1.1API - Scripts API", function() {
     });
 
     describe("Output formats", function() {
-        let csv = require("csv");
+        let csvParse = require("csv-parse/sync");
         let yaml = require("js-yaml");
         let name = 'formats';
         before(function(done) {
@@ -165,11 +165,9 @@ describe("@API @V1.1API - Scripts API", function() {
             ApiServer.get(uri).expect(200, function(err, res) {
                 should.not.exist(err);
                 let body = res.text;
-                csv.parse(body, function(e, result) {
-                    should.not.exist(e);
-                    result.should.eql(csvData);
-                    done();
-                });
+                let result = csvParse.parse(body);
+                result.should.eql(csvData);
+                done();
             });
         });
 
@@ -178,7 +176,7 @@ describe("@API @V1.1API - Scripts API", function() {
             ApiServer.get(uri).expect(200, function(err, res) {
                 should.not.exist(err);
                 let body = res.text;
-                let data = yaml.safeLoad(body);
+                let data = yaml.load(body);
                 data.should.eql(expectedData);
                 done();
             });

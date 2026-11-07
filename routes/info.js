@@ -17,7 +17,7 @@ module.exports.setup = function(app, config) {
         build = { 'err' : 'no info present' };
     }
 
-    app.get("/api/:version(" + SIS.SUPPORTED_VERSIONS.join("|") + ")/info", function(req, res) {
+    app.get("/api/:version/info", function(req, res) {
         res.status(200).json(build);
     });
 };

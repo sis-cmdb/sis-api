@@ -50,7 +50,7 @@ describe('Replication Simulation', function() {
                     schema._sis._updated_at += 1000;
                     delete schema._id;
                     schema.definition.bool = { type : "Boolean", default : true };
-                    schemaManager.model.update({ name : schema.name}, schema, done);
+                    schemaManager.model.updateOne({ name : schema.name}, schema).exec().then(function() { done(); }, done);
                 });
             });
         });
@@ -68,12 +68,11 @@ describe('Replication Simulation', function() {
     });
     it("should return a 404", function(done) {
         // delete the model
-        schemaManager.model.remove({ name : schema.name }, function(err, res) {
-            if (err) { return done(err); }
+        schemaManager.model.deleteMany({ name : schema.name }).exec().then(function(res) {
             // now expect a 404
             ApiServer.get("/api/v1.1/entities/" + schema.name)
                 .expect(404, done);
-        });
+        }, function(err) { return done(err); });
     });
     after(function(done) {
         schemaManager.objectRemoved(schema).then(function() {

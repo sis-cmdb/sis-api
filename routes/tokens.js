@@ -3,7 +3,6 @@
 var ApiController = require("./apicontroller");
 var SIS = require("../util/constants");
 var passport = require("passport");
-var BPromise = require("bluebird");
 
 /////////////////////////////////
 // Token controller (user level)
@@ -21,7 +20,7 @@ function TokenController(config) {
 require('util').inherits(TokenController, ApiController);
 
 TokenController.prototype.getManager = function(req) {
-    return BPromise.resolve(this.sm.getTokenManagerForUser(req.params.uid));
+    return Promise.resolve(this.sm.getTokenManagerForUser(req.params.uid));
 };
 
 // Append the query parameter to be that of the user
