@@ -27,3 +27,7 @@ node_modules
 #*
 *.local
 .tern-*
+
+# JWT signing keys are per deployment (see `npm run gen-jwt-key`)
+conf/keys/*
+!conf/keys/.gitkeep

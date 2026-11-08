@@ -110,7 +110,9 @@ module.exports.schemas = [
             verified : { type : "Boolean", "default" : false },
             super_user : { type : "Boolean", "default" : false },
             pw : { type : "String" },
-            roles : { type : {}, "default" : { } }
+            roles : { type : {}, "default" : { } },
+            // server managed; incremented to end all of the user's sessions
+            session_gen : { type : "Number", "default" : 0 }
         }
     },
     // sis_tokens

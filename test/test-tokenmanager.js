@@ -21,67 +21,6 @@ describe('Token Manager', function() {
         LocalTest.stop(done);
     });
 
-    if (process.env.SIS_RUN_LONG_TESTS) {
-        describe("temp tokens", function() {
-            var users = require("./fixtures/authdata").createUsers();
-            before(function(done) {
-                // set the expiration time to 80 seconds (in ms).
-                SIS.AUTH_EXPIRATION_TIME = 80000;
-                var userManager = schemaManager.auth[SIS.SCHEMA_USERS];
-                var superUser = users.superman;
-                var admin = users.admin1;
-                var tokenManager = schemaManager.tokenFetcher;
-                tokenManager.model.ensureIndexes().then(function() {
-                    userManager.add(admin, { user : superUser }).nodeify(done);
-                }, done);
-            });
-            after(function(done) {
-                SIS.AUTH_EXPIRATION_TIME = 1000 * 60 * 60 * 8;
-                var userManager = schemaManager.auth[SIS.SCHEMA_USERS];
-                var superUser = users.superman;
-                userManager.delete('admin1', { user : superUser }).nodeify(done);
-            });
-
-            it("should add a temp token", function(done) {
-                // mongo ttl thread runs every minute... sort of
-                console.log("Testing temp token expiration - please wait");
-                this.timeout(240000);
-                var userManager = schemaManager.auth[SIS.SCHEMA_USERS];
-                var user = users.admin1;
-                var tokenManager = schemaManager.getTokenManagerForUser(user.name);
-                userManager.createTempToken(user).nodeify(function(e, token) {
-                    should.not.exist(e);
-                    should.exist(token);
-                    'admin1'.should.eql(token[SIS.FIELD_USERNAME]);
-                    var t1 = null;
-                    var t2 = null;
-                    t1 = setTimeout(function() {
-                        tokenManager.getById(token.name).done(function(token) {
-                            should.exist(token);
-                            if (token[SIS.FIELD_USERNAME] !== 'admin1') {
-                                clearTimeout(t2);
-                                done(token[SIS.FIELD_USERNAME]);
-                            }
-                        }, function(err) {
-                            clearTimeout(t2);
-                            done(JSON.stringify(err));
-                        });
-                    }, 70000);
-                    t2 = setTimeout(function() {
-                        tokenManager.getById(token.name).then(function(token) {
-                            done(token);
-                        }).catch(function(e) {
-                            if (e[0] == 404)
-                                done();
-                            else
-                                done(e);
-                        });
-                    }, 185000);
-                });
-            });
-        });
-    }
-
     var users = require("./fixtures/authdata").createUsers();
     var addTests = [
         // array defining test
@@ -150,6 +89,18 @@ describe('Token Manager', function() {
         // user3 isn't an admin of anything
         ["user3", "admin1", 'a', "test_g2", 'user', false]
     ];
+
+    it("should not store tokens that expire", function(done) {
+        // temporary tokens are JWT sessions and never stored
+        var tokenManager = schemaManager.getTokenManagerForUser("user1");
+        var token = { username : "user1", expires : Date.now() + 10000 };
+        tokenManager.add(token, { user : users.superman }).nodeify(function(err) {
+            should.exist(err);
+            err[0].should.eql(400);
+            err[1].error.should.match(/cannot expire/);
+            done();
+        });
+    });
 
     describe("persistent tokens", function() {
         // add all users and a token in parallel

@@ -2,7 +2,6 @@
 
 var ApiController = require("./apicontroller");
 var SIS = require("../util/constants");
-var passport = require("passport");
 
 /////////////////////////////////
 // User controller
@@ -14,27 +13,49 @@ function UserController(config) {
     SIS.UTIL_MERGE_SHALLOW(opts, config);
     ApiController.call(this, opts);
     this.manager = this.sm.auth[SIS.SCHEMA_USERS];
+    this.sessionManager = config[SIS.OPT_SESSION_MGR];
 }
 
 // inherit
 require('util').inherits(UserController, ApiController);
 
-// extend attach to also attach the token request route
+// extend attach to also attach the session token routes
 UserController.prototype.attach = function(app, prefix) {
+    var self = this;
+    var apiPrefix = "/api/:version" + prefix;
+    this.auth_token_path = apiPrefix + "/auth_token";
+    if (!app.get(SIS.OPT_READONLY)) {
+        // logout: ends every session of the authenticated user.  Registered
+        // before the base routes so DELETE /users/:id does not capture it.
+        app.delete(this.auth_token_path, function(req, res) {
+            var p = self.authenticate(req, res, SIS.SCHEMA_TOKENS).then(function(user) {
+                return self.manager.endSessions(user[SIS.FIELD_NAME]);
+            });
+            p.then(function() {
+                res.status(204).end();
+            }).catch(function(err) {
+                self.sendError(res, err);
+            });
+        });
+    }
     ApiController.prototype.attach.call(this, app, prefix);
-    this.auth_token_path = this.apiPrefix + "/auth_token";
+    // login: exchange Basic credentials for a JWT session token
     app.post(this.auth_token_path, function(req, res) {
         // cors support
         res.set('Access-Control-Allow-Credentials', true);
         req.isAuthTokenReq = true;
-        var p = this.authenticate(req, res, 'basic')
-            .then(this.manager.createTempToken.bind(this.manager));
+        var p = self.authenticate(req, res, 'basic').then(function(user) {
+            if (!self.sessionManager) {
+                return Promise.reject(SIS.ERR_INTERNAL("Session tokens are not configured."));
+            }
+            return self.sessionManager.issue(user);
+        });
         // hacky
-        return this._finish(req, res, p, 201);
-    }.bind(this));
+        return self._finish(req, res, p, 201);
+    });
 };
 
-// No password hashes should be returned.
+// No password hashes or server managed fields should be returned.
 UserController.prototype.convertToResponseObject = function(req, o) {
     var res = o;
     if (typeof res.toObject == 'function') {
@@ -50,6 +71,7 @@ UserController.prototype.convertToResponseObject = function(req, o) {
         res[SIS.FIELD_EXPIRES] = timeLeft;
     } else {
         delete res.pw;
+        delete res[SIS.FIELD_SESSION_GEN];
     }
     return res;
 };
