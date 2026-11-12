@@ -63,6 +63,10 @@ TokenManager.prototype.validate = function(obj, toUpdate, options) {
     if (obj[SIS.FIELD_USERNAME] && obj[SIS.FIELD_USERNAME] !== this.username) {
         return "Token must belong to " + this.username;
     }
+    if (!toUpdate && obj[SIS.FIELD_EXPIRES]) {
+        // temporary tokens are JWT sessions from POST /users/auth_token
+        return "Stored tokens cannot expire.";
+    }
     obj[SIS.FIELD_USERNAME] = this.username;
     return null;
 };
@@ -110,10 +114,8 @@ TokenManager.prototype.authorize = function(evt, doc, user, mergedDoc) {
         return Promise.reject(SIS.ERR_BAD_REQ("Cannot change the username of the token."));
     }
     if (mergedDoc && mergedDoc[SIS.FIELD_EXPIRES]) {
+        // a stored temporary token issued before the switch to JWT sessions
         return Promise.reject(SIS.ERR_BAD_REQ("Cannot change a temporary token."));
-    }
-    if (doc[SIS.FIELD_EXPIRES] && doc[SIS.FIELD_USERNAME] != user[SIS.FIELD_NAME]) {
-        return Promise.reject(SIS.ERR_BAD_REQ("Cannot create a temp token for another user."));
     }
     if (!self.authEnabled) {
         return Promise.resolve(mergedDoc || doc);
@@ -127,7 +129,7 @@ TokenManager.prototype.authorize = function(evt, doc, user, mergedDoc) {
     // get the user
     var username = doc[SIS.FIELD_USERNAME];
     return self.sm.auth[SIS.SCHEMA_USERS].getById(username).then(function(tokenUser) {
-        if (tokenUser[SIS.FIELD_SUPERUSER] && !doc[SIS.FIELD_EXPIRES]) {
+        if (tokenUser[SIS.FIELD_SUPERUSER] && evt === SIS.EVENT_INSERT) {
             // super users cannot have a persistent token.  too much power
             return Promise.reject(SIS.ERR_BAD_REQ("Super users cannot have persistent tokens."));
         }

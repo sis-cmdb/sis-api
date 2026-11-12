@@ -56,7 +56,9 @@ for coverage. (The former grunt + jshint + blanket stack has been removed.)
     - `mongod --dbpath=/data --port 27017` will launch a mongo server listening on 27017 and writing data to `/data`.
     - Alternatively, start one in a container (see [Running in Containers](#running-in-containers)).
 2. From the root directory, run `npm install`.
-3. Run `npm start` (or `node server.js`) to start the server. The main file is `server.js`.
+3. Run `npm run gen-jwt-key` once to create the key pair used to sign session
+   tokens (see [Session Tokens](#session-tokens-jwt)).
+4. Run `npm start` (or `node server.js`) to start the server. The main file is `server.js`.
 
 The available npm scripts are:
 
@@ -65,6 +67,7 @@ The available npm scripts are:
 - `npm run lint` - run ESLint (flat config in `eslint.config.js`).
 - `npm run coverage` - run the test suite under `c8` and emit an HTML + text report.
 - `npm run build` - generate `build.json` (consumed by the `/info` endpoint).
+- `npm run gen-jwt-key [kid]` - generate an Ed25519 key pair in `conf/keys/` for signing session tokens.
 
 ## Running the tests
 
@@ -119,13 +122,25 @@ An annotated `config.json` looks like:
     "app" : {
         // whether Role Based Access Control is enabled.  Defaults to true
         "auth" : true,
-        // whether read (GET) requests also require a valid x-auth-token.
+        // whether read (GET) requests also require a valid API token.
         // Requires "auth" to be true.  Defaults to false (reads are public)
         "auth_reads" : false,
         // authentication backend config.  See below
         // defaults to a sis backend.
         "auth_config" : {
             // specific info per backend
+        },
+        // session token (JWT) settings.  See "Session Tokens" below
+        "jwt" : {
+            // key id used to sign new session tokens.  Defaults to "default"
+            "active_kid" : "default",
+            // directory holding jwt-<kid>.key / jwt-<kid>.pub, relative to
+            // conf/ unless absolute.  Defaults to "keys" (conf/keys)
+            "keys_dir" : "keys",
+            // session length in ms.  Defaults to 8 hours
+            "ttl_ms" : 28800000,
+            // the iss claim.  Defaults to "sis"
+            "issuer" : "sis"
         },
         // whether the app only serves read requests (GET).  Defaults to false
         "readonly" : false,
@@ -226,6 +241,55 @@ An authentication request for `user1` then binds as
 `user_domain` is optional. See
 [Trying the LDAP backend](#trying-the-ldap-backend) for a ready-to-run example.
 
+## Session Tokens (JWT)
+
+`POST /api/v1.1/users/auth_token` returns a session token: a JWT signed with an
+Ed25519 key, valid for 8 hours by default. Session tokens are not stored in the
+database; persistent API tokens (`/users/:name/tokens`) are unchanged. Either
+kind can be sent in the `x-auth-token` header or as `Authorization: Bearer <token>`.
+See [Tokens](docs/users.md#tokens) for the API.
+
+The signing keys are stored alongside the configuration:
+
+```
+conf/
+  config.json
+  keys/
+    jwt-default.key   (private key, mode 0600, git-ignored)
+    jwt-default.pub   (public key)
+```
+
+Create them with:
+
+```bash
+npm run gen-jwt-key            # writes conf/keys/jwt-default.key and .pub
+```
+
+(With Compose the keys are created for you; see
+[Running in Containers](#running-in-containers).)
+
+The server refuses to start when authentication is enabled and the private key
+for `app.jwt.active_kid` is missing, and logs a warning if that file is readable
+by group or others. Every `jwt-*.pub` file in `keys_dir` is trusted for
+verification. In clustered or replicated deployments, every server must have
+the same key files. Servers running with `"readonly" : true` need only the
+`.pub` files; without a private key they cannot hand out sessions.
+
+### Rotating the signing key
+
+1. Generate a new pair with a new key id: `npm run gen-jwt-key 2027-01`.
+2. Copy `jwt-2027-01.pub` to every server, then `jwt-2027-01.key` to the servers
+   that issue sessions.
+3. Set `app.jwt.active_kid` to `2027-01` (or `app__jwt__active_kid`) and restart.
+   Existing sessions keep working because the old `.pub` is still present.
+4. After the session length (8 hours) has passed, delete the old `.key` and `.pub`.
+
+### Ending sessions
+
+`DELETE /api/v1.1/users/auth_token` ends every session of the calling user.
+Changing a user's password, or deleting the user, also ends their sessions.
+Role changes take effect on the next request.
+
 # Running in Containers
 
 SIS ships with a `Dockerfile` and a `compose.yaml` so the API and its MongoDB
@@ -235,11 +299,13 @@ files are compatible with both.
 
 ## Quick start with Compose
 
-`compose.yaml` runs two services: `mongo` (MongoDB 7) and `sis-api` (this app).
-The API waits for MongoDB to report healthy before starting.
+`compose.yaml` runs `mongo` (MongoDB 7), `sis-api` (this app), and `sis-keys`, a
+one-shot job that creates the [session signing keys](#session-tokens-jwt) on
+the first start and does nothing on later starts. The API waits for MongoDB to
+report healthy and for `sis-keys` to finish before starting.
 
 ```bash
-# Build the image and start both services in the background
+# Build the image and start the services in the background
 podman compose up -d --build
 
 # Follow the API logs (JSON, written to stdout)
@@ -255,6 +321,20 @@ Once up, the API listens on `http://localhost:3000`:
 curl -I http://localhost:3000/            # -> 200
 curl http://localhost:3000/api/v1.1/info  # -> build/version info
 ```
+
+The signing keys live next to the config at `/app/conf/keys`, stored in the
+named `sis_keys` volume (mounted read-only into `sis-api`). `conf/keys/` is
+excluded from the image by `.dockerignore`, so private keys never end up in an
+image layer. To rotate, generate a new pair into the volume and set
+`app__jwt__active_kid` on `sis-api`:
+
+```bash
+podman compose run --rm sis-keys node scripts/gen-jwt-key.js 2027-01
+```
+
+To manage the key files yourself instead, replace the volume with a bind mount
+of a host directory. The files must be readable by the container's `node` user
+(uid 1000), so `chown 1000` the private key rather than loosening its mode.
 
 MongoDB data persists in the named `mongodb_data` volume. By default MongoDB is
 reachable only by the `sis-api` service over the internal Compose network and is
@@ -288,8 +368,13 @@ container and scale with replicas instead.
 ```bash
 podman build -t sis-api:latest .
 
+# create the session signing keys in a volume (once)
+podman run --rm -v sis_keys:/app/conf/keys sis-api:latest \
+  node scripts/gen-jwt-key.js --if-missing
+
 podman run --rm -p 3000:3000 \
   -e db__url="mongodb://my-mongo-host:27017/sis" \
+  -v sis_keys:/app/conf/keys:ro \
   sis-api:latest
 ```
 
@@ -322,7 +407,8 @@ Then mint a token as the seeded directory user to confirm LDAP auth works:
 
 ```bash
 curl -u user1:pass1 -X POST http://localhost:3000/api/v1.1/users/auth_token
-# -> 201 with a token; SIS auto-creates the user1 account on first login
+# -> 201 with a session token (a JWT in "name"); SIS auto-creates the user1
+#    account on first login
 ```
 
 The overlay points SIS at the LDAP server with a bind-DN template (see

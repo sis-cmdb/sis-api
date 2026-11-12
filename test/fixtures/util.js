@@ -1,10 +1,15 @@
 "use strict";
 
 var nconf = require('nconf');
+var fs = require('fs');
+var path = require('path');
 
 function loadConfig() {
     nconf.env('__').argv();
     nconf.file("config.test.json", __dirname + "/config.test.json");
+    // git does not keep file modes; keep the test signing key private so the
+    // server does not warn about it
+    fs.chmodSync(path.join(__dirname, "keys", "jwt-default.key"), parseInt("600", 8));
 }
 
 function TestServer() {

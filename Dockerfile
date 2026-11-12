@@ -26,6 +26,11 @@ ENV BUILD_NUMBER=$BUILD_NUMBER \
     GIT_COMMIT_HASH=$GIT_COMMIT_HASH
 RUN node scripts/gen-build-info.js
 
+# JWT session keys live next to the config but are never baked into the image.
+# Create the directory owned by 'node' so a volume mounted here inherits that
+# ownership and the server can read its 0600 private key.
+RUN mkdir -p /app/conf/keys && chown node:node /app/conf/keys && chmod 700 /app/conf/keys
+
 # Drop privileges to the unprivileged 'node' user that ships with the base image.
 USER node
 

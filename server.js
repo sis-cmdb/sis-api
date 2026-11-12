@@ -29,6 +29,21 @@ var validateAppConfig = function(appConfig) {
     }
 };
 
+// Load the JWT session keys.  Throws if auth is enabled and the keys are
+// missing or invalid.  Read-only servers only need the public keys; they
+// mint tokens only if a private key is also present.
+var createSessionManager = function(appConfig, logger) {
+    var SIS = require("./util/constants");
+    appConfig = appConfig || { };
+    if (!appConfig[SIS.OPT_USE_AUTH]) {
+        return null;
+    }
+    return require("./util/session-manager")(appConfig[SIS.OPT_JWT], {
+        requireSigningKey : !appConfig[SIS.OPT_READONLY],
+        logger : logger
+    });
+};
+
 var startServer = function(callback) {
     var SIS = require("./util/constants");
     var LOGGER = logger.createLogger({
@@ -40,7 +55,7 @@ var startServer = function(callback) {
         res.set('Access-Control-Allow-Origin', origin);
         res.set('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE');
         res.set('Access-Control-Allow-Headers', 'Content-Type,X-Requested-With,x-auth-token,Authorization');
-        res.set('Access-Control-Expose-Headers', "x-total-count");
+        res.set('Access-Control-Expose-Headers', "x-total-count,WWW-Authenticate");
         next();
     };
 
@@ -85,6 +100,7 @@ var startServer = function(callback) {
 
     // fail fast on invalid settings before touching the database
     validateAppConfig(nconf.get('app'));
+    var sessionManager = createSessionManager(nconf.get('app'), LOGGER);
 
     var opts = nconf.get('db').opts || { };
 
@@ -101,7 +117,7 @@ var startServer = function(callback) {
             if (err) {
                 throw err;
             }
-            passport.use(webUtil.createTokenStrategy(schemaManager));
+            passport.use(webUtil.createTokenStrategy(schemaManager, sessionManager));
             passport.use(webUtil.createUserPassStrategy(schemaManager, appConfig));
 
             app.use(passport.initialize());
@@ -110,7 +126,9 @@ var startServer = function(callback) {
             cfg[SIS.OPT_SCHEMA_MGR] = schemaManager;
             cfg[SIS.OPT_USE_AUTH] = app.get(SIS.OPT_USE_AUTH);
             cfg[SIS.OPT_AUTH_READS] = !!app.get(SIS.OPT_AUTH_READS);
+            cfg[SIS.OPT_SESSION_MGR] = sessionManager;
             app.set(SIS.OPT_SCHEMA_MGR, schemaManager);
+            app.set(SIS.OPT_SESSION_MGR, sessionManager);
 
             // Validate the API :version param (Express 5 dropped inline route
             // regex that previously restricted it to SUPPORTED_VERSIONS).
@@ -163,6 +181,16 @@ function main() {
         name : "SISMain"
     });
 
+    // Check the config once, before forking, so a bad setting exits with a
+    // clear message instead of crashing (and re-forking) every worker.
+    try {
+        validateAppConfig(nconf.get('app'));
+        createSessionManager(nconf.get('app'));
+    } catch (ex) {
+        LOGGER.fatal(ex.message);
+        process.exit(1);
+    }
+
     var setupCloseHandlers = function(app, server) {
         mongoose.connection.on('error', function(err) {
             LOGGER.error({ err : err }, "A connection error occurred.");
@@ -210,6 +238,7 @@ if (!module.parent) {
 module.exports.mongoose = mongoose;
 module.exports.startServer = startServer;
 module.exports.validateAppConfig = validateAppConfig;
+module.exports.createSessionManager = createSessionManager;
 module.exports.stopServer = function(server, callback) {
     server.close(callback);
 };
