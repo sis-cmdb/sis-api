@@ -53,6 +53,8 @@ module.exports = {
     FIELD_TOKEN_USER : "sis_token_user",
     FIELD_MODIFIED_BY : "modified_by",
     FIELD_VERIFIED : "verified",
+    // per-user session generation; bumping it ends all of the user's sessions
+    FIELD_SESSION_GEN : "session_gen",
     FIELD_LOCKED_FIELDS : "locked_fields",
     FIELD_TRACK_HISTORY : "track_history",
     FIELD_DESCRIPTION : "description",
@@ -113,6 +115,9 @@ module.exports = {
     // require a valid token on read (GET) requests too
     OPT_AUTH_READS : "auth_reads",
     OPT_AUTH_CONFIG : "auth_config",
+    // JWT session settings (app.jwt)
+    OPT_JWT : "jwt",
+    OPT_SESSION_MGR : "session_manager",
 
     // supported versions
     SUPPORTED_VERSIONS : ["v1.1"],
@@ -133,6 +138,14 @@ module.exports = {
     DEFAULT_OPT_USE_AUTH : true,
     DEFAULT_OPT_AUTH_READS : false,
 
+    // JWT session defaults
+    JWT_DEFAULT_KID : "default",
+    JWT_DEFAULT_KEYS_DIR : "keys",
+    JWT_DEFAULT_ISSUER : "sis",
+    JWT_AUDIENCE : "sis-api",
+    JWT_ALGORITHM : "EdDSA",
+    JWT_CLOCK_TOLERANCE_SEC : 30,
+
     // endpoint message types
     EP_READY : "ready",
     EP_REQ   : "request",
@@ -145,6 +158,8 @@ module.exports = {
     // headers
     HEADER_TOTAL_COUNT : "x-total-count",
     HEADER_AUTH_TOKEN : "x-auth-token",
+    HEADER_AUTHORIZATION : "authorization",
+    HEADER_WWW_AUTHENTICATE : "WWW-Authenticate",
 
     // errors
     // error objects are an array w/ first elem as http status, second as err obj

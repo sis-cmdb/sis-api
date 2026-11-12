@@ -154,12 +154,19 @@ describe('@API @V1.1API - Authorization API Tokens', function() {
 
     describe("delete tokens", function() {
         userNames.forEach(function(name) {
-            var testName = name + " can delete own tokens";
+            it(name + " cannot delete a session token via the tokens api", function(done) {
+                // sessions are JWTs and are not stored; logout ends them
+                var session = userToTokens[name][0];
+                var url = "/api/v1.1/users/" + name + "/tokens/" + session.name;
+                ApiServer.del(url, session.name).expect(404, done);
+            });
+            var testName = name + " can delete own persistent tokens";
             it(testName, function(done) {
-                var tokens = userToTokens[name];
+                var session = userToTokens[name][0];
+                var tokens = userToTokens[name].slice(1);
                 async.map(tokens, function(token, callback) {
                     var url = "/api/v1.1/users/" + name + "/tokens/" + token.name;
-                    ApiServer.del(url, token.name)
+                    ApiServer.del(url, session.name)
                         .expect(200, function(err, res) {
                         should.not.exist(err);
                         callback(null);

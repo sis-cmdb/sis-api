@@ -88,9 +88,15 @@ normalization, and populate behavior. See `docs/index.md` for the full field/end
 ### Cross-cutting pieces
 
 - **Auth**: Passport strategies in `routes/webutil.js` - a user/password strategy (to mint
-  tokens via `Authorization`) and a token strategy (`x-auth-token`). Backends are `sis`
-  (passwords stored in SIS) or `ldap` (Active Directory), selected by `app.auth_config`.
-  RBAC is enforced in the managers; reads are open by design.
+  tokens via `Authorization: Basic`) and a token strategy (`x-auth-token` or
+  `Authorization: Bearer`). Backends are `sis` (passwords stored in SIS) or `ldap`
+  (Active Directory), selected by `app.auth_config`. RBAC is enforced in the managers;
+  reads are open by design (unless `app.auth_reads`).
+- **Sessions**: `POST /users/auth_token` returns an Ed25519-signed JWT from
+  `util/session-manager.js` (not stored). Keys are `conf/keys/jwt-<kid>.{key,pub}`
+  (`npm run gen-jwt-key`; tests use `test/fixtures/keys`). The user is still loaded per
+  request, and `sis_users.session_gen` (bumped by logout `DELETE /users/auth_token` or a
+  password change) invalidates sessions. Persistent tokens stay opaque in `sis_tokens`.
 - **Versioning**: paths carry `:version` (`v1` deprecated, `v1.1` current, see
   `SIS.SUPPORTED_VERSIONS`).
 - **Commits / history**: `util/commit-manager.js` records diffs (via `jsondiffpatch`) when a

@@ -17,14 +17,17 @@ function UserManager(sm) {
 
 require('util').inherits(UserManager, Manager);
 
-UserManager.prototype.createTempToken = function(user) {
-    var tm = this.sm.getTokenManagerForUser(user[SIS.FIELD_NAME]);
-    var token = {
-        username : user[SIS.FIELD_NAME],
-        expires : Date.now() + SIS.AUTH_EXPIRATION_TIME
-    };
-    var p = tm.add(token, { user : user });
-    return p;
+// End all of the user's sessions (logout everywhere)
+UserManager.prototype.endSessions = function(username) {
+    var inc = { };
+    inc[SIS.FIELD_SESSION_GEN] = 1;
+    return Promise.resolve(this.model.updateOne({ name : username }, { $inc : inc }).exec())
+    .then(function(result) {
+        if (!result.matchedCount) {
+            return Promise.reject(SIS.ERR_NOT_FOUND(SIS.SCHEMA_USERS, username));
+        }
+        return username;
+    });
 };
 
 UserManager.prototype.hashPw = function(pw) {
@@ -37,6 +40,8 @@ UserManager.prototype.hashPw = function(pw) {
 // need to hash the pw
 UserManager.prototype.add = function(obj, options) {
     obj = JSON.parse(JSON.stringify(obj));
+    // server managed
+    delete obj[SIS.FIELD_SESSION_GEN];
     if (obj[SIS.FIELD_PW]) {
         obj[SIS.FIELD_PW] = this.hashPw(obj[SIS.FIELD_PW]);
     }
@@ -45,8 +50,14 @@ UserManager.prototype.add = function(obj, options) {
 
 UserManager.prototype.applyUpdate = function(obj, updateObj) {
     updateObj = JSON.parse(JSON.stringify(updateObj));
+    // server managed
+    delete updateObj[SIS.FIELD_SESSION_GEN];
     if (updateObj[SIS.FIELD_PW]) {
         updateObj[SIS.FIELD_PW] = this.hashPw(updateObj[SIS.FIELD_PW]);
+        if (updateObj[SIS.FIELD_PW] !== obj[SIS.FIELD_PW]) {
+            // a password change ends all existing sessions
+            updateObj[SIS.FIELD_SESSION_GEN] = (obj[SIS.FIELD_SESSION_GEN] || 0) + 1;
+        }
     }
     return Manager.prototype.applyUpdate.call(this, obj, updateObj);
 };

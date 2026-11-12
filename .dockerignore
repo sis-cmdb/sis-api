@@ -11,6 +11,8 @@ npm-debug.log
 # Local-only config and build artifacts (regenerated in the image)
 *.local
 conf/config.json.local
+# JWT keys are mounted at runtime, never baked into the image
+conf/keys/
 build.json
 
 # Tests, coverage, reports - not needed at runtime

@@ -53,14 +53,16 @@ documentation on [Role Based Access Control](./rbac.md) for more information.
 ### Request Headers
 
 - `Content-Type` - set on all PUT and POST requests.
-- Methods that require [authentication](./rbac.md) require one of two headers:
-  - `Authorization` - for retrieving an API token via credentials.
-  - `x-auth-token` - contains the API token
+- Methods that require [authentication](./rbac.md) need an API token (see
+  [Tokens](./users.md#tokens)), sent in either header:
+  - `x-auth-token: <token>`
+  - `Authorization: Bearer <token>`
+- `Authorization: Basic ...` is used only to retrieve a session token via
+  credentials (`POST /api/v1.1/users/auth_token`).
 
-By default only modification requests (POST, PUT, DELETE) require an
-`x-auth-token`; reads (GET) are open to anyone.  When the server is configured
-with `app.auth_reads` set to `true`, every read also requires a valid
-`x-auth-token`.  That covers all resource GETs, commit history, users, and
+By default only modification requests (POST, PUT, DELETE) require an API token;
+reads (GET) are open to anyone.  When the server is configured with
+`app.auth_reads` set to `true`, every read also requires a valid API token.  That covers all resource GETs, commit history, users, and
 script endpoints.  `GET /api/v1.1/info`, `HEAD /`, and
 `POST /api/v1.1/users/auth_token` stay open so health checks and token
 retrieval keep working.

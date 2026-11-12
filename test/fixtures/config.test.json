@@ -13,6 +13,9 @@
     },
     "app" : {
         "auth" : true,
+        "jwt" : {
+            "keys_dir" : "../test/fixtures/keys"
+        },
         "scripts_enabled" : true,
         "test" : true
     },

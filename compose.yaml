@@ -15,6 +15,20 @@ services:
       retries: 5
       start_period: 20s
 
+  # One-shot job that creates the JWT session signing keys on first start and
+  # does nothing on later starts. The keys live in the sis_keys volume, mounted
+  # next to the config at /app/conf/keys.
+  sis-keys:
+    build:
+      context: .
+    image: sis-api:latest
+    command: ["node", "scripts/gen-jwt-key.js", "--if-missing"]
+    restart: "no"
+    volumes:
+      - sis_keys:/app/conf/keys
+    healthcheck:
+      disable: true
+
   sis-api:
     build:
       context: .
@@ -29,9 +43,13 @@ services:
       app__use_cluster: "false"
     ports:
       - "3000:3000"
+    volumes:
+      - sis_keys:/app/conf/keys:ro
     depends_on:
       mongo:
         condition: service_healthy
+      sis-keys:
+        condition: service_completed_successfully
     # Mirrors the Dockerfile HEALTHCHECK; podman ignores HEALTHCHECK baked into
     # OCI images, so declare it here too for engine-agnostic behavior.
     healthcheck:
@@ -47,3 +65,4 @@ services:
 
 volumes:
   mongodb_data:
+  sis_keys:

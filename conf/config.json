@@ -16,6 +16,12 @@
         "auth_config" : {
             "type" : "sis"
         },
+        "jwt" : {
+            "active_kid" : "default",
+            "keys_dir" : "keys",
+            "ttl_ms" : 28800000,
+            "issuer" : "sis"
+        },
         "scripts_enabled" : false,
         "scripts_min" : 1,
         "scripts_max" : 2,

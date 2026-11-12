@@ -6,6 +6,7 @@ var SIS = require("../util/constants");
 var P = require("../util/promises");
 var util = require("util");
 var _ = require("lodash");
+var isJwt = require("../util/session-manager").isJwt;
 
 // authorization using user and pass via the user manager
 var _verifyUserPass = function(user, pass, done) {
@@ -83,10 +84,37 @@ var getLdapVerificationFunc = function(sm, auth_config) {
     };
 };
 
-// authorization using sis_tokens
-var _verifySisToken = function(token, done) {
-    var userManager = this.auth[SIS.SCHEMA_USERS];
-    var p = this.tokenFetcher.getTokenByName(token).then(function(t) {
+// Map a missing user / token lookup (404) to bad credentials
+var notFoundToBadCreds = function(err) {
+    // an unknown token (or one whose user is gone) is bad credentials,
+    // not a missing resource
+    if (err instanceof Array && err[0] === 404) {
+        return Promise.reject(SIS.ERR_BAD_CREDS("Invalid token."));
+    }
+    return Promise.reject(err);
+};
+
+// authorization using a JWT session token
+var _verifySessionToken = function(sessionManager, userManager, token) {
+    if (!sessionManager) {
+        return Promise.reject(SIS.ERR_BAD_CREDS("Invalid token."));
+    }
+    return sessionManager.verify(token).then(function(claims) {
+        return userManager.getById(claims.sub, {lean : true}).then(function(user) {
+            // a logout or password change bumps session_gen, ending
+            // every session issued before it
+            if ((user[SIS.FIELD_SESSION_GEN] || 0) !== claims.sgen) {
+                return Promise.reject(SIS.ERR_BAD_CREDS("Session has ended."));
+            }
+            return user;
+        });
+    });
+};
+
+// authorization using sis_tokens (persistent tokens and temporary
+// tokens issued before the switch to JWT sessions)
+var _verifyStoredToken = function(tokenFetcher, userManager, token) {
+    return tokenFetcher.getTokenByName(token).then(function(t) {
         // check if the token has expired
         if (t[SIS.FIELD_EXPIRES]) {
             var expires = t[SIS.FIELD_EXPIRES];
@@ -97,16 +125,44 @@ var _verifySisToken = function(token, done) {
             }
         }
         return userManager.getById(t[SIS.FIELD_USERNAME], {lean : true});
-    }).catch(function(err) {
-        // an unknown token (or one whose user is gone) is bad credentials,
-        // not a missing resource
-        if (err instanceof Array && err[0] === 404) {
-            return Promise.reject(SIS.ERR_BAD_CREDS("Invalid token."));
-        }
-        return Promise.reject(err);
     });
-    return P.nodeify(p, done);
 };
+
+var _verifySisToken = function(sm, sessionManager, token, done) {
+    var userManager = sm.auth[SIS.SCHEMA_USERS];
+    var p = isJwt(token) ?
+        _verifySessionToken(sessionManager, userManager, token) :
+        _verifyStoredToken(sm.tokenFetcher, userManager, token);
+    return P.nodeify(p.catch(notFoundToBadCreds), done);
+};
+
+// Extract the API token from x-auth-token or Authorization: Bearer.
+// Returns { token : string } or { error : SIS error }.  Basic credentials
+// in Authorization are ignored here (they are only used to mint tokens).
+var BEARER_PATTERN = /^Bearer[ ]+([^ ]+)[ ]*$/i;
+var extractToken = function(req) {
+    var headerToken = req.headers[SIS.HEADER_AUTH_TOKEN];
+    var bearerToken = null;
+    var authz = req.headers[SIS.HEADER_AUTHORIZATION];
+    if (typeof authz === "string" && /^bearer(\s|$)/i.test(authz)) {
+        var m = BEARER_PATTERN.exec(authz);
+        if (!m) {
+            return { error : SIS.ERR_BAD_REQ("Malformed Authorization: Bearer header") };
+        }
+        bearerToken = m[1];
+    }
+    if (headerToken && bearerToken && headerToken !== bearerToken) {
+        return { error : SIS.ERR_BAD_REQ(SIS.HEADER_AUTH_TOKEN +
+            " and Authorization: Bearer contain different tokens") };
+    }
+    var token = headerToken || bearerToken;
+    if (!token) {
+        return { error : SIS.ERR_BAD_REQ("Missing " + SIS.HEADER_AUTH_TOKEN +
+                                         " or Authorization: Bearer header") };
+    }
+    return { token : token };
+};
+module.exports.extractToken = extractToken;
 
 var getAuthType = function(config) {
     if (!config.auth_config || !config.auth_config.type ||
@@ -126,10 +182,9 @@ module.exports.createUserPassStrategy = function(sm, config) {
     return new BasicStrategy({}, verifyFunc);
 };
 
-// The passport strategy for authenticating x-auth-token
-function SisTokenStrategy(sm) {
-    var opts = { realm : SIS.SCHEMA_TOKENS };
-    this._verify = _verifySisToken.bind(sm);
+// The passport strategy for authenticating x-auth-token / Bearer tokens
+function SisTokenStrategy(sm, sessionManager) {
+    this._verify = _verifySisToken.bind(null, sm, sessionManager);
     passport.Strategy.call(this);
     this.name = SIS.SCHEMA_TOKENS;
 }
@@ -137,8 +192,8 @@ function SisTokenStrategy(sm) {
 util.inherits(SisTokenStrategy, passport.Strategy);
 
 SisTokenStrategy.prototype.authenticate = function(req) {
-    var token = req.headers[SIS.HEADER_AUTH_TOKEN];
-    if (!token) { return this.error(SIS.ERR_BAD_REQ("Missing " + SIS.HEADER_AUTH_TOKEN)); }
+    var extracted = extractToken(req);
+    if (extracted.error) { return this.error(extracted.error); }
 
     var self = this;
     function verified(err, user) {
@@ -150,11 +205,11 @@ SisTokenStrategy.prototype.authenticate = function(req) {
         self.success(user);
     }
 
-    this._verify(token, verified);
+    this._verify(extracted.token, verified);
 };
 
-module.exports.createTokenStrategy = function(sm) {
-    return new SisTokenStrategy(sm);
+module.exports.createTokenStrategy = function(sm, sessionManager) {
+    return new SisTokenStrategy(sm, sessionManager);
 };
 
 // Returns a promise that authenticates a request using the passport
@@ -163,6 +218,11 @@ module.exports.authenticate = function(req, res, type) {
     return new Promise(function(resolve, reject) {
         passport.authenticate(type, { session : false }, function(err, user) {
             if (err) {
+                if (type === SIS.SCHEMA_TOKENS && err instanceof Array && err[0] === 401) {
+                    // RFC 6750 challenge for rejected tokens
+                    res.set(SIS.HEADER_WWW_AUTHENTICATE,
+                            'Bearer realm="sis", error="invalid_token"');
+                }
                 reject(err);
             } else if (!user) {
                 reject(SIS.ERR_BAD_CREDS("Invalid credentials"));
@@ -174,7 +234,7 @@ module.exports.authenticate = function(req, res, type) {
     });
 };
 
-// Express middleware that rejects requests without a valid x-auth-token
+// Express middleware that rejects requests without a valid API token
 module.exports.requireToken = function(req, res, next) {
     module.exports.authenticate(req, res, SIS.SCHEMA_TOKENS).then(function() {
         next();
