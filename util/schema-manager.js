@@ -723,12 +723,32 @@ SchemaManager.prototype._createEntityManager = function(schema, opts) {
 };
 
 
+// Resolves once the model's indexes are built. Mongoose builds them in the
+// background when the model is created (for a new or changed schema), and a
+// write that comes first is not checked against a unique index; a duplicate
+// written then even keeps the index from being built. If building fails (the
+// collection already holds duplicates), the error is logged once and writes go
+// ahead without the index.
+var indexFailuresLogged = new WeakSet();
+
+SchemaManager.prototype.indexesReady = function(model) {
+    return Promise.resolve(model.init()).catch(function(err) {
+        if (!indexFailuresLogged.has(model)) {
+            indexFailuresLogged.add(model);
+            LOGGER.error({ err : err, collection : model.collection.name },
+                         "Could not build the indexes of " + model.collection.name);
+        }
+    });
+};
+
 SchemaManager.prototype.getEntityManager = function(schemaName, opts) {
     var self = this;
     return self.getById(schemaName, { lean : true })
     .then(function(schema) {
         var manager = self._createEntityManager(schema, opts);
-        return manager;
+        return self.indexesReady(manager.model).then(function() {
+            return manager;
+        });
     });
 };
 

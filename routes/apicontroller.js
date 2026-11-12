@@ -86,7 +86,8 @@ ApiController.prototype.sendError = function(res, err) {
         if (res.log) {
             res.log.error(err);
         }
-        err = [500, err];
+        // never send a raw error: it can hold internals such as a stack trace
+        err = SIS.ERR_INTERNAL(err) || SIS.ERR_INTERNAL("unknown error");
     }
     res.status(err[0]).send(err[1]);
 };

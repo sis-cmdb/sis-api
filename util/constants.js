@@ -17,6 +17,23 @@ var FIELD_VERS = "_v";
 
 var LOGGER = null;
 
+// MongoDB's duplicate key error (also on bulk writes)
+function isDuplicateKeyError(err) {
+    return typeof err == 'object' && (err.code === 11000 || err.code === 11001);
+}
+
+// e.g. 'host "web1" already exists'
+function describeDuplicateKey(err) {
+    var keyValue = err.keyValue ||
+        (err.writeErrors && err.writeErrors[0] && err.writeErrors[0].err && err.writeErrors[0].err.keyValue);
+    if (!keyValue || !Object.keys(keyValue).length) {
+        return "an object with the same unique value already exists";
+    }
+    return Object.keys(keyValue).map(function(k) {
+        return k + " " + JSON.stringify(keyValue[k]);
+    }).join(", ") + " already exists";
+}
+
 module.exports = {
 
     // events / actions
@@ -170,16 +187,26 @@ module.exports = {
     ERR_BAD_REQ : function(msg) {
         return [400, { error : util.format("Bad request: %s", msg), code : 1001 }];
     },
+    // the object conflicts with an existing one, e.g. a unique field's value is taken
+    ERR_CONFLICT : function(msg) {
+        return [409, { error : util.format("Conflict: %s", msg), code : 1005 }];
+    },
     ERR_INTERNAL : function(msg) {
         if (!msg) { return null; }
         if (typeof msg == 'object' && msg.name == 'ValidationError') {
             return [400, { error : util.format("Invalid data %s", msg), code : 1003 }];
         }
+        // a unique index rejected the write
+        if (isDuplicateKeyError(msg)) {
+            return module.exports.ERR_CONFLICT(describeDuplicateKey(msg));
+        }
         if (!LOGGER) {
             LOGGER = logger.createLogger({ name : "ErrorLogger" });
         }
         LOGGER.error({ msg: msg, err: msg });
-        return [500, { error : util.format("Internal error %s", msg), code : 1002 }, msg];
+        // details such as the stack trace go to the log, not to the client
+        var text = msg instanceof Error ? String(msg) : msg;
+        return [500, { error : util.format("Internal error %s", text), code : 1002 }, msg];
     },
     ERR_INTERNAL_OR_NOT_FOUND : function(err, type, id, result) {
         if (err) {

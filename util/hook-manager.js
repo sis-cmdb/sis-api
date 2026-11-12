@@ -132,6 +132,21 @@ var dispatchHook = function(hook, entity, event, isBulk) {
     return d.promise;
 };
 
+// Hook dispatches run after the write's response is sent. Their lookups of the
+// hooks to run are tracked, so a stopping server can let them finish before
+// the database connection closes (the requests to the hooks are not waited for:
+// with retries they can take minutes).
+var pendingLookups = new Set();
+
+function trackLookup(lookup) {
+    var tracked = lookup.then(function() {}, function() {});
+    pendingLookups.add(tracked);
+    tracked.then(function() {
+        pendingLookups.delete(tracked);
+    });
+    return lookup;
+}
+
 // hook dispatching methods
 HookManager.prototype.dispatchHooks = function(entity, entity_type, event, isBulk, callback) {
     if (!callback) {
@@ -144,7 +159,7 @@ HookManager.prototype.dispatchHooks = function(entity, entity_type, event, isBul
     // find hooks that have the entity_type w/ the
     // event
     var query = {"entity_type" : entity_type, "events" :  event };
-    Promise.resolve(this.model.find(query, null, { lean : true }).exec())
+    trackLookup(Promise.resolve(this.model.find(query, null, { lean : true }).exec()))
     .then(function(hooks) {
         var promises = hooks.map(function(hook) {
             return dispatchHook(hook, entity, event, isBulk);
@@ -153,7 +168,7 @@ HookManager.prototype.dispatchHooks = function(entity, entity_type, event, isBul
             callback(null, res);
         });
     }).catch(function(err) {
-        callback(SIS.ERR_NOT_FOUND(err), null);
+        callback(err, null);
     });
 };
 
@@ -183,4 +198,9 @@ HookManager.prototype.triggerHooks = function(entityType, entityId, opts) {
 
 module.exports = function(schemaManager, opts) {
     return new HookManager(schemaManager);
+};
+
+// resolves once the hook lookups running now are done
+module.exports.lookupsDone = function() {
+    return Promise.all(Array.from(pendingLookups));
 };

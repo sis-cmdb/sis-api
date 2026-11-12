@@ -71,7 +71,7 @@ The response is the created script.
 
 Error cases:
 
-* An entry with the same name already exists.
+* An entry with the same name already exists (409).
 * Validation failure
 * Authorization failure
 

@@ -106,6 +106,17 @@ normalization, and populate behavior. See `docs/index.md` for the full field/end
   controller is configured with `fire_hooks`.
 - **Constants**: `util/constants.js` holds every option key, error factory (`SIS.ERR_*`),
   field name, and enum used across layers - read it before inventing strings.
+  `ERR_INTERNAL` turns MongoDB duplicate key errors into `ERR_CONFLICT` (409, code 1005,
+  naming the taken value) and sends other errors as their name and message only (the
+  stack goes to the log); `ApiController.sendError` routes any non-tuple error through it,
+  so no raw error reaches a client.
+- **Indexes**: Mongoose builds a model's indexes in the background, and a write that gets
+  ahead of a unique index is not checked (and then keeps the index from being built).
+  `schemaManager.indexesReady(model)` waits for them: `getEntityManager` uses it before
+  handing out a manager, and `server.js` waits for every model before it listens. Keep
+  new write paths behind one of the two.
+- **Shutdown**: hooks are dispatched after the response; `stopServer` waits for their
+  lookups (`hook-manager.lookupsDone()`) so the connection can close cleanly.
 - **Clustering**: when `app.use_cluster` is set, `server.js` forks a worker per CPU.
 
 ### Configuration
