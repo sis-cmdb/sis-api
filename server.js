@@ -153,16 +153,21 @@ var startServer = function(callback) {
                 res.status(errObj[0]).send(errObj[1]);
             });
 
-            // listen
-            var httpServer = app.listen(nconf.get('server').port, function(err) {
-                httpServer.on("close", function() {
-                    app.locals.closeListeners.forEach(function(handler) {
-                        handler();
+            // listen once the indexes of every model (e.g. the unique names of
+            // schemas and users) exist, so no write can slip past them
+            Promise.all(mongoose.modelNames().map(function(name) {
+                return schemaManager.indexesReady(mongoose.model(name));
+            })).then(function() {
+                var httpServer = app.listen(nconf.get('server').port, function(err) {
+                    httpServer.on("close", function() {
+                        app.locals.closeListeners.forEach(function(handler) {
+                            handler();
+                        });
                     });
+                    if (callback) {
+                        callback(app, httpServer);
+                    }
                 });
-                if (callback) {
-                    callback(app, httpServer);
-                }
             });
         });
     }).catch(function(err) {
@@ -239,6 +244,12 @@ module.exports.mongoose = mongoose;
 module.exports.startServer = startServer;
 module.exports.validateAppConfig = validateAppConfig;
 module.exports.createSessionManager = createSessionManager;
+// stops accepting requests, then lets running hook lookups finish so the
+// database connection can be closed
 module.exports.stopServer = function(server, callback) {
-    server.close(callback);
+    server.close(function(err) {
+        require('./util/hook-manager').lookupsDone().then(function() {
+            callback(err);
+        });
+    });
 };
