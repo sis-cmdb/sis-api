@@ -1,0 +1,12 @@
+# Mocha configuration (replaces the grunt-mocha-test wiring).
+# gen-build-info.js writes build.json (consumed by /info) before tests load.
+# init-tests.js is listed first so the shared local server boots before the suites.
+require:
+  - ./scripts/gen-build-info.js
+  - ./test/fixtures/promise-compat.js
+spec:
+  - test/init-tests.js
+  - test/test-*.js
+  - test/v1.1-api/test-*.js
+timeout: 60000
+exit: true

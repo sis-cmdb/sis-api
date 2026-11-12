@@ -80,11 +80,10 @@ describe("Mongo Collection Naming", function() {
             var tasks = schemas.map(function(s) {
                 var em = entityManagers[s.name];
                 return function(cb) {
-                    em.model.find({}, function(err, res) {
-                        should.not.exist(err);
+                    em.model.find({}).exec().then(function(res) {
                         res.length.should.eql(5);
                         cb(null, res);
-                    });
+                    }, cb);
                 };
             });
             async.parallel(tasks, done);
@@ -95,15 +94,13 @@ describe("Mongo Collection Naming", function() {
             var db = mongoose.connection.db;
             var tasks = schemas.map(function(s) {
                 return function(cb) {
-                    db.collection(s.name, { strict : true }, function(err, collection) {
-                        should.not.exist(err);
-                        should.exist(collection);
-                        collection.find().toArray(function(err, res) {
-                            should.not.exist(err);
-                            res.length.should.eql(5);
-                            cb(null);
-                        });
-                    });
+                    // modern driver: db.collection() is synchronous (no strict/callback)
+                    var collection = db.collection(s.name);
+                    should.exist(collection);
+                    collection.find().toArray().then(function(res) {
+                        res.length.should.eql(5);
+                        cb(null);
+                    }, cb);
                 };
             });
             async.series(tasks, done);

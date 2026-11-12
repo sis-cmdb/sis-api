@@ -2,16 +2,11 @@
 // A class used to manage the SIS Scripts defined by the /scripts api
 
 'use strict';
-// node http lib
-var http = require('http');
-// simplified http req
-var request = require('request');
 var nconf = require('nconf');
 var vm = require("vm");
 
 var SIS = require('./constants');
 var Manager = require("./manager");
-var BPromise = require("bluebird");
 
 /////////////////////////////////
 // Script Manager

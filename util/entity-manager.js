@@ -4,7 +4,7 @@
 'use strict';
 
 var Manager = require("./manager");
-var BPromise = require("bluebird");
+var P = require("./promises");
 var SIS = require("./constants");
 
 //////////
@@ -200,7 +200,7 @@ EntityManager.prototype.authorize = function(evt, doc, user, mergedDoc) {
     // authorize against entity subset or schema
     var ownerSubset = this._getOwnerSubset(user, this.schema);
     if (!ownerSubset.length) {
-        return BPromise.reject(SIS.ERR_BAD_CREDS("Insufficient privileges to operate on entities in this schema."));
+        return Promise.reject(SIS.ERR_BAD_CREDS("Insufficient privileges to operate on entities in this schema."));
     }
     var docMeta = doc[SIS.FIELD_SIS_META];
     if (!docMeta[SIS.FIELD_OWNER] || !docMeta[SIS.FIELD_OWNER].length) {
@@ -217,22 +217,23 @@ EntityManager.prototype.authorize = function(evt, doc, user, mergedDoc) {
 
 // get a single object by id.
 EntityManager.prototype.getById = function(id, options) {
+    var self = this;
     // id could be _id or idField
-    var idField = this.schema[SIS.FIELD_ID_FIELD];
+    var idField = self.schema[SIS.FIELD_ID_FIELD];
     var q = {};
     if (idField && idField != '_id') {
         // try getting it like this first
         q[idField] = id;
-        return this.getSingleByCondition(q, id, options)
-            .bind(this).catch(function(err) {
+        return self.getSingleByCondition(q, id, options)
+            .catch(function(err) {
             // fallback to _id
             q = {}; q._id = id;
-            return this.getSingleByCondition(q, id, options);
+            return self.getSingleByCondition(q, id, options);
         });
     } else {
         // use _id
         q._id = id;
-        return this.getSingleByCondition(q, id, options);
+        return self.getSingleByCondition(q, id, options);
     }
 };
 
@@ -248,7 +249,9 @@ EntityManager.prototype.applyUpdate = function(result, entity, options) {
         ret[p] = result.get(p);
         return ret;
     }, { });
-    result.set(entity);
+    // merge:true keeps nested defined objects deep-merged (mongoose 4 behavior);
+    // Mixed paths are then restored explicitly below.
+    result.set(entity, undefined, { merge: true });
 
     var getValueForPath = function(path, obj) {
         if (!obj) {
@@ -365,7 +368,8 @@ EntityManager.prototype._getReferenceObjectIds = function(ref, obj, idx, errors)
     var d = null;
     if (ref.type == 'oid') {
         if (typeof currObj === 'object' &&
-            currObj.constructor.name !== "ObjectID") {
+            currObj.constructor.name !== "ObjectID" &&
+            currObj.constructor.name !== "ObjectId") {
             if (SIS.FIELD_ID in currObj) {
                 currObj = currObj[SIS.FIELD_ID];
             } else {
@@ -388,7 +392,8 @@ EntityManager.prototype._getReferenceObjectIds = function(ref, obj, idx, errors)
         var errored = false;
         currObj.map(function(obj) {
             if (typeof obj === 'object' &&
-                obj.constructor.name !== "ObjectID") {
+                obj.constructor.name !== "ObjectID" &&
+                obj.constructor.name !== "ObjectId") {
                 if (SIS.FIELD_ID in obj) {
                     return obj[SIS.FIELD_ID];
                 } else {
@@ -433,7 +438,7 @@ EntityManager.prototype._addReferencesToState = function(ref, obj, idx,
 EntityManager.prototype._preSaveBulk = function(objs) {
     var references = this.getReferences();
     if (!references.length || !objs || !objs.length) {
-        return BPromise.resolve([objs, []]);
+        return Promise.resolve([objs, []]);
     }
     // track all errors
     var allErrors = { };
@@ -491,16 +496,16 @@ EntityManager.prototype._preSaveBulk = function(objs) {
         var objIds = Object.keys(state.refToIdx);
         if (!objIds.length) {
             // nothing to do.
-            return BPromise.resolve(true);
+            return Promise.resolve(true);
         }
         return this.sm.getEntityModelAsync(refModelName).then(function(model) {
             if (!model) {
                 var err = SIS.ERR_BAD_REQ("No schema named " + refModelName);
                 // schema doesn't exist.  all of the items are bad
                 markErrored(state.refToIdx, err);
-                return BPromise.resolve(false);
+                return Promise.resolve(false);
             }
-            return model.findAsync({ '_id' : { "$in" : objIds }}, '_id', {lean : true}).then(function(r) {
+            return Promise.resolve(model.find({ '_id' : { "$in" : objIds }}, '_id', {lean : true}).exec()).then(function(r) {
                 if (!r || r.length != objIds.length) {
                     // sigh.. figure out the ones that are missing
                     r = r || [];
@@ -516,12 +521,12 @@ EntityManager.prototype._preSaveBulk = function(objs) {
                     return true;
                 }
             }).catch(function(err) {
-                return BPromise.reject(SIS.ERR_INTERNAL("Error verifying references"));
+                return Promise.reject(SIS.ERR_INTERNAL("Error verifying references"));
             });
         });
     }.bind(this));
 
-    return BPromise.all(promises).then(function() {
+    return Promise.all(promises).then(function() {
         // at this point, all errors has all the errors.
         var erroredIndeces = Object.keys(allErrors);
         if (!erroredIndeces.length) {
@@ -539,12 +544,12 @@ EntityManager.prototype._preSaveBulk = function(objs) {
 };
 
 EntityManager.prototype._preSave = function(obj) {
-    return this._preSaveBulk([obj]).spread(function(success, errors) {
+    return this._preSaveBulk([obj]).then(P.spread(function(success, errors) {
         if (errors.length) {
-            return BPromise.reject(errors[0].err);
+            return Promise.reject(errors[0].err);
         }
         return obj;
-    });
+    }));
 };
 //////////
 

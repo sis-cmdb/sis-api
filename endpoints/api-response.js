@@ -1,6 +1,5 @@
 "use strict";
-var BPromise = require("bluebird");
-var csv = require("csv");
+var csvStringify = require("csv-stringify");
 var yaml = require("js-yaml");
 
 function Response(holder) {
@@ -31,7 +30,7 @@ function Response(holder) {
             .send(JSON.stringify(data));
     };
     this.csv = function(data) {
-        csv.stringify(data, function(err, output) {
+        csvStringify(data, function(err, output) {
             if (err) {
                 this.status(500).json(err);
             } else {
@@ -42,7 +41,7 @@ function Response(holder) {
     };
     this.yaml = function(data, options) {
         data = data || {};
-        var result = yaml.safeDump(data, options);
+        var result = yaml.dump(data, options);
         this.set("Content-Type", "application/x-yaml")
             .send(result);
     };

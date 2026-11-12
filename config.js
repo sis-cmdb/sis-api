@@ -5,10 +5,8 @@ module.exports =
     db: {
         url : "mongodb://localhost/sis",
         opts : {
-                "server": {
-                    "auto_reconnect": true,"socketOptions": {"keepAlive": 1}, "poolSize": 5
-                },
-                db: {w: 1, j: true}
+                maxPoolSize: 5,
+                writeConcern: {w: 1, j: true}
             }
     },
     server : {

@@ -2,7 +2,7 @@ describe('@API @V1.1API - Entity ID fields', function() {
     "use strict";
 
     var should = require('should');
-    var BPromise = require('bluebird');
+    var P = require("../../util/promises");
 
     var SIS = require("../../util/constants");
 
@@ -61,7 +61,7 @@ describe('@API @V1.1API - Entity ID fields', function() {
                     other : 'test'
                 };
             });
-            var d = BPromise.pending();
+            var d = P.defer();
             ApiServer.post('/api/v1.1/entities/test_schema_id_field')
             .send(data)
             .expect(200, function(err, res) {
@@ -86,7 +86,7 @@ describe('@API @V1.1API - Entity ID fields', function() {
 
         var fetchUpdateAndDelete = function(e, field) {
             var url = '/api/v1.1/entities/test_schema_id_field/' + e[field];
-            var d = BPromise.pending();
+            var d = P.defer();
             ApiServer.get(url).expect(200, function(err, res) {
                 if (err) { return d.reject(err); }
                 if (res.body._id != e._id) {
@@ -136,9 +136,9 @@ describe('@API @V1.1API - Entity ID fields', function() {
 
         var createAndVerify = function(field, done) {
             createEntities().then(function(entities) {
-                return BPromise.map(entities, function(e) {
+                return Promise.all(entities.map(function(e) {
                     return fetchUpdateAndDelete(e, field);
-                }).then(function(res) {
+                })).then(function(res) {
                     done();
                 });
             }).catch(function(err) {

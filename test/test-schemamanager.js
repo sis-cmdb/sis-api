@@ -202,15 +202,13 @@ describe('SchemaManager', function() {
                     return;
                 }
                 var doc = new EntityType({f1 : "f1", f2 : "f2" } );
-                doc.save(function(err, e) {
-                    should.not.exist(err);
+                doc.save().then(function(e) {
                     // assert there is an item
-                    EntityType.count({}, function(err, result) {
-                        should.not.exist(err);
+                    EntityType.countDocuments({}).exec().then(function(result) {
                         result.should.eql(1);
-                        done(err);
-                    });
-                });
+                        done();
+                    }, done);
+                }, done);
             });
         });
 
@@ -250,10 +248,10 @@ describe('SchemaManager', function() {
                     return;
                 }
                 var EntityType = schemaManager.getEntityModel(entity);
-                EntityType.count({}, function(err, result) {
+                EntityType.countDocuments({}).exec().then(function(result) {
                     result.should.eql(0);
-                    done(err);
-                });
+                    done();
+                }, done);
             });
         });
     });
@@ -288,11 +286,10 @@ describe('SchemaManager', function() {
                     if (err) return done(err);
                     var EntityType = schemaManager.getEntityModel(schema);
                     var doc = new EntityType(initialEntity);
-                    doc.save(function(err, e) {
-                        if (err) { return done(err); }
+                    doc.save().then(function(e) {
                         savedEntity = e;
                         done();
-                    });
+                    }, function(err) { return done(err); });
                 });
             });
         });
@@ -321,13 +318,12 @@ describe('SchemaManager', function() {
         it("Should retrieve the existing entity", function(done) {
             schemaManager.getById(schema.name).done(function(entitySchema) {
                 var EntityType = schemaManager.getEntityModel(entitySchema);
-                EntityType.findOne({"_id" : savedEntity._id}, function(err, result) {
-                    should.not.exist(err);
+                EntityType.findOne({"_id" : savedEntity._id}).exec().then(function(result) {
                     should.exist(result);
                     // ensure that the bool is removed
                     should.not.exist(result.num);
                     done();
-                });
+                }, done);
             }, done);
         });
 
@@ -337,12 +333,11 @@ describe('SchemaManager', function() {
                 var doc = new EntityType(initialEntity);
                 var docSchema = doc.schema;
                 should.not.exist(doc.schema.num);
-                doc.save(function(err, e) {
-                    should.not.exist(err);
+                doc.save().then(function(e) {
                     should.exist(e.str);
                     should.not.exist(e.num);
                     done();
-                });
+                }, done);
             }, done);
         });
 
@@ -356,7 +351,7 @@ describe('SchemaManager', function() {
                     "arr" : [0,1,2],
                     "bool" : "became a string"
                 });
-                doc.save(done);
+                doc.save().then(function() { done(); }, done);
             }, done);
         });
     });
@@ -450,18 +445,18 @@ describe('SchemaManager', function() {
 
         it("Should fail to add two objects w/ same str", function(done) {
             var EntityType = schemaManager.getEntityModel(schemaDoc);
-            EntityType.ensureIndexes(function(err) {
-                should.not.exist(err);
+            EntityType.ensureIndexes().then(function() {
                 var doc1 = new EntityType({ str : "foo", other : "foo" });
                 var doc2 = new EntityType({ str : "foo", other : "bar" });
-                doc1.save(function(err) {
-                    should.not.exist(err);
-                    doc2.save(function(err) {
+                doc1.save().then(function() {
+                    doc2.save().then(function() {
+                        done(new Error("doc2.save should have failed with a duplicate key error"));
+                    }, function(err) {
                         should.exist(err);
                         done();
                     });
-                });
-            });
+                }, done);
+            }, done);
         });
 
         it("Should remove the unique index", function(done) {
@@ -471,10 +466,9 @@ describe('SchemaManager', function() {
                 schemaDoc = result[1].toObject();
                 var EntityType = schemaManager.getEntityModel(schemaDoc);
                 var doc2 = new EntityType({ str : "foo", other : "bar" });
-                doc2.save(function(err) {
-                    should.not.exist(err);
+                doc2.save().then(function() {
                     done();
-                });
+                }, done);
             }).catch(done);
         });
 

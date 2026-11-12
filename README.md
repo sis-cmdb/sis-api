@@ -2,18 +2,18 @@ Table of Contents
 =================
 
 - [Description](#description)
+- [Requirements](#requirements)
 - [Building and Testing](#building-and-testing)
 - [Configuration](#configuration)
     - [Authentication Backends](#authentication-backends)
         -[Default Backend](#default-backend-configuration)
         -[Active Directory over LDAP](#active-directory-over-ldap)
+- [Running in Containers](#running-in-containers)
 - [Tools](#tools)
     - [Creating Users](#creating-users)
     - [Deleting Users](#deleting-users)
 - [LICENSE](#license)
 - [REST API Documentation](#rest-api-documentation)
-
-[![Build Status](https://travis-ci.org/sis-cmdb/sis-api.svg?branch=develop)](https://travis-ci.org/sis-cmdb/sis-api)
 
 # Description
 
@@ -39,23 +39,69 @@ More details can be found in the [API Documentation](./docs/index.md)
 
 The following are required to build and run SIS:
 
-- [node](nodejs.org) 0.12.x or iojs 1.8.x+
-- [mongodb](https://www.mongodb.org/) 2.6+.
+- [Node.js](https://nodejs.org/) 20 or later (see the `engines` field in `package.json`).
+- [MongoDB](https://www.mongodb.org/) 4.4+ (tested against MongoDB 7).
+
+If you would rather not install these locally, see
+[Running in Containers](#running-in-containers) to run the API and MongoDB with
+`podman` / `docker`.
 
 # Building and Testing
 
-[Grunt](http://gruntjs.com/) is used to build SIS.  [Mocha](http://mochajs.org/) is used for testing.
+SIS uses npm scripts for its tooling: [Mocha](https://mochajs.org/) for tests,
+[ESLint](https://eslint.org/) for linting, and [c8](https://github.com/bcoe/c8)
+for coverage. (The former grunt + jshint + blanket stack has been removed.)
 
-1. Ensure a local mongodb instance is running on port 27017.
-    - `mongod --dbpath=/data --port 27017` will launch a mongo server listening on 27017 and writing data to `/data`
-2. Ensure grunt is installed via: `npm install -g grunt-cli`
-3. From the root directory, run `npm install`.
-4. Run `grunt` to build a distribution and run unit tests.
-5. The main file is `server.js`.  Simply run `node server.js` to start the server.
+1. Ensure a local MongoDB instance is running on port 27017.
+    - `mongod --dbpath=/data --port 27017` will launch a mongo server listening on 27017 and writing data to `/data`.
+    - Alternatively, start one in a container (see [Running in Containers](#running-in-containers)).
+2. From the root directory, run `npm install`.
+3. Run `npm start` (or `node server.js`) to start the server. The main file is `server.js`.
+
+The available npm scripts are:
+
+- `npm start` - run the server (`node server.js`).
+- `npm test` - run the Mocha suite (config in `.mocharc.yml`).
+- `npm run lint` - run ESLint (flat config in `eslint.config.js`).
+- `npm run coverage` - run the test suite under `c8` and emit an HTML + text report.
+- `npm run build` - generate `build.json` (consumed by the `/info` endpoint).
+
+## Running the tests
+
+The test suite connects to `mongodb://localhost/sis-test` by default. Override
+the connection string with the `db__url` environment variable (`nconf` reads
+`__` as the nested-key separator):
+
+```bash
+db__url="mongodb://localhost:27018/sis-test" npm test
+```
+
+To run a single spec, list `test/init-tests.js` first (it starts the shared
+server and seeds a superuser) followed by the target spec:
+
+```bash
+db__url="mongodb://localhost/sis-test" ./node_modules/.bin/mocha --timeout 60000 \
+  test/init-tests.js test/v1.1-api/test-api-entities.js
+```
+
+Relevant environment variables:
+
+- `SIS_RUN_LONG_TESTS=true` - enable the longer/replication suites.
+- `SIS_REMOTE_URL` - run the suite against a remote SIS instead of spawning a local server.
+- `db__url` - override the MongoDB connection string for a run.
 
 # Configuration
 
-The configuration is represented in conf/config.json and overrides can be supplied via conf/config.json.  An annotated config.json looks like:
+The default configuration lives in `conf/config.json`. Settings are resolved
+with the following precedence (highest first):
+
+1. Environment variables (`nconf` reads `__` as the nested-key separator, so
+   `db.url` is set via `db__url`; values are parsed as JSON).
+2. Command-line arguments.
+3. `conf/config.json.local` - an optional, git-ignored file for local overrides.
+4. `conf/config.json` - the committed defaults.
+
+An annotated `config.json` looks like:
 
 ```javascript
 {
@@ -72,7 +118,10 @@ The configuration is represented in conf/config.json and overrides can be suppli
     // application specific settings
     "app" : {
         // whether Role Based Access Control is enabled.  Defaults to true
-        "auth" : true
+        "auth" : true,
+        // whether read (GET) requests also require a valid x-auth-token.
+        // Requires "auth" to be true.  Defaults to false (reads are public)
+        "auth_reads" : false,
         // authentication backend config.  See below
         // defaults to a sis backend.
         "auth_config" : {
@@ -120,7 +169,9 @@ The default backend authenticates a user against a password stored with the user
 
 ### Active Directory over LDAP
 
-The LDAP authentication backend authenticates users belonging to a particular user domain via Active Directory.  When a user successfully authenticates for the first time, the backend creates an empty User object with no privileges.
+The LDAP authentication backend authenticates a user by attempting an LDAP bind
+with their credentials. When a user successfully authenticates for the first
+time, the backend creates an empty User object with no privileges.
 
 Configure the backend using:
 
@@ -130,15 +181,16 @@ Configure the backend using:
     "url" : "<url of the LDAP endpoint>",
     "user_domain" : "<the user domain to authenticate against>",
     "email_domain" : "<the domain to append as the email address for the user>",
-    "client_opts" " {
-        "option_1" : "option_1_value",
-        // etc.  These are options used when creating the [ldapjs client](http://ldapjs.org/client.html)
+    "client_opts" : {
+        "option_1" : "option_1_value"
+        // etc.  These are options passed to the ldapts Client constructor:
+        // https://github.com/ldapts/ldapts
     }
 }
-
 ```
 
-As an example, with the following config:
+By default SIS binds using an Active Directory userPrincipalName, i.e.
+`<user>@<user_domain>`. For example, with:
 
 ```javascript
 "auth_config" : {
@@ -149,7 +201,143 @@ As an example, with the following config:
 }
 ```
 
-An authentication request for `user1` will attempt to authenticate `user1@ad.corp.com` and create the user `user1` with email `user1@company.com` if successful and does not already exist.
+An authentication request for `user1` will attempt to bind as `user1@ad.corp.com`
+and create the user `user1` with email `user1@company.com` if successful and does
+not already exist.
+
+#### Binding by full DN (non-AD directories)
+
+Directories such as OpenLDAP bind by a full distinguished name rather than a
+userPrincipalName. For those, set `bind_dn_template` instead of (or in addition
+to) `user_domain`. The `%u` placeholder is replaced with the (DN-escaped) login
+name:
+
+```javascript
+"auth_config" : {
+    "type" : "ldap",
+    "url" : "ldap://openldap:1389",
+    "email_domain" : "example.org",
+    "bind_dn_template" : "cn=%u,ou=users,dc=example,dc=org"
+}
+```
+
+An authentication request for `user1` then binds as
+`cn=user1,ou=users,dc=example,dc=org`. When `bind_dn_template` is set,
+`user_domain` is optional. See
+[Trying the LDAP backend](#trying-the-ldap-backend) for a ready-to-run example.
+
+# Running in Containers
+
+SIS ships with a `Dockerfile` and a `compose.yaml` so the API and its MongoDB
+dependency can be run as containers. The examples below use `podman` /
+`podman compose`; substitute `docker` / `docker compose` if you prefer - the
+files are compatible with both.
+
+## Quick start with Compose
+
+`compose.yaml` runs two services: `mongo` (MongoDB 7) and `sis-api` (this app).
+The API waits for MongoDB to report healthy before starting.
+
+```bash
+# Build the image and start both services in the background
+podman compose up -d --build
+
+# Follow the API logs (JSON, written to stdout)
+podman compose logs -f sis-api
+
+# Stop the stack (add -v to also delete the MongoDB data volume)
+podman compose down
+```
+
+Once up, the API listens on `http://localhost:3000`:
+
+```bash
+curl -I http://localhost:3000/            # -> 200
+curl http://localhost:3000/api/v1.1/info  # -> build/version info
+```
+
+MongoDB data persists in the named `mongodb_data` volume. By default MongoDB is
+reachable only by the `sis-api` service over the internal Compose network and is
+not published to the host; uncomment the `ports` block on the `mongo` service in
+`compose.yaml` if you need to connect to it directly.
+
+## Configuration via environment variables
+
+The image contains the default `conf/config.json`. Rather than editing files,
+override individual settings with environment variables: `nconf` reads env vars
+using `__` as the nested-key separator, so `db.url` becomes `db__url`,
+`server.port` becomes `server__port`, and so on. Values are parsed as JSON, so
+`"false"` and `"3000"` become a boolean and a number respectively.
+
+`compose.yaml` uses this to point the API at the `mongo` service and to run a
+single process per container:
+
+```yaml
+environment:
+  db__url: "mongodb://mongo:27017/sis"
+  server__port: "3000"
+  app__use_cluster: "false"
+```
+
+`app.use_cluster` is disabled in containers because the cluster module forks a
+worker per host CPU (ignoring container CPU limits); run one process per
+container and scale with replicas instead.
+
+## Building the image directly
+
+```bash
+podman build -t sis-api:latest .
+
+podman run --rm -p 3000:3000 \
+  -e db__url="mongodb://my-mongo-host:27017/sis" \
+  sis-api:latest
+```
+
+The build generates `build.json` (served by the `/info` endpoint). Pass
+`--build-arg BUILD_NUMBER=... --build-arg GIT_COMMIT_HASH=...` to stamp CI build
+metadata into the image.
+
+The image runs as the non-root `node` user and sets `STOPSIGNAL SIGINT` so that
+`podman stop` / `docker stop` triggers the server's graceful-shutdown handler.
+
+> **Note:** MongoDB runs without authentication in the default `compose.yaml`,
+> which matches the credential-less `db.url` and is fine for local development.
+> For a deployment that requires auth, enable it on the `mongo` service and put
+> the credentials in `db__url` (e.g. `mongodb://user:pass@mongo:27017/sis?authSource=admin`).
+
+## Trying the LDAP backend
+
+An optional overlay, `compose.ldap.yaml`, adds a throwaway OpenLDAP server
+(seeded with a `user1` / `pass1` account) and switches `sis-api` to the
+[LDAP auth backend](#active-directory-over-ldap). It is kept separate so the
+default `podman compose up` stays on the built-in `sis` backend.
+
+Start the stack with both files:
+
+```bash
+podman compose -f compose.yaml -f compose.ldap.yaml up -d --build
+```
+
+Then mint a token as the seeded directory user to confirm LDAP auth works:
+
+```bash
+curl -u user1:pass1 -X POST http://localhost:3000/api/v1.1/users/auth_token
+# -> 201 with a token; SIS auto-creates the user1 account on first login
+```
+
+The overlay points SIS at the LDAP server with a bind-DN template (see
+[Binding by full DN](#binding-by-full-dn-non-ad-directories)):
+
+```yaml
+app__auth_config__type: "ldap"
+app__auth_config__url: "ldap://ldap:1389"
+app__auth_config__email_domain: "example.org"
+app__auth_config__bind_dn_template: "cn=%u,ou=users,dc=example,dc=org"
+```
+
+This overlay is for local development only. It uses Bitnami's frozen
+`bitnamilegacy/openldap` image and ships throwaway credentials in the compose
+file; do not use it as-is in production.
 
 # Tools
 

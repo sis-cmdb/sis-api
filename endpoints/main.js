@@ -3,8 +3,8 @@
 'use strict';
 
 var nconf = require('nconf');
-var BPromise = require("bluebird");
-var mongoose = BPromise.promisifyAll(require("mongoose"));
+var P = require("../util/promises");
+var mongoose = require("mongoose");
 var SIS = require("../util/constants");
 
 if (process.env.TESTING) {
@@ -27,11 +27,11 @@ function sendResponse(res) {
 }
 
 var opts = nconf.get('db').opts || { };
-mongoose.connectAsync(nconf.get('db').url, opts)
+Promise.resolve(mongoose.connect(nconf.get('db').url, opts))
 .then(function() {
     var appConfig = nconf.get('app') || { };
     var schemaManager = require('../util/schema-manager')(mongoose, appConfig);
-    var d = BPromise.pending();
+    var d = P.defer();
     schemaManager.bootstrapEntitySchemas(function(err) {
         if (err) { return d.reject(err); }
         return d.resolve(schemaManager);

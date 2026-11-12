@@ -43,46 +43,50 @@ var options = {
 var jsonFile = process.argv[3];
 var user = JSON.parse(fs.readFileSync(jsonFile, 'utf8'));
 
-function updateUser(userManager, user, callback) {
-    userManager.getById(user.name).done(function(u) {
+function updateUser(userManager, user) {
+    return userManager.getById(user.name).then(function(u) {
         // user exists
-        userManager.update(u.name, user, options).nodeify(callback);
+        return userManager.update(u.name, user, options);
     }, function(err) {
         // user does not exist.
-        userManager.add(user, options).nodeify(callback);
+        return userManager.add(user, options);
     });
 }
 
-function deleteUser(userManager, user, callback) {
-    userManager.delete(user.name, options).nodeify(callback);
+function deleteUser(userManager, user) {
+    return userManager.delete(user.name, options);
+}
+
+function fail(msg, err) {
+    console.log(msg, err instanceof Array ? JSON.stringify(err[1]) : err);
+    process.exit(1);
 }
 
 var opts = nconf.get('db').opts || { };
 
-mongoose.connect(nconf.get('db').url, opts, function(err) {
-    if (err) {
-        throw err;
-    }
+mongoose.connect(nconf.get('db').url, opts).then(function() {
     var schemaManager = require('../util/schema-manager')(mongoose, appConfig);
     schemaManager.bootstrapEntitySchemas(function(err) {
         if (err) {
-            throw err;
+            return fail("Error initializing schemas.", err);
         }
         var userManager = schemaManager.auth[SIS.SCHEMA_USERS];
         if (action === 'update') {
-            updateUser(userManager, user, function(err, r) {
-                if (err) {
-                    console.log("Error updating user.");
-                    process.exit(1);
-                } else {
-                    console.log("User updated.");
-                    process.exit(0);
-                }
+            updateUser(userManager, user).then(function() {
+                console.log("User updated.");
+                process.exit(0);
+            }, function(err) {
+                fail("Error updating user.", err);
             });
         } else {
-            deleteUser(userManager, user, function(err, r) {
+            deleteUser(userManager, user).then(function() {
+                console.log("User deleted.");
                 process.exit(0);
+            }, function(err) {
+                fail("Error deleting user.", err);
             });
         }
     });
+}, function(err) {
+    fail("Error connecting to the database.", err);
 });

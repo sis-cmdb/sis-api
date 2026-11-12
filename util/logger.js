@@ -1,7 +1,7 @@
 "use strict";
 // logger middleware
 var bunyan = require('bunyan');
-var uuid = require('node-uuid');
+var crypto = require('crypto');
 var nconf = require('nconf');
 var _ = require('lodash');
 
@@ -46,7 +46,7 @@ module.exports.errorLoggingMiddleware = function(opts) {
 
     return function(err, req, res, next) {
         var startTime = process.hrtime();
-        req.id = uuid.v4();
+        req.id = crypto.randomUUID();
         var childLogger = logger.child({ req_id : req.id });
         req.log = childLogger;
         res.log = childLogger;

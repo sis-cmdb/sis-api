@@ -1,0 +1,49 @@
+services:
+  mongo:
+    image: docker.io/library/mongo:7
+    restart: unless-stopped
+    volumes:
+      - mongodb_data:/data/db
+    # Not published to the host by default; only sis-api reaches it over the
+    # internal network. Uncomment to inspect Mongo from the host:
+    # ports:
+    #   - "27017:27017"
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  sis-api:
+    build:
+      context: .
+    image: sis-api:latest
+    restart: unless-stopped
+    environment:
+      # nconf reads env vars with '__' as the nested-key separator.
+      db__url: "mongodb://mongo:27017/sis"
+      server__port: "3000"
+      # One process per container; scale with replicas rather than in-process
+      # clustering (os.cpus() ignores container CPU limits).
+      app__use_cluster: "false"
+    ports:
+      - "3000:3000"
+    depends_on:
+      mongo:
+        condition: service_healthy
+    # Mirrors the Dockerfile HEALTHCHECK; podman ignores HEALTHCHECK baked into
+    # OCI images, so declare it here too for engine-agnostic behavior.
+    healthcheck:
+      test:
+        - "CMD"
+        - "node"
+        - "-e"
+        - "require('http').request({host:'127.0.0.1',port:3000,method:'HEAD',path:'/'},function(r){process.exit(r.statusCode===200?0:1)}).on('error',function(){process.exit(1)}).end()"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  mongodb_data:

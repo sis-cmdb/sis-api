@@ -1,8 +1,7 @@
 'use strict';
 
 var SIS = require("../util/constants");
-var BPromise = require("bluebird");
-var passport = require("passport");
+var P = require("../util/promises");
 var webUtil = require("./webutil");
 var nconf = require("nconf");
 var _ = require("lodash");
@@ -15,6 +14,8 @@ var _ = require("lodash");
 // opts is a dictionary w/ the following keys
 // - schema_manager - the schema manager across the system
 // - auth - boolean (default true) indicating if auth is enabled
+// - auth_reads - boolean (default false) indicating if GET requests
+//       also require a valid token
 // - type - optional string indicating the type for hooks/commits
 // - log_commits - boolean indicating if this controller should
 //       log creates/update/deletions
@@ -22,6 +23,7 @@ var _ = require("lodash");
 function ApiController(opts) {
     this.sm = opts[SIS.OPT_SCHEMA_MGR];
     this.auth = SIS.OPT_USE_AUTH in opts ? opts[SIS.OPT_USE_AUTH] : SIS.DEFAULT_OPT_USE_AUTH;
+    this.authReads = SIS.OPT_AUTH_READS in opts ? !!opts[SIS.OPT_AUTH_READS] : SIS.DEFAULT_OPT_AUTH_READS;
     opts = opts || { };
     if (opts[SIS.OPT_TYPE]) {
         this.type = opts[SIS.OPT_TYPE];
@@ -44,9 +46,9 @@ function ApiController(opts) {
 ApiController.prototype.getManager = function(req) {
     if (this.manager) {
         req.useLean = true;
-        return BPromise.resolve(this.manager);
+        return Promise.resolve(this.manager);
     } else {
-        return BPromise.reject(SIS.ERR_INTERNAL("Error fetching object"));
+        return Promise.reject(SIS.ERR_INTERNAL("Error fetching object"));
     }
 };
 
@@ -123,7 +125,7 @@ function writeJSONArrayChunk(res, array, cStart, cSize, defer) {
 }
 
 function writeJSONArray(res, array) {
-    var d = BPromise.pending();
+    var d = P.defer();
     if (!array.length) {
         res.write("[]");
         d.resolve(res);
@@ -184,13 +186,14 @@ ApiController.prototype.parsePopulate = function(req) {
 
 // Handler for the getAll request (typically GET controller_base/)
 ApiController.prototype.getAll = function(req, res) {
-    this.applyDefaults(req);
-    var rq = this.parseQuery(req);
+    var self = this;
+    self.applyDefaults(req);
+    var rq = self.parseQuery(req);
     if (rq.query === webUtil.ERROR_QUERY) {
-        this.sendError(res, SIS.ERR_BAD_REQ("Query parameter is invalid.  Must be JSON"));
+        self.sendError(res, SIS.ERR_BAD_REQ("Query parameter is invalid.  Must be JSON"));
         return;
     }
-    var options = this._getReqOptions(req);
+    var options = self._getReqOptions(req);
     options.skip = rq.offset;
     options.limit = rq.limit;
     if (rq.sort) {
@@ -198,20 +201,20 @@ ApiController.prototype.getAll = function(req, res) {
     }
     var fields = rq.fields;
     var condition = rq.query;
-    var p = this.getManager(req).bind(this).then(function(mgr) {
-        return webUtil.flattenCondition(condition,this.sm,mgr);
-    }).spread(function(flattenedCondition, mgr) {
+    var p = self.getManager(req).then(function(mgr) {
+        return webUtil.flattenCondition(condition,self.sm,mgr);
+    }).then(P.spread(function(flattenedCondition, mgr) {
         return mgr.count(flattenedCondition);
-    }).spread(function(c, flattenedCondition, mgr) {
+    })).then(P.spread(function(c, flattenedCondition, mgr) {
         c = c || 0;
         res.setHeader(SIS.HEADER_TOTAL_COUNT, c);
         if (!c || c < options.offset) {
-            return BPromise.resolve([]);
+            return Promise.resolve([]);
         }
         options.lean = req.useLean;
-        var populate = this.parsePopulate(req);
+        var populate = self.parsePopulate(req);
         if (populate) {
-            return mgr.getPopulateFields(this.sm, populate).then(function(populateFields) {
+            return mgr.getPopulateFields(self.sm, populate).then(function(populateFields) {
                 if (populateFields) {
                     options.populate = populateFields;
                 }
@@ -220,20 +223,21 @@ ApiController.prototype.getAll = function(req, res) {
         } else {
             return mgr.getAll(flattenedCondition, options, fields);
         }
-    });
-    this._finish(req, res, p, 200);
+    }));
+    self._finish(req, res, p, 200);
 };
 
 // Handler for the get request (typically GET controller_base/:id)
 ApiController.prototype.get = function(req, res) {
-    this.applyDefaults(req);
+    var self = this;
+    self.applyDefaults(req);
     var id = req.params.id;
-    var p = this.getManager(req).bind(this).then(function(mgr) {
-        var options = this._getReqOptions(req);
+    var p = self.getManager(req).then(function(mgr) {
+        var options = self._getReqOptions(req);
         options.lean = req.useLean;
-        var populate = this.parsePopulate(req);
+        var populate = self.parsePopulate(req);
         if (populate) {
-            return mgr.getPopulateFields(this.sm, populate).then(function(populateFields) {
+            return mgr.getPopulateFields(self.sm, populate).then(function(populateFields) {
                 if (populateFields) {
                     options.populate = populateFields;
                 }
@@ -244,79 +248,85 @@ ApiController.prototype.get = function(req, res) {
         }
     });
 
-    this._finish(req, res, p, 200);
+    self._finish(req, res, p, 200);
 };
 
 // Handler for the delete request (typically DELETE controller_base/:id)
 ApiController.prototype.delete = function(req, res) {
-    this.applyDefaults(req);
+    var self = this;
+    self.applyDefaults(req);
     var id = req.params.id;
     var p = null;
-    var options = this._getReqOptions(req);
+    var options = self._getReqOptions(req);
     if (id) {
-        p = this.getManager(req).call('delete', id, options);
-        this._finish(req, res, p, 200);
+        p = self.getManager(req).then(function(mgr) {
+            return mgr.delete(id, options);
+        });
+        self._finish(req, res, p, 200);
     } else {
         // bulk delete - query is required
         req.params.isBulk = true;
-        var self = this;
-        var rq = this.parseQuery(req);
+        var rq = self.parseQuery(req);
         var condition = rq.query;
         if (!condition || !Object.keys(condition).length) {
-            this.sendError(res, SIS.ERR_BAD_REQ("Bulk delete requires a non empty query."));
+            self.sendError(res, SIS.ERR_BAD_REQ("Bulk delete requires a non empty query."));
             return;
         }
-        p = this.getManager(req).bind(this).then(function(mgr) {
-            return webUtil.flattenCondition(condition,this.sm,mgr);
-        }).spread(function(flattenedCondition, mgr) {
+        p = self.getManager(req).then(function(mgr) {
+            return webUtil.flattenCondition(condition,self.sm,mgr);
+        }).then(P.spread(function(flattenedCondition, mgr) {
             // delegate to mgr
             return mgr.bulkDelete(flattenedCondition, options);
-        });
-        this._finish(req, res, p, 200);
+        }));
+        self._finish(req, res, p, 200);
     }
 };
 
 ApiController.prototype.bulkUpdate = function(req, res) {
+    var self = this;
     // either an array of objects or a query with an object to set
     var obj = req.body;
-    var options = this._getReqOptions(req);
+    var options = self._getReqOptions(req);
     var p = null;
     req.params.isBulk = true;
     if (Array.isArray(obj)) {
         if (!obj.length) {
-            return this.sendError(res, SIS.ERR_BAD_REQ("Array must not be empty."));
+            return self.sendError(res, SIS.ERR_BAD_REQ("Array must not be empty."));
         }
         // array of individual objects
-        p = this.getManager(req).call('bulkUpdateArray', obj, options);
+        p = self.getManager(req).then(function(mgr) {
+            return mgr.bulkUpdateArray(obj, options);
+        });
     } else {
         if (typeof obj !== "object") {
-            return this.sendError(res, SIS.ERR_BAD_REQ("Bulk update requires array or object as body"));
+            return self.sendError(res, SIS.ERR_BAD_REQ("Bulk update requires array or object as body"));
         }
-        var rq = this.parseQuery(req);
+        var rq = self.parseQuery(req);
         var condition = rq.query;
         if (!condition || !Object.keys(condition).length) {
-            return this.sendError(res, SIS.ERR_BAD_REQ("A valid query is required"));
+            return self.sendError(res, SIS.ERR_BAD_REQ("A valid query is required"));
         }
         if (!Object.keys(obj).length) {
-            return this.sendError(res, SIS.ERR_BAD_REQ("Body should not be empty"));
+            return self.sendError(res, SIS.ERR_BAD_REQ("Body should not be empty"));
         }
-        p = this.getManager(req).bind(this).then(function(mgr) {
-            return webUtil.flattenCondition(condition,this.sm, mgr);
-        }).spread(function(flattenedCondition, mgr) {
+        p = self.getManager(req).then(function(mgr) {
+            return webUtil.flattenCondition(condition,self.sm, mgr);
+        }).then(P.spread(function(flattenedCondition, mgr) {
             return mgr.bulkUpdateQuery(flattenedCondition, obj, options);
-        });
+        }));
     }
-    return this._finish(req, res, p, 200);
+    return self._finish(req, res, p, 200);
 };
 
 // Handler for the update request (typically PUT controller_base:/id)
 ApiController.prototype.update = function(req, res) {
-    this.applyDefaults(req);
+    var self = this;
+    self.applyDefaults(req);
     var id = req.params.id;
     var obj = req.body;
-    var upsert = this.parseUpsert(req);
+    var upsert = self.parseUpsert(req);
     var p = null;
-    var options = this._getReqOptions(req);
+    var options = self._getReqOptions(req);
     var cas;
     options.forceMixed = req.query.forceMixed;
     if ('cas' in req.query) {
@@ -332,21 +342,26 @@ ApiController.prototype.update = function(req, res) {
             cas instanceof Array ||
             !Object.keys(cas).length) {
             // invalid query
-            return this.sendError(res, SIS.ERR_BAD_REQ("CAS condition must be an object."));
+            return self.sendError(res, SIS.ERR_BAD_REQ("CAS condition must be an object."));
         }
         options.cas = cas;
     }
     if (upsert) {
-        p = this.getManager(req).call('upsert', id, obj, options);
+        p = self.getManager(req).then(function(mgr) {
+            return mgr.upsert(id, obj, options);
+        });
     } else {
-        p = this.getManager(req).call('update', id, obj, options);
+        p = self.getManager(req).then(function(mgr) {
+            return mgr.update(id, obj, options);
+        });
     }
-    this._finish(req, res, p, 200);
+    self._finish(req, res, p, 200);
 };
 
 // Handler for the add request (typically POST controller_base:/)
 ApiController.prototype.add = function(req, res) {
-    this.applyDefaults(req);
+    var self = this;
+    self.applyDefaults(req);
     var body = req.body;
     if (body instanceof Array) {
         req.params.isBulk = true;
@@ -356,35 +371,43 @@ ApiController.prototype.add = function(req, res) {
             req.query.all_or_none = req.query.all_or_none == "true";
         }
         if (!body.length) {
-            return this.sendError(res, SIS.ERR_BAD_REQ("Array must not be empty."));
+            return self.sendError(res, SIS.ERR_BAD_REQ("Array must not be empty."));
         }
     }
-    var p = this.getManager(req);
-    var options = this._getReqOptions(req);
+    var p = self.getManager(req);
+    var options = self._getReqOptions(req);
     if (req.params.isBulk) {
         options.allOrNone = req.query.all_or_none;
-        p = p.call('bulkAdd', body, options);
-        this._finish(req, res, p, 200);
+        p = p.then(function(mgr) {
+            return mgr.bulkAdd(body, options);
+        });
+        self._finish(req, res, p, 200);
     } else {
-        p = p.call('add', body, options);
-        this._finish(req, res, p, 201);
+        p = p.then(function(mgr) {
+            return mgr.add(body, options);
+        });
+        self._finish(req, res, p, 201);
     }
 };
 
 // Attach the controller to the app at a particular base
 ApiController.prototype.attach = function(app, prefix) {
-    // prepend prefix w/ /api/version str
-    prefix = "/api/:version(" + SIS.SUPPORTED_VERSIONS.join("|") + ")" + prefix;
+    // prepend prefix w/ /api/version str.  Express 5 (path-to-regexp v8) no
+    // longer supports inline regex in the path, so the version is validated by
+    // an app.param('version', ...) guard registered in server.js.
+    prefix = "/api/:version" + prefix;
     this.apiPrefix = prefix;
-    app.get(prefix, this.getAll.bind(this));
-    app.get(prefix + "/:id", this.get.bind(this));
+    app.get(prefix, this._wrapReadAuth(this.getAll));
+    app.get(prefix + "/:id", this._wrapReadAuth(this.get));
     if (!app.get(SIS.OPT_READONLY)) {
         // wrap authorization around modification calls
         app.put(prefix + "/:id", this._wrapAuth(this.update));
         app.put(prefix, this._wrapAuth(this.bulkUpdate));
         app.post(prefix, this._wrapAuth(this.add));
-        app.delete(prefix + "/:id?", this._wrapAuth(this.delete));
-        app.put(prefix, this._wrapAuth(this.bulkUpdate));
+        // Express 5 dropped optional params (/:id?) - register both forms.
+        // The delete handler bulk-deletes when no id is present.
+        app.delete(prefix + "/:id", this._wrapAuth(this.delete));
+        app.delete(prefix, this._wrapAuth(this.delete));
         // enable the commit api if we have a commitManager
         if (this.commitManager) {
             this._enableCommitApi(app, prefix);
@@ -396,19 +419,7 @@ ApiController.prototype.attach = function(app, prefix) {
 // The type specifies which kind of authentication to use
 // and should have already been registered with passport
 ApiController.prototype.authenticate = function(req, res, type) {
-    var d = BPromise.pending();
-    var self = this;
-    passport.authenticate(type, {session : false}, function(err, user) {
-        if (err) {
-            d.reject(err);
-        } else if (!user) {
-            d.reject(SIS.ERR_BAD_CREDS("Invalid credentials"));
-        } else {
-            req.user = user;
-            d.resolve(user);
-        }
-    })(req, res);
-    return d.promise;
+    return webUtil.authenticate(req, res, type);
 };
 
 // "private"
@@ -427,15 +438,24 @@ ApiController.prototype._wrapAuth = function(func) {
         })
         .catch(function(err) {
             return self.sendError(res, err);
-        }).done();
+        });
     }.bind(this);
+};
+
+// Wrap a read (GET) handler.  Reads only require a token when
+// auth_reads is enabled.
+ApiController.prototype._wrapReadAuth = function(func) {
+    if (this.authReads) {
+        return this._wrapAuth(func);
+    }
+    return func.bind(this);
 };
 
 // Enable the commit API endpoints
 ApiController.prototype._enableCommitApi = function(app, prefix) {
     // all history
     var self = this;
-    app.get(prefix + "/:id/commits", function(req, res) {
+    app.get(prefix + "/:id/commits", this._wrapReadAuth(function(req, res) {
         req.params.isCommitApi = true;
         var type = this.getType(req);
         var id = req.params.id;
@@ -446,23 +466,25 @@ ApiController.prototype._enableCommitApi = function(app, prefix) {
         rq.query.entity_id = id;
         rq.query.type = type;
 
-        mongooseModel.count(rq.query, function(err, c) {
-            if (err || !c) {
+        Promise.resolve(mongooseModel.countDocuments(rq.query).exec()).then(function(c) {
+            if (!c) {
                 res.setHeader("x-total-count", 0);
                 return self.sendObject(res, 200, []);
             }
             var opts = { skip : rq.offset, limit: rq.limit};
-            var mgQuery = mongooseModel.find(rq.query, rq.fields, opts);
-            mgQuery = mgQuery.sort({date_modified: -1});
-            mgQuery.exec(function(err, entities) {
+            var mgQuery = mongooseModel.find(rq.query, rq.fields, opts).sort({date_modified: -1});
+            return Promise.resolve(mgQuery.exec()).then(function(entities) {
                 res.setHeader("x-total-count", c);
                 self.sendObject(res, 200, entities);
             });
+        }).catch(function(err) {
+            res.setHeader("x-total-count", 0);
+            self.sendObject(res, 200, []);
         });
-    }.bind(this));
+    }));
 
     // specific entry by history id
-    app.get(prefix + "/:id/commits/:hid", function(req, res) {
+    app.get(prefix + "/:id/commits/:hid", this._wrapReadAuth(function(req, res) {
         var type = this.getType(req);
         var id = req.params.id;
         var hid = req.params.hid;
@@ -475,9 +497,9 @@ ApiController.prototype._enableCommitApi = function(app, prefix) {
                 self.sendObject(res, 200, result);
             }
         });
-    }.bind(this));
+    }));
 
-    app.get(prefix + "/:id/revision/:utc", function(req, res) {
+    app.get(prefix + "/:id/revision/:utc", this._wrapReadAuth(function(req, res) {
         var type = this.getType(req);
         var id = req.params.id;
         var utc = req.params.utc;
@@ -491,7 +513,7 @@ ApiController.prototype._enableCommitApi = function(app, prefix) {
             }
         });
 
-    }.bind(this));
+    }));
 };
 
 ApiController.prototype._convertToResponseObject = function(req, obj) {
@@ -573,10 +595,10 @@ ApiController.prototype._saveSingleCommit = function(req, result) {
             old = result;
             break;
         default:
-            return BPromise.reject(SIS.ERR_INTERNAL("invalid commit being saved"));
+            return Promise.reject(SIS.ERR_INTERNAL("invalid commit being saved"));
     }
     // save it
-    var d = BPromise.pending();
+    var d = P.defer();
     var type = this.getType(req);
     this.commitManager.recordHistory(old, now, req.user, type, function(e, h) {
         // doesn't matter for now.
@@ -601,7 +623,7 @@ ApiController.prototype._saveCommit = function(req) {
     // but returns the initial object passed to it
     return function(result) {
         if (!this.shouldSaveCommit(req)) {
-            return BPromise.resolve(result);
+            return Promise.resolve(result);
         }
 
         if (req.params.isBulk) {
@@ -614,7 +636,7 @@ ApiController.prototype._saveCommit = function(req) {
                     return result;
                 });
             } else {
-                return BPromise.resolve(result);
+                return Promise.resolve(result);
             }
         } else {
             return this._saveSingleCommit(req, result);
@@ -626,15 +648,14 @@ ApiController.prototype._saveCommit = function(req) {
 // p is the promise that receives the object from the
 // request handler
 ApiController.prototype._finish = function(req, res, p, code) {
-    p = p.tap(this._saveCommit(req));
+    p = p.then(P.tap(this._saveCommit(req)));
     var cb = this._getSendCallback(req, res, code);
     p.then(function(result) {
         cb(null, result);
     })
     .catch(function(err) {
         cb(err);
-    })
-    .done();
+    });
 };
 
 // get request options to pass to managers per request

@@ -1,6 +1,5 @@
 "use strict";
 
-var BPromise = require("bluebird");
 var nconf = require('nconf');
 
 function loadConfig() {
@@ -126,7 +125,23 @@ function TestServer() {
             result.set("x-auth-token", this.authToken);
         }
         result.set('Accept', 'application/json');
-        return BPromise.promisifyAll(result);
+        // native-promise versions of the supertest callbacks (was bluebird promisifyAll)
+        result.endAsync = function() {
+            var req = this;
+            return new Promise(function(resolve, reject) {
+                req.end(function(err, res) { if (err) { reject(err); } else { resolve(res); } });
+            });
+        };
+        result.expectAsync = function() {
+            var req = this;
+            var args = Array.prototype.slice.call(arguments);
+            return new Promise(function(resolve, reject) {
+                req.expect.apply(req, args.concat([function(err, res) {
+                    if (err) { reject(err); } else { resolve(res); }
+                }]));
+            });
+        };
+        return result;
     };
 
     this.stop = function(callback) {
@@ -137,10 +152,13 @@ function TestServer() {
             return callback();
         }
         serverData.server.stopServer(serverData.http, function() {
-            serverData.mongoose.connection.close(function(err) {
-                if (err) { callback(err); }
+            // mongoose 8 connection.close() returns a promise (no callback)
+            Promise.resolve(serverData.mongoose.connection.close()).then(function() {
                 serverData = null;
                 callback();
+            }, function(err) {
+                serverData = null;
+                callback(err);
             });
         });
     };
@@ -196,8 +214,13 @@ function LocalTest() {
             return callback();
         }
         var mongoose = dbData.mongoose;
-        mongoose.connection.db.dropDatabase(function() {
-            mongoose.connection.close(callback);
+        // mongoose 8 / modern driver use promises (no callbacks)
+        Promise.resolve(mongoose.connection.dropDatabase()).then(function() {
+            return mongoose.connection.close();
+        }).then(function() {
+            callback();
+        }, function(err) {
+            callback(err);
         });
     };
 
